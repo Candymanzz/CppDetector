@@ -36,3 +36,27 @@ Result: cam 0-5 get a plausible but too generous polygon (includes neighbouring 
 
 ## D7 - Heatmap rendering (2026-10-20)
 Heatmap colours are normalised to the detection threshold (thr -> mid colour, 2*thr -> red); values below thr/2 are not painted. Otherwise JPEG/lighting noise paints the whole bucket.
+
+## D8 - Findings on the real label shots (2026-10-20)
+Setup: reference good1, ROI polygon over the bucket body (excludes lid reflections and neighbouring objects), sensitivity 1.0, reject threshold 0.1%.
+- downscale 0.4: good2 0.00%, bad1 0.62%, bad2 0.38%, bad21 0.35% -> clean separation, ~60-110 ms per frame (single).
+- downscale 0.6/0.8/1.0: bad scores grow (bad1 1.4/2.2/3.1%), good2 stays 0.00%, but time per frame grows 130/230/330-390 ms (single frame) - too slow for 10 parallel frames in 500 ms without enough cores.
+- Without ROI, lid glare and a neighbouring object produce large false zones -> ROI is mandatory for this scene.
+- Dark images: contrast of defects is low, sensitivity had to be at the maximum (diff threshold 5). Candidate improvement: contrast stretch by ROI percentile before diff (not done yet) so that sensitivity is meaningful across lighting.
+- bad1 false zones along the label's left/right edges come from bucket rotation (translation-only alignment, D2). Candidate improvements: exclude edge band from ROI, or local/affine alignment.
+- Added Inspector guard: frame size != reference size -> reason `size_mismatch` (no crash; verdict NO_REFERENCE).
+
+## D9 - Benchmark: 10 cameras in parallel over all frames (2026-10-20)
+Tool: `cppdetector --bench [--verbose]` (src/app/bench.cpp). Machine: 8 hardware threads. One batch = one frame per camera, 10 tasks via std::async.
+- Camera dataset 960x803, downscale 1.0, ref = earliest frame, 19 batches x 10 cameras = 190 frames: total ~4.3 s, batch avg 225 / p95 255 / max 255 ms (with JPEG decode: avg 240 / max 287 ms). Budget 500 ms met with ~2x margin. 0 rejects (clean frames).
+- Label shots 2448x2048 (reference good1, body ROI, sens 1.0, thr 0.1), 10 virtual cameras: downscale 0.4 -> batch avg 273-307 ms (OK); 0.5 -> 395-437 ms (OK, thin margin); 0.6 -> 592-653 ms (over budget). 30 of 40 frames rejected = exactly the 3 bad files x 10 cameras; good2 never rejected.
+- A single frame alone takes ~60 ms (960x803) but ~210 ms when 10 run at once: the batch is CPU-bound (10 tasks on 8 logical threads, likely 4 physical cores). cv::setNumThreads(1) made no real difference.
+- Next speed levers if needed: phaseCorrelate on a much smaller image (it is a full float DFT), avoid redundant float conversions, reuse buffers per camera, stable thread pool instead of std::async.
+
+## D10 - Benchmark on frames36 (1224x1024, 10 cameras, 99 batches = 990 frames) (2026-10-20)
+Defaults sens 0.5, no ROI, ref = idx 1 of each camera, 8 logical threads.
+- downscale 1.0: batch avg 386 / p95 411 / max 490 ms (!thin margin; max with decode 431) - total 38 s for 990 frames.
+- downscale 0.7: batch avg 191 / p95 241 / max 279 ms.
+- downscale 0.5: batch avg 95 / p95 106 / max 115 ms (with decode up to 152 ms).
+- Rejects at thr 2%: 199 / 178 / 160 of 990 (1.0 / 0.7 / 0.5) -> verdicts depend on downscale, so thresholds must be tuned at the downscale that will be used in production.
+- Recommendation: run production at downscale 0.7 (or 0.5) for 1224x1024 frames; 1.0 leaves almost no margin to 500 ms.

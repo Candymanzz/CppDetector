@@ -1,6 +1,7 @@
 // CppDetector: reference-based frame inspection with a web test UI.
-// Usage: cppdetector [--frames DIR] [--port N] [--web DIR]
+// Usage: cppdetector [--frames DIR] [--port N] [--web DIR] [--bench [--dataset-only] [--verbose]]
 #include "app/app.h"
+#include "app/bench.h"
 #include "web/routes.h"
 #include <iostream>
 #include <string>
@@ -11,18 +12,22 @@
 
 int main(int argc, char** argv) {
     namespace fs = std::filesystem;
-    fs::path frames = fs::path(CD_SOURCE_DIR) / "frame" / "frame";
+    fs::path frames = fs::path(CD_SOURCE_DIR) / "frame" / "frames36";
     fs::path webDir = fs::path(CD_SOURCE_DIR) / "web";
     int port = 8080;
-    for (int i = 1; i + 1 < argc; i += 2) {
+    bool bench = false;
+    for (int i = 1; i < argc; ++i) {
         std::string k = argv[i];
-        if (k == "--frames") frames = argv[i + 1];
-        else if (k == "--port") port = std::stoi(argv[i + 1]);
-        else if (k == "--web") webDir = argv[i + 1];
+        if (k == "--bench") bench = true;
+        else if (i + 1 < argc && k == "--frames") frames = argv[++i];
+        else if (i + 1 < argc && k == "--port") port = std::stoi(argv[++i]);
+        else if (i + 1 < argc && k == "--web") webDir = argv[++i];
     }
+    if (bench) return cd::runBench(frames, std::vector<std::string>(argv + 1, argv + argc));
 
     fs::path data = fs::path(CD_SOURCE_DIR);
-    cd::App app(frames, data / "config" / "config.json", data / "logs");
+    // settings are kept per dataset (folder name), so different frame sets do not overwrite each other
+    cd::App app(frames, data / "config" / ("config_" + frames.filename().string() + ".json"), data / "logs");
 
     httplib::Server svr;
     svr.new_task_queue = [] { return new httplib::ThreadPool(8); };

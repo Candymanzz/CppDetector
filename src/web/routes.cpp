@@ -98,7 +98,26 @@ void registerRoutes(httplib::Server& svr, App& app) {
         sendJson(res, r);
     });
 
-    svr.Post("/api/inspect_all", [&](const httplib::Request& req, httplib::Response& res) {
+    svr.Get("/api/testfiles", [&](const httplib::Request&, httplib::Response& res) { sendJson(res, app.testFiles()); });
+
+    svr.Post("/api/reference_testfile", [&](const httplib::Request& req, httplib::Response& res) {
+        cv::Mat img;
+        std::string err;
+        if (!app.readTestFile(req.get_param_value("file"), img)) return sendError(res, "unknown test file");
+        if (!app.setReferenceFromImage(intParam(req, "cam"), img, err)) return sendError(res, err);
+        sendJson(res, {{"ok", true}});
+    });
+
+    svr.Post("/api/inspect_testfile", [&](const httplib::Request& req, httplib::Response& res) {
+        cv::Mat img;
+        std::string err, name = req.get_param_value("file");
+        if (!app.readTestFile(name, img)) return sendError(res, "unknown test file");
+        json r = app.inspectUpload(intParam(req, "cam"), img, name, boolParam(req, "defect"), err);
+        if (!err.empty()) return sendError(res, err);
+        sendJson(res, r);
+    });
+
+    svr.Post("/api/inspect_all",[&](const httplib::Request& req, httplib::Response& res) {
         std::string err;
         json r = app.inspectAll(intParam(req, "cam"), boolParam(req, "defect"), err);
         if (!err.empty()) return sendError(res, err);

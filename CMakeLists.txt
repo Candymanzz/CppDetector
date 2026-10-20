@@ -14,6 +14,7 @@ add_executable(cppdetector
   src/inspect/auto_roi.cpp
   src/app/app.cpp
   src/app/decision_log.cpp
+  src/app/bench.cpp
   src/web/routes.cpp)
 target_compile_definitions(cppdetector PRIVATE CD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 if(MSVC)

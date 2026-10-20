@@ -62,6 +62,7 @@
             <button id="setRef">Сделать эталоном</button>
           </div>
           <div class="row"><label class="filebtn">Загрузить эталон из файла<input type="file" id="refFile" accept="image/*" hidden></label></div>
+          <div class="row"><select id="refTestSelect" title="Файлы из frame/test-pr-ph"></select><button id="setRefTest">Эталон из test-pr-ph</button></div>
         </div>
 
         <div class="card">
@@ -90,6 +91,8 @@
             <label class="filebtn">Загрузить кадр и проверить<input type="file" id="testFile" accept="image/*" hidden></label>
           </div>
           <div class="row"><button id="runAll">Проверить все кадры камеры</button></div>
+          <div class="row"><select id="testFileSelect" title="Файлы из frame/test-pr-ph"></select><button id="runTestFile">Проверить файл</button></div>
+          <div class="row"><button id="runAllTestFiles">Проверить все файлы test-pr-ph</button></div>
           <div id="result" class="result"></div>
           <div id="allResults"></div>
         </div>

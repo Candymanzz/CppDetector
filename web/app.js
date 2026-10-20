@@ -63,6 +63,8 @@ function reasonText(r) {
       return `Score ${fmt(r.score, 3)}% выше порога ${fmt(r.threshold, 2)}% — найдено зон: ${(r.zones || []).length}.`;
     case "shift_exceeded":
       return `Кадр сдвинут относительно эталона на (${fmt(r.shift && r.shift[0])}, ${fmt(r.shift && r.shift[1])}) px — больше допустимого. Увеличь допуск на сдвиг или проверь камеру.`;
+    case "size_mismatch":
+      return "Размер кадра не совпадает с размером эталона этой камеры — сравнение невозможно.";
     case "no_reference":
       return "Для камеры нет эталона (или downscale изменился после выбора эталона).";
     default:
@@ -568,3 +570,65 @@ window.addEventListener("load", () => {
     else if (location.hash === "#log") showTab("log");
   }, 300);
 });
+
+/* ---------- extra test images (frame/test-pr-ph) ---------- */
+
+async function loadTestFiles() {
+  let files = [];
+  try { files = await api("/api/testfiles"); } catch (e) { return; }
+  S.testFiles = files;
+  fillSelect($("refTestSelect"), files, files.find((f) => /good/.test(f)));
+  fillSelect($("testFileSelect"), files, files.find((f) => /bad/.test(f)));
+}
+
+$("setRefTest").addEventListener("click", async () => {
+  const file = $("refTestSelect").value;
+  if (!file) return;
+  try {
+    await api(`/api/reference_testfile?cam=${S.cam}&file=${encodeURIComponent(file)}`, { method: "POST" });
+    await reloadState();
+    toast("Эталон камеры " + S.cam + ": " + file);
+  } catch (e) { /* toast shown */ }
+});
+
+$("runTestFile").addEventListener("click", async () => {
+  const file = $("testFileSelect").value;
+  if (!file) return;
+  try {
+    afterInspect(await api(`/api/inspect_testfile?cam=${S.cam}&file=${encodeURIComponent(file)}&defect=${$("testDefect").checked ? 1 : 0}`, { method: "POST" }));
+  } catch (e) { /* toast shown */ }
+});
+
+$("runAllTestFiles").addEventListener("click", async () => {
+  const box = $("allResults");
+  box.replaceChildren(el("div", "muted small", "проверка…"));
+  const t = el("table");
+  const hd = el("tr");
+  ["Файл", "Score, %", "Вердикт", "мс"].forEach((h) => hd.append(el("th", "", h)));
+  t.append(hd);
+  let last = null;
+  for (const f of S.testFiles || []) {
+    try {
+      const r = await api(`/api/inspect_testfile?cam=${S.cam}&file=${encodeURIComponent(f)}&defect=0`, { method: "POST" });
+      last = r;
+      const tr = el("tr");
+      const v = el("td");
+      v.append(verdictBadge(r.verdict));
+      tr.append(el("td", "mono", f), el("td", "num", fmt(r.score, 3)), v, el("td", "num", fmt(r.ms, 1)));
+      tr.style.cursor = "pointer";
+      tr.addEventListener("click", async () => { $("testFileSelect").value = f; $("runTestFile").click(); });
+      t.append(tr);
+    } catch (e) {
+      const tr = el("tr");
+      const td = el("td", "muted", f + ": ошибка (размер не совпадает с эталоном?)");
+      td.colSpan = 4;
+      tr.append(td);
+      t.append(tr);
+    }
+  }
+  box.replaceChildren(t);
+  if (last) afterInspect(last);
+  refreshLogIfVisible();
+});
+
+loadTestFiles();

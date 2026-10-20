@@ -1,0 +1,182 @@
+{
+  "cameras": [
+    {
+      "downscale": 1.0,
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [
+        [
+          198,
+          665
+        ],
+        [
+          206,
+          211
+        ],
+        [
+          272,
+          156
+        ],
+        [
+          367,
+          108
+        ],
+        [
+          478,
+          91
+        ],
+        [
+          555,
+          82
+        ],
+        [
+          616,
+          82
+        ],
+        [
+          684,
+          85
+        ],
+        [
+          810,
+          112
+        ],
+        [
+          851,
+          164
+        ],
+        [
+          867,
+          229
+        ],
+        [
+          886,
+          374
+        ],
+        [
+          908,
+          494
+        ],
+        [
+          911,
+          592
+        ],
+        [
+          869,
+          648
+        ],
+        [
+          756,
+          683
+        ],
+        [
+          599,
+          697
+        ],
+        [
+          394,
+          694
+        ],
+        [
+          346,
+          710
+        ],
+        [
+          282,
+          716
+        ],
+        [
+          264,
+          693
+        ]
+      ],
+      "sensitivity": 0.5,
+      "shift_tolerance": 3
+    },
+    {
+      "downscale": 1.0,
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [],
+      "sensitivity": 0.5,
+      "shift_tolerance": 3
+    },
+    {
+      "downscale": 1.0,
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [],
+      "sensitivity": 0.5,
+      "shift_tolerance": 3
+    },
+    {
+      "downscale": 1.0,
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [],
+      "sensitivity": 0.5,
+      "shift_tolerance": 3
+    },
+    {
+      "downscale": 1.0,
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [],
+      "sensitivity": 0.5,
+      "shift_tolerance": 3
+    },
+    {
+      "downscale": 1.0,
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [],
+      "sensitivity": 0.5,
+      "shift_tolerance": 3
+    },
+    {
+      "downscale": 1.0,
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [],
+      "sensitivity": 0.5,
+      "shift_tolerance": 3
+    },
+    {
+      "downscale": 1.0,
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [],
+      "sensitivity": 0.5,
+      "shift_tolerance": 3
+    },
+    {
+      "downscale": 1.0,
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [],
+      "sensitivity": 0.5,
+      "shift_tolerance": 3
+    },
+    {
+      "downscale": 1.0,
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [],
+      "sensitivity": 0.5,
+      "shift_tolerance": 3
+    }
+  ],
+  "defect": false,
+  "period_ms": 1000,
+  "source_dir": "D:/GitHubPj/CppDetector\\frame\\frames36"
+}

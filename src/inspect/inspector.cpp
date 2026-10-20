@@ -16,6 +16,7 @@ cv::Mat Inspector::prepare(const cv::Mat& bgr, double downscale) const {
 void Inspector::setReference(const cv::Mat& bgr, const std::vector<cv::Point>& roi, const InspectParams& p) {
     refGray_ = prepare(bgr, p.downscale);
     refDownscale_ = p.downscale;
+    refSize_ = bgr.size();
     roi_ = roi;
     roiMask_ = cv::Mat::zeros(refGray_.size(), CV_8U);
     if (roi.empty()) {
@@ -33,6 +34,10 @@ InspectResult Inspector::inspect(const cv::Mat& bgr, const InspectParams& p) con
     InspectResult r;
     if (!hasReference() || p.downscale != refDownscale_ || roiArea_ == 0) {
         r.reason = "no_reference";
+        return r;
+    }
+    if (bgr.size() != refSize_) {
+        r.reason = "size_mismatch";
         return r;
     }
     cv::Mat cur = prepare(bgr, p.downscale);

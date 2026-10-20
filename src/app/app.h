@@ -32,6 +32,8 @@ public:
     json inspectUpload(int cam, const cv::Mat& img, const std::string& name, bool defect, std::string& err);
     json inspectAll(int cam, bool defect, std::string& err);
     bool autoRoi(int cam, const std::string& frame, std::vector<cv::Point>& out, std::string& err);
+    std::vector<std::string> testFiles() const;                  // images in <frames>/../test-pr-ph
+    bool readTestFile(const std::string& name, cv::Mat& out) const;
     void setRunning(bool on) { running_ = on; }
 
     bool frameJpeg(int cam, const std::string& frame, std::vector<uchar>& out);   // frame="" -> reference
@@ -55,6 +57,7 @@ private:
         int64_t lastRejectSaveMs = 0;
     };
 
+    fs::path refImagePath(int cam) const { return cfgPath_.parent_path() / ("ref_" + cfgPath_.stem().string() + "_cam" + std::to_string(cam) + ".png"); }
     bool validCam(int cam) const { return cam >= 0 && cam < kCameras; }
     bool readFrame(Cam& c, const std::string& frame, cv::Mat& out);
     json inspectLocked(Cam& c, int id, const cv::Mat& img, const std::string& name,

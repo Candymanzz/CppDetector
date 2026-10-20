@@ -37,6 +37,7 @@ private:
     cv::Mat roiMask_;               // CV_8U at working resolution
     std::vector<cv::Point> roi_;
     double refDownscale_ = 1.0;
+    cv::Size refSize_;              // original reference size
     int roiArea_ = 0;
 };
 

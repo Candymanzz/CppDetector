@@ -96,7 +96,7 @@ void App::load() {
         if (cj.contains("roi")) parseRoi(cj["roi"], c.roi, err);
         std::string ref = cj.value("reference", "");
         if (ref == "upload") {
-            cv::Mat m = cv::imread((cfgPath_.parent_path() / ("ref_cam" + std::to_string(i) + ".png")).string());
+            cv::Mat m = cv::imread(refImagePath(i).string());
             if (!m.empty()) { c.ref = m; c.refName = "upload"; }
         } else if (!ref.empty() && std::find(c.frames.begin(), c.frames.end(), ref) != c.frames.end()) {
             c.refName = ref;
@@ -227,7 +227,7 @@ bool App::setReferenceFromImage(int cam, const cv::Mat& img, std::string& err) {
         c.ref = img;
         c.refName = "upload";
         fs::create_directories(cfgPath_.parent_path());
-        cv::imwrite((cfgPath_.parent_path() / ("ref_cam" + std::to_string(cam) + ".png")).string(), img);
+        cv::imwrite(refImagePath(cam).string(), img);
         rebuild(c);
     }
     save();
@@ -278,7 +278,7 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
     j["defect_injected"] = defect;
     j["score"] = std::round(r.score * 1000) / 1000;
     j["reject"] = r.reject;
-    j["verdict"] = r.reject ? "REJECT" : (r.reason == "no_reference" ? "NO_REFERENCE" : "OK");
+    j["verdict"] = r.reject ? "REJECT" : (r.reason == "no_reference" || r.reason == "size_mismatch" ? "NO_REFERENCE" : "OK");
     j["reason"] = r.reason;
     j["threshold"] = c.p.rejectThreshold;
     j["sensitivity"] = c.p.sensitivity;
@@ -407,6 +407,31 @@ void App::loop() {
                std::chrono::duration<double, std::milli>(Clock::now() - t0).count() < periodMs_)
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+}
+
+}
+
+namespace cd {
+
+// Extra test images (e.g. real labelled shots) live next to the camera folders.
+std::vector<std::string> App::testFiles() const {
+    std::vector<std::string> v;
+    std::error_code ec;
+    for (auto& d : fs::directory_iterator(source_.parent_path() / "test-pr-ph", ec)) {
+        std::string ext = d.path().extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char ch) { return (char)std::tolower(ch); });
+        if (d.is_regular_file() && (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".bmp"))
+            v.push_back(d.path().filename().string());
+    }
+    std::sort(v.begin(), v.end());
+    return v;
+}
+
+bool App::readTestFile(const std::string& name, cv::Mat& out) const {
+    auto list = testFiles();
+    if (std::find(list.begin(), list.end(), name) == list.end()) return false;   // listing only: no path tricks
+    out = cv::imread((source_.parent_path() / "test-pr-ph" / name).string());
+    return !out.empty();
 }
 
 }
