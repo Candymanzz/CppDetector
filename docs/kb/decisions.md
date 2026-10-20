@@ -60,3 +60,20 @@ Defaults sens 0.5, no ROI, ref = idx 1 of each camera, 8 logical threads.
 - downscale 0.5: batch avg 95 / p95 106 / max 115 ms (with decode up to 152 ms).
 - Rejects at thr 2%: 199 / 178 / 160 of 990 (1.0 / 0.7 / 0.5) -> verdicts depend on downscale, so thresholds must be tuned at the downscale that will be used in production.
 - Recommendation: run production at downscale 0.7 (or 0.5) for 1224x1024 frames; 1.0 leaves almost no margin to 500 ms.
+
+## D11 - Integration into Defect Detector V3 (2026-10-20, planning only)
+Decision: build a C++ drop-in replacement of analisSurface (same HTTP contract) using the CppDetector inspection core; no new features (no learning, FP zones, sub-zones). Details, contract facts and open questions: integration-in-main-application.md.
+Why: the main app's Java orchestrator talks to analisSurface over HTTP + shared memory; a replacement is transparent if the contract is identical.
+Status: reviewed branch core-dev-p; awaiting user approval before any code.
+
+## D12 - Integration decisions approved by the user (2026-10-20)
+Score scale `min(1, area%/5)`; only real settings (sensitivity, threshold, shift_tolerance, min_blob_area, inspect_scale) per camera profile; the orchestrator and the UI are adapted to cppAnalisSurface (isolated new Java client, new settings panel/proxy), legacy Python path left untouched behind `python_detector.backend`; one multi-threaded process; the module lives in the main repo `defect-detector-v3/cppAnalisSurface`; the user commits, Claude never commits there. Details and file list: integration-in-main-application.md.
+
+## D13 - Java serialised requests per client (2026-10-20)
+Context: `InspectPythonExecutor` used Semaphore(1) per client (Python/GIL). Decision: lane permits come from `python_detector.server_concurrency` (default 1 keeps Python behaviour). Why: a single C++ process must receive all 10 camera requests at once. Consequence: for cpp use `python_parallelism: 1`, `python_server_pool_size: 1`, `server_concurrency: 10`, `python_request_parallelism: 10`.
+
+## D14 - HTTP thread pool must exceed client connections (2026-10-20)
+Finding: cpp-httplib serves one keep-alive connection per thread. With pool `workers+4` (8) and 10 Java connections, two requests waited the keep-alive timeout (5 s). Fix: pool `max(64, workers*4)`; CPU concurrency is bounded separately by the `workers` limiter. Do not shrink the pool.
+
+## D15 - Inspector changes for the service (2026-10-20)
+Per-scale prepared reference cache (inspect_scale arrives per request/profile); analysis restricted to ROI bounding box; shift estimation on a <=256 px thumbnail (cheap, subpixel via phaseCorrelate+Hanning); heatmap built on the downscaled image. Measured: 10 parallel full-size frames 152-179 ms (CppDetector's first version: 386 ms).

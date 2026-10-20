@@ -6,3 +6,5 @@
 - 2026-10-20: test-pr-ph support (API: /api/testfiles, /api/reference_testfile, /api/inspect_testfile; UI controls); size_mismatch guard in Inspector. Camera 0 currently configured with good1 as reference (config/config.json, config/ref_cam0.png).
 - 2026-10-20: added `--bench` console benchmark (src/app/bench.cpp); results in decisions.md D9.
 - 2026-10-20: default dataset = frame/frames36; settings per dataset (config_<name>.json); --bench accepts --frames and --dataset-only; bench runs downscale 1.0/0.7/0.5.
+- 2026-10-20: reviewed defect-detector-v3 (branch core-dev-p) for integration; created integration-in-main-application.md; no integration code yet.
+- 2026-10-20: integration implemented in defect-detector-v3 (cppAnalisSurface service, Java CppAnalisSurfaceHttpSupervisor + DetectorBackend + settings proxy, front-end DetectorSettingsPanel, config examples, README). See integration-in-main-application.md. CppDetector also got: per-dataset config files, default dataset frames36, size_mismatch guard, --bench.

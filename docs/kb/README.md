@@ -10,9 +10,11 @@ after every significant decision.
 | decisions.md | decision log (ADR style: context -> decision -> reason -> consequences) |
 | algorithms.md | inspection algorithm, parameters and their effect |
 | constraints.md | invariants / things that must not change, with reasons |
-| data.md | dataset layout and per-camera peculiarities |
+| data.md | datasets (frame/frame, frame/frames36, frame/test-pr-ph) and per-camera peculiarities |
+| integration-in-main-application.md | porting the inspection core into the main app (Defect Detector V3 / analisSurface): contract, plan, change log of every integration step |
 | changelog.md | what changed and when |
 
 Rules:
-- Never use Python, legacy services or the old result.json/heatmap.u8 files as input or reference (user's explicit wish: build from scratch).
+- Never use Python, legacy services or the old result.json/heatmap.u8 files as input or reference for CppDetector itself (user's explicit wish: build from scratch). The exception is the integration work, where the Python analisSurface API is the contract to reproduce (see integration-in-main-application.md).
 - A decision without a recorded reason is not a decision: always add "why".
+- Every integration action is logged in integration-in-main-application.md (section Change log).
