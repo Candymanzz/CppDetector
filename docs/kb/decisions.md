@@ -70,10 +70,16 @@ Status: reviewed branch core-dev-p; awaiting user approval before any code.
 Score scale `min(1, area%/5)`; only real settings (sensitivity, threshold, shift_tolerance, min_blob_area, inspect_scale) per camera profile; the orchestrator and the UI are adapted to cppAnalisSurface (isolated new Java client, new settings panel/proxy), legacy Python path left untouched behind `python_detector.backend`; one multi-threaded process; the module lives in the main repo `defect-detector-v3/cppAnalisSurface`; the user commits, Claude never commits there. Details and file list: integration-in-main-application.md.
 
 ## D13 - Java serialised requests per client (2026-10-20)
-Context: `InspectPythonExecutor` used Semaphore(1) per client (Python/GIL). Decision: lane permits come from `python_detector.server_concurrency` (default 1 keeps Python behaviour). Why: a single C++ process must receive all 10 camera requests at once. Consequence: for cpp use `python_parallelism: 1`, `python_server_pool_size: 1`, `server_concurrency: 10`, `python_request_parallelism: 10`.
+Context: `InspectPythonExecutor` used Semaphore(1) per client (Python/GIL). Decision: lane permits come from `python_detector.server_concurrency` (default 1 keeps Python behaviour). Why: a single C++ process must receive all 10 camera requests at once. Consequence: for cpp use `python_parallelism: 10` (see D16: 1 serialises the cameras), `python_server_pool_size: 1`, `server_concurrency: 10`, `python_request_parallelism: 10`.
 
 ## D14 - HTTP thread pool must exceed client connections (2026-10-20)
 Finding: cpp-httplib serves one keep-alive connection per thread. With pool `workers+4` (8) and 10 Java connections, two requests waited the keep-alive timeout (5 s). Fix: pool `max(64, workers*4)`; CPU concurrency is bounded separately by the `workers` limiter. Do not shrink the pool.
 
 ## D15 - Inspector changes for the service (2026-10-20)
 Per-scale prepared reference cache (inspect_scale arrives per request/profile); analysis restricted to ROI bounding box; shift estimation on a <=256 px thumbnail (cheap, subpixel via phaseCorrelate+Hanning); heatmap built on the downscaled image. Measured: 10 parallel full-size frames 152-179 ms (CppDetector's first version: 386 ms).
+
+## D16 - python_parallelism = 1 serialised the whole detector stage (found 2026-10-20 from the user's log)
+Symptom: with the cpp detector (38-44 ms per call) the 10-camera cycle still took ~680 ms: all cameras started together and captured in parallel (234-302 ms), but results finished one after another every ~40 ms (= one detector call), and `idle = total_ms - pipeline_ms` grew linearly (1, 45, 77, 112 ... 281 ms).
+Cause: `PipelineCameraRuntimeService` creates the `stage-python` executor with `python_parallelism` threads (also the number of HTTP clients). My config.exemple set it to 1 ("one client per process") -> only one detector call at a time. My mistake in D13/integration doc.
+Fix: `python_parallelism: 10` (= number of cameras processed at the same time). Expected cycle: capture of the slowest camera (~300 ms) + ~50 ms detection + decision, i.e. ~350-400 ms instead of ~680 ms. To be re-measured after the user's config change.
+Rule: `python_parallelism` must be >= number of cameras whose frames can arrive together; `python_request_parallelism` is capped by `camera_parallelism`.

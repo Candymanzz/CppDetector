@@ -9,3 +9,5 @@
 - 2026-10-20: reviewed defect-detector-v3 (branch core-dev-p) for integration; created integration-in-main-application.md; no integration code yet.
 - 2026-10-20: integration implemented in defect-detector-v3 (cppAnalisSurface service, Java CppAnalisSurfaceHttpSupervisor + DetectorBackend + settings proxy, front-end DetectorSettingsPanel, config examples, README). See integration-in-main-application.md. CppDetector also got: per-dataset config files, default dataset frames36, size_mismatch guard, --bench.
 - 2026-10-20: cppAnalisSurface got rebuild-and-run / run scripts with dependency auto-install (integration doc 5.3a).
+- 2026-10-20: main app root launch scripts adapted for the cpp detector (no Python needed with backend: cpp).
+- 2026-10-20: python_parallelism corrected to 10 (was 1 and serialised the cameras), see D16.
