@@ -1,0 +1,13 @@
+{
+  "name": "cppdetector",
+  "version": "0.1.0",
+  "dependencies": [
+    {
+      "name": "opencv4",
+      "default-features": false,
+      "features": ["jpeg", "png"]
+    },
+    "cpp-httplib",
+    "nlohmann-json"
+  ]
+}

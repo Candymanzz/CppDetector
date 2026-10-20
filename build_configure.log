@@ -1,0 +1,15 @@
+-- Running vcpkg install
+A suitable version of cmake was not found (required v4.4.3).
+Downloading https://github.com/Kitware/CMake/releases/download/v4.4.3/cmake-4.4.3-windows-x86_64.zip -> cmake-4.4.3-windows-x86_64.zip
+Successfully downloaded cmake-4.4.3-windows-x86_64.zip
+Extracting cmake...
+A suitable version of 7zip was not found (required v26.03).
+Downloading https://github.com/ip7z/7zip/releases/download/26.03/7z2603-x64.exe -> 7z2603-x64.7z.exe
+Successfully downloaded 7z2603-x64.7z.exe
+Extracting 7zip...
+A suitable version of 7zr was not found (required v26.03).
+Downloading https://github.com/ip7z/7zip/releases/download/26.03/7zr.exe -> 211a9748-7zr.exe
+Successfully downloaded 211a9748-7zr.exe
+Detecting compiler hash for triplet x64-windows...
+A suitable version of powershell-core was not found (required v7.6.6).
+Downloading https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/PowerShell-7.6.6-win-x64.zip -> PowerShell-7.6.6-win-x64.zip
