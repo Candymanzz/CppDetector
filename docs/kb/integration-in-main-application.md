@@ -55,6 +55,10 @@ CMake + vcpkg manifest (OpenCV core/imgproc/imgcodecs, cpp-httplib, nlohmann-jso
 - EDITED: `MainOverview.tsx` and `SettingList.tsx` use the new panel instead of `AnalysisSettingsPanel` (file kept, unused); `shared/api/{types,index,orchestratorApi}.ts` (types `DetectorSettings*`, methods `get/set/resetCameraDetectorSettings`, `getDefaultDetectorSettings`, `testAnalyzePinnedFrame(... analysis.settings)`).
 - `npm ci --ignore-scripts` was run in `front-end/` (node_modules is git-ignored); `tsc --noEmit` and eslint on the changed files pass.
 
+### 5.3a Build and run scripts (cppAnalisSurface/)
+`rebuild-and-run.ps1|.cmd` and `run.ps1|.cmd` (+ `scripts/common.ps1`), Windows PowerShell 5.1 compatible, English messages (PS 5.1 mis-reads UTF-8 without BOM). rebuild-and-run: stops the running exe of this build, then checks and installs only what is missing: Visual Studio C++ tools (vswhere; downloads Build Tools 2022, needs UAC), CMake >= 3.25 (portable zip into `.tools/`), git (portable MinGit, only for vcpkg), vcpkg (VCPKG_ROOT, D:vcpkg, C:vcpkg, %USERPROFILE%vcpkg, else clone next to the project drive + bootstrap), libraries opencv4/cpp-httplib/nlohmann-json (probe headers in `buildvcpkg_installedd-windows-static-md`, SHA-256 stamp of `vcpkg.json` in `build.vcpkg-manifest.sha256`), then configure (generator detected from vswhere, so no preset is required), build, run. Options: `-CheckOnly -NoRun -Clean -Port -Workers -DataDir -BindHost -Config`. run: refuses to start when the port is busy or the exe is missing. `.cmd` wrappers clear `PSModulePath` (a polluted module path made `Get-FileHash` unavailable in a child process); the manifest hash is computed with .NET for the same reason.
+Tested here: CheckOnly; all installed -> skips and builds in 2 s; `-Clean` -> libraries reinstalled from the vcpkg binary cache, configured and built in 72 s; run via `.cmd`, busy-port refusal, rebuild while running, missing exe message; simulated missing CMake/git -> portable download and second pass skip. NOT tested: real installation of Visual Studio Build Tools and a vcpkg clone on a clean machine (URLs verified to resolve).
+
 ### 5.4 Config examples
 `config.exemple/blocks/01-core.yaml` (cpp autostart commands, `inspect_workers: 12`, `python_parallelism: 1`, `python_server_pool_size: 1`, `python_request_parallelism: 10`), `blocks/20-detectors.yaml` (`backend: cpp`, `server_concurrency: 10`), `config.exemple/config.json` (same keys). The old Python command is kept as a comment.
 
@@ -78,3 +82,4 @@ Java: one client, lane permits = `server_concurrency` (10), global `python_reque
 ## 9. Change log
 - 2026-10-20: reviewed `defect-detector-v3` branch `core-dev-p`; plan approved by the user with the decisions in section 4.
 - 2026-10-20: implemented cppAnalisSurface (C++), Java client/backend switch/settings proxy/concurrency lane, front-end settings panel, config examples, README; verified as in section 7. Nothing committed (user commits).
+- 2026-10-20: added Windows scripts `rebuild-and-run` / `run` (.ps1 + .cmd) with dependency check/auto-install (see 5.3a) and README section; `.tools/` added to cppAnalisSurface/.gitignore.
