@@ -1,3 +1,7 @@
 frame/
 build/
 logs/
+config/config.json
+config/ref_cam*.png
+server.log
+build_configure.log

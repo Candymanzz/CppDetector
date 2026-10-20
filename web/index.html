@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CppDetector</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <h1>CppDetector</h1>
+  <nav class="tabs" id="tabs">
+    <button data-tab="grid" class="active">Камеры</button>
+    <button data-tab="cam">Настройка и тест</button>
+    <button data-tab="log">Журнал решений</button>
+  </nav>
+  <div class="stream">
+    <button id="runBtn" class="primary">▶ Старт потока</button>
+    <label>период, мс <input id="period" type="number" min="100" max="60000" step="100" value="1000"></label>
+    <label class="check"><input id="globalDefect" type="checkbox"> тестовый дефект</label>
+    <div class="batch" title="Время обработки пачки из 10 кадров (чтение + инспекция + отрисовка), бюджет 500 мс">
+      <div class="batch-text"><span id="batchNum">пачка —</span> <b id="batchMs">— мс</b> <span class="muted">/ 500</span></div>
+      <div class="bar"><div id="batchBar"></div></div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ===== Camera grid ===== -->
+  <section id="tab-grid" class="tab active">
+    <div class="grid" id="grid"></div>
+    <p class="muted hint">Кадры берутся по кругу из папки каждой камеры (кроме эталона). Нажми на камеру, чтобы открыть её настройки.</p>
+  </section>
+
+  <!-- ===== Camera setup / test ===== -->
+  <section id="tab-cam" class="tab">
+    <div class="camtabs" id="camPicker"></div>
+    <div class="cam-layout">
+      <div class="viewer-col">
+        <div class="view-modes" id="viewModes">
+          <button data-mode="ref" class="active">Эталон</button>
+          <button data-mode="frame">Выбранный кадр</button>
+          <button data-mode="result">Результат</button>
+          <span class="muted" id="viewInfo"></span>
+        </div>
+        <div class="canvas-wrap"><canvas id="canvas"></canvas></div>
+        <div class="roi-tools">
+          <button id="autoRoi">Авто-ROI</button>
+          <button id="undoRoi">Убрать последнюю точку</button>
+          <button id="clearRoi">Очистить ROI</button>
+          <span class="muted" id="roiInfo"></span>
+        </div>
+        <p class="muted small">ROI: клик — добавить точку (рядом с ребром — вставить в него), перетаскивание — двигать точку, правая кнопка по точке — удалить. Изменения сохраняются автоматически.</p>
+      </div>
+
+      <aside class="side">
+        <div class="card">
+          <h2>Эталон камеры</h2>
+          <div class="row"><span id="refName" class="mono">—</span></div>
+          <div class="row">
+            <select id="refSelect"></select>
+            <button id="setRef">Сделать эталоном</button>
+          </div>
+          <div class="row"><label class="filebtn">Загрузить эталон из файла<input type="file" id="refFile" accept="image/*" hidden></label></div>
+        </div>
+
+        <div class="card">
+          <h2>Параметры</h2>
+          <div class="param"><label>Чувствительность <b id="v_sensitivity"></b></label>
+            <input type="range" id="sensitivity" min="0" max="1" step="0.01"></div>
+          <div class="param"><label>Порог брака, % <b id="v_reject_threshold"></b></label>
+            <input type="range" id="reject_threshold" min="0" max="20" step="0.05"></div>
+          <div class="param"><label>Допуск на сдвиг, px <b id="v_shift_tolerance"></b></label>
+            <input type="range" id="shift_tolerance" min="0" max="15" step="1"></div>
+          <div class="param"><label>Downscale <b id="v_downscale"></b></label>
+            <input type="range" id="downscale" min="0.2" max="1" step="0.05"></div>
+          <div class="param"><label>Мин. площадь пятна, px <b id="v_min_blob_area"></b></label>
+            <input type="range" id="min_blob_area" min="1" max="500" step="1"></div>
+          <div class="muted small" id="saveState">&nbsp;</div>
+        </div>
+
+        <div class="card">
+          <h2>Проверка</h2>
+          <div class="row">
+            <select id="testSelect"></select>
+          </div>
+          <div class="row"><label class="check"><input type="checkbox" id="testDefect"> внести тестовый дефект</label></div>
+          <div class="row">
+            <button id="runOne" class="primary">Проверить кадр</button>
+            <label class="filebtn">Загрузить кадр и проверить<input type="file" id="testFile" accept="image/*" hidden></label>
+          </div>
+          <div class="row"><button id="runAll">Проверить все кадры камеры</button></div>
+          <div id="result" class="result"></div>
+          <div id="allResults"></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===== Log ===== -->
+  <section id="tab-log" class="tab">
+    <div class="logtools">
+      <select id="logFilter">
+        <option value="">все решения</option>
+        <option value="REJECT">только брак</option>
+        <option value="OK">только OK</option>
+      </select>
+      <select id="logCam"><option value="">все камеры</option></select>
+      <button id="logRefresh">Обновить</button>
+      <label class="check"><input type="checkbox" id="logAuto" checked> автообновление</label>
+      <span class="muted small">файл: logs/decisions.jsonl</span>
+    </div>
+    <div class="tablewrap">
+      <table id="logTable">
+        <thead><tr><th>Время</th><th>Кам.</th><th>Кадр</th><th>Источник</th><th>Вердикт</th><th>Score, %</th><th>Порог, %</th><th>Причина</th><th>Зон</th><th>мс</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<div id="toast" class="toast" role="status"></div>
+<script src="app.js"></script>
+</body>
+</html>
