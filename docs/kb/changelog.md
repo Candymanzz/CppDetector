@@ -11,3 +11,4 @@
 - 2026-10-20: cppAnalisSurface got rebuild-and-run / run scripts with dependency auto-install (integration doc 5.3a).
 - 2026-10-20: main app root launch scripts adapted for the cpp detector (no Python needed with backend: cpp).
 - 2026-10-20: python_parallelism corrected to 10 (was 1 and serialised the cameras), see D16.
+- 2026-10-21: cppAnalisSurface file logging (logs/, JSONL per inspection + event log + minute summaries), see D17.
