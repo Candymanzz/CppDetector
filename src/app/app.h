@@ -1,6 +1,7 @@
 #pragma once
 #include "decision_log.h"
 #include "../inspect/inspector.h"
+#include "../inspect/seam.h"
 #include <atomic>
 #include <filesystem>
 #include <memory>
@@ -49,6 +50,7 @@ private:
         cv::Mat ref;
         std::vector<cv::Point> roi;
         InspectParams p;
+        SeamParams seam;              // seam straightness check (KB D18)
         Inspector insp;
         json last;
         std::vector<uchar> overlay;

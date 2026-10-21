@@ -10,6 +10,9 @@ const S = {
   img: { ref: null, frame: null },
   lastVer: [],         // last overlay version shown per camera
   drag: -1,
+  seam: null,          // working copy of the seam settings of the current camera
+  seamPick: 0,         // 0 = off, 1/2 = waiting for the first/second seam end click
+  seamDrag: -1,
 };
 
 /* ---------- helpers ---------- */
@@ -57,12 +60,19 @@ function verdictBadge(v) {
   return el("span", "badge " + cls, text);
 }
 
+function seamText(s) {
+  if (!s) return "Отклонение линии стыка.";
+  return `Линия стыка искривлена: отклонение ${fmt(s.max_dev, 2)} px на ${Math.round(s.worst_t * 100)}% длины стыка (${fmt(s.ratio, 2)}× от допуска).`;
+}
+
 function reasonText(r) {
   switch (r.reason) {
     case "score_over_threshold":
       return `Score ${fmt(r.score, 3)}% выше порога ${fmt(r.threshold, 2)}% — найдено зон: ${(r.zones || []).length}.`;
     case "shift_exceeded":
       return `Кадр сдвинут относительно эталона на (${fmt(r.shift && r.shift[0])}, ${fmt(r.shift && r.shift[1])}) px — больше допустимого. Увеличь допуск на сдвиг или проверь камеру.`;
+    case "seam_deviation":
+      return seamText(r.seam);
     case "size_mismatch":
       return "Размер кадра не совпадает с размером эталона этой камеры — сравнение невозможно.";
     case "no_reference":
@@ -200,6 +210,9 @@ function selectCam(i) {
   $("refName").textContent = c.reference === "upload" ? "загруженный файл" : c.reference || "—";
   PARAMS.forEach(([k, d]) => { $(k).value = c[k]; $("v_" + k).textContent = fmt(c[k], d); });
   S.roi = c.roi.map((p) => p.slice());
+  S.seam = JSON.parse(JSON.stringify(c.seam));
+  S.seamPick = 0;
+  fillSeamUi();
   $("result").replaceChildren();
   $("allResults").replaceChildren();
   setMode("ref");
@@ -273,9 +286,32 @@ function draw() {
       ctx.stroke();
     });
   }
+  drawSeam(k);
   $("roiInfo").textContent = S.roi.length
     ? `точек: ${S.roi.length}` + (S.roi.length < 3 ? " (нужно минимум 3)" : "")
     : "ROI не задан — проверяется весь кадр";
+}
+
+function drawSeam(k) {
+  const sm = S.seam;
+  if (!sm || !sm.p0 || !sm.p1 || (sm.p0[0] === sm.p1[0] && sm.p0[1] === sm.p1[1])) return;
+  const dx = sm.p1[0] - sm.p0[0], dy = sm.p1[1] - sm.p0[1], L = Math.hypot(dx, dy) || 1;
+  const nx = (-dy / L) * sm.band, ny = (dx / L) * sm.band;
+  ctx.save();
+  ctx.strokeStyle = sm.enabled ? "#00e5ff" : "rgba(0,229,255,0.45)";
+  ctx.lineWidth = 1.5 * k;
+  ctx.beginPath();
+  ctx.moveTo(sm.p0[0] + nx, sm.p0[1] + ny); ctx.lineTo(sm.p1[0] + nx, sm.p1[1] + ny);
+  ctx.lineTo(sm.p1[0] - nx, sm.p1[1] - ny); ctx.lineTo(sm.p0[0] - nx, sm.p0[1] - ny);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sm.p0[0], sm.p0[1]); ctx.lineTo(sm.p1[0], sm.p1[1]); ctx.stroke();
+  [sm.p0, sm.p1].forEach((p, i) => {
+    ctx.beginPath(); ctx.arc(p[0], p[1], 5 * k, 0, Math.PI * 2);
+    ctx.fillStyle = i === S.seamDrag ? "#fff" : "#00e5ff"; ctx.fill();
+    ctx.lineWidth = 1.5 * k; ctx.strokeStyle = "#000"; ctx.stroke();
+  });
+  ctx.restore();
 }
 
 function canvasPoint(ev) {
@@ -305,6 +341,18 @@ function segDist(p, a, b) {
 canvas.addEventListener("pointerdown", (ev) => {
   if (ev.button !== 0) return;
   const pt = canvasPoint(ev);
+  if (S.seamPick) {                                   // placing the seam line ends
+    if (S.seamPick === 1) { S.seam.p0 = pt; S.seam.p1 = pt; S.seamPick = 2; }
+    else { S.seam.p1 = pt; S.seamPick = 0; saveSeam(); }
+    fillSeamUi();
+    draw();
+    return;
+  }
+  if (S.seam && S.seam.p0 && S.seam.p1) {             // drag an existing seam end
+    const hr = hitRadius();
+    const e = [S.seam.p0, S.seam.p1].findIndex((p) => Math.hypot(p[0] - pt[0], p[1] - pt[1]) <= hr);
+    if (e >= 0 && hitPoint(pt) < 0) { S.seamDrag = e; canvas.setPointerCapture(ev.pointerId); draw(); return; }
+  }
   let i = hitPoint(pt);
   if (i < 0) {
     // insert into the nearest edge, otherwise append
@@ -323,12 +371,15 @@ canvas.addEventListener("pointerdown", (ev) => {
 });
 
 canvas.addEventListener("pointermove", (ev) => {
+  if (S.seamDrag >= 0) { S.seam[S.seamDrag ? "p1" : "p0"] = canvasPoint(ev); draw(); return; }
+  if (S.seamPick === 2) { S.seam.p1 = canvasPoint(ev); draw(); return; }
   if (S.drag < 0) return;
   S.roi[S.drag] = canvasPoint(ev);
   draw();
 });
 
 canvas.addEventListener("pointerup", () => {
+  if (S.seamDrag >= 0) { S.seamDrag = -1; draw(); saveSeam(); return; }
   if (S.drag < 0) return;
   S.drag = -1;
   draw();
@@ -362,6 +413,53 @@ async function saveRoi() {
     flashSaved();
   } catch (e) { /* toast shown */ }
 }
+
+/* ----- seam (label seam straightness) ----- */
+
+const SEAM_PARAMS = [["band", 0], ["tol_mid", 1], ["tol_edge", 1], ["edge_frac", 2]];
+
+function fillSeamUi() {
+  const sm = S.seam;
+  $("seamEnabled").checked = !!sm.enabled;
+  SEAM_PARAMS.forEach(([k, d]) => { $("seam_" + k).value = sm[k]; $("v_seam_" + k).textContent = fmt(sm[k], d); });
+  $("seamInfo").textContent = S.seamPick === 1 ? "кликни по НАЧАЛУ стыка (верхний конец)" :
+    S.seamPick === 2 ? "кликни по КОНЦУ стыка (нижний конец)" :
+    (sm.p0[0] === sm.p1[0] && sm.p0[1] === sm.p1[1]) ? "линия стыка не задана" : "концы линии можно перетащить мышью";
+}
+
+async function saveSeam() {
+  const sm = S.seam;
+  const body = { enabled: sm.enabled, p0: sm.p0, p1: sm.p1 };
+  SEAM_PARAMS.forEach(([k]) => (body[k] = sm[k]));
+  try {
+    await post("/api/camera?cam=" + S.cam, { seam: body });
+    cur().seam = JSON.parse(JSON.stringify(sm));
+    flashSaved();
+  } catch (e) { /* toast shown */ }
+}
+
+$("seamPick").addEventListener("click", () => { S.seamPick = 1; fillSeamUi(); });
+$("seamEnabled").addEventListener("change", () => {
+  const sm = S.seam;
+  if ($("seamEnabled").checked && sm.p0[0] === sm.p1[0] && sm.p0[1] === sm.p1[1]) {
+    $("seamEnabled").checked = false;
+    toast("Сначала задай линию стыка на кадре", true);
+    return;
+  }
+  sm.enabled = $("seamEnabled").checked;
+  draw();
+  saveSeam();
+});
+let seamTimer;
+SEAM_PARAMS.forEach(([k, d]) => {
+  $("seam_" + k).addEventListener("input", () => {
+    S.seam[k] = Number($("seam_" + k).value);
+    $("v_seam_" + k).textContent = fmt(S.seam[k], d);
+    draw();
+    clearTimeout(seamTimer);
+    seamTimer = setTimeout(saveSeam, 300);
+  });
+});
 
 /* ----- parameters (auto-saved) ----- */
 
@@ -434,6 +532,7 @@ function renderResult(r) {
   add("Порог брака", fmt(r.threshold, 2) + "%");
   add("Чувствительность", fmt(r.sensitivity, 2));
   add("Сдвиг, px", r.shift ? `${fmt(r.shift[0])}, ${fmt(r.shift[1])}` : "—");
+  if (r.seam) add("Стык", !r.seam.found ? "не найден" : `${fmt(r.seam.max_dev, 2)} px на ${Math.round(r.seam.worst_t * 100)}% (${fmt(r.seam.ratio, 2)}× допуска)`);
   add("Время", fmt(r.ms, 1) + " мс");
   box.append(kv);
   const zones = r.zones || [];

@@ -91,6 +91,21 @@
           693
         ]
       ],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "p0": [
+          0,
+          0
+        ],
+        "p1": [
+          0,
+          0
+        ],
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
       "sensitivity": 0.5,
       "shift_tolerance": 3
     },
@@ -100,6 +115,21 @@
       "reference": "f_0000001",
       "reject_threshold": 2.0,
       "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "p0": [
+          0,
+          0
+        ],
+        "p1": [
+          0,
+          0
+        ],
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
       "sensitivity": 0.5,
       "shift_tolerance": 3
     },
@@ -109,6 +139,21 @@
       "reference": "f_0000001",
       "reject_threshold": 2.0,
       "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "p0": [
+          0,
+          0
+        ],
+        "p1": [
+          0,
+          0
+        ],
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
       "sensitivity": 0.5,
       "shift_tolerance": 3
     },
@@ -118,6 +163,142 @@
       "reference": "f_0000001",
       "reject_threshold": 2.0,
       "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "p0": [
+          0,
+          0
+        ],
+        "p1": [
+          0,
+          0
+        ],
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance": 3
+    },
+    {
+      "downscale": 1.0,
+      "min_blob_area": 20,
+      "reference": "f_0000003",
+      "reject_threshold": 2.0,
+      "roi": [
+        [
+          161,
+          646
+        ],
+        [
+          300,
+          262
+        ],
+        [
+          330,
+          231
+        ],
+        [
+          335,
+          174
+        ],
+        [
+          410,
+          164
+        ],
+        [
+          465,
+          165
+        ],
+        [
+          529,
+          158
+        ],
+        [
+          588,
+          162
+        ],
+        [
+          660,
+          169
+        ],
+        [
+          710,
+          181
+        ],
+        [
+          742,
+          190
+        ],
+        [
+          797,
+          213
+        ],
+        [
+          825,
+          234
+        ],
+        [
+          861,
+          263
+        ],
+        [
+          891,
+          297
+        ],
+        [
+          908,
+          323
+        ],
+        [
+          942,
+          723
+        ],
+        [
+          948,
+          772
+        ],
+        [
+          835,
+          756
+        ],
+        [
+          689,
+          732
+        ],
+        [
+          596,
+          722
+        ],
+        [
+          425,
+          714
+        ],
+        [
+          381,
+          712
+        ],
+        [
+          354,
+          653
+        ]
+      ],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": true,
+        "p0": [
+          424,
+          283
+        ],
+        "p1": [
+          245,
+          649
+        ],
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
       "sensitivity": 0.5,
       "shift_tolerance": 3
     },
@@ -127,6 +308,21 @@
       "reference": "f_0000001",
       "reject_threshold": 2.0,
       "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "p0": [
+          0,
+          0
+        ],
+        "p1": [
+          0,
+          0
+        ],
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
       "sensitivity": 0.5,
       "shift_tolerance": 3
     },
@@ -136,6 +332,21 @@
       "reference": "f_0000001",
       "reject_threshold": 2.0,
       "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "p0": [
+          0,
+          0
+        ],
+        "p1": [
+          0,
+          0
+        ],
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
       "sensitivity": 0.5,
       "shift_tolerance": 3
     },
@@ -145,6 +356,21 @@
       "reference": "f_0000001",
       "reject_threshold": 2.0,
       "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "p0": [
+          0,
+          0
+        ],
+        "p1": [
+          0,
+          0
+        ],
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
       "sensitivity": 0.5,
       "shift_tolerance": 3
     },
@@ -154,6 +380,21 @@
       "reference": "f_0000001",
       "reject_threshold": 2.0,
       "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "p0": [
+          0,
+          0
+        ],
+        "p1": [
+          0,
+          0
+        ],
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
       "sensitivity": 0.5,
       "shift_tolerance": 3
     },
@@ -163,20 +404,26 @@
       "reference": "f_0000001",
       "reject_threshold": 2.0,
       "roi": [],
-      "sensitivity": 0.5,
-      "shift_tolerance": 3
-    },
-    {
-      "downscale": 1.0,
-      "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 2.0,
-      "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "p0": [
+          0,
+          0
+        ],
+        "p1": [
+          0,
+          0
+        ],
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
       "sensitivity": 0.5,
       "shift_tolerance": 3
     }
   ],
   "defect": false,
-  "period_ms": 1000,
-  "source_dir": "D:/GitHubPj/CppDetector\\frame\\frames36"
+  "period_ms": 300,
+  "source_dir": "D:\\Pj\\CppDetector\\frames36"
 }

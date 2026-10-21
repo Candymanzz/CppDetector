@@ -12,3 +12,5 @@
 - 2026-10-20: main app root launch scripts adapted for the cpp detector (no Python needed with backend: cpp).
 - 2026-10-20: python_parallelism corrected to 10 (was 1 and serialised the cameras), see D16.
 - 2026-10-21: cppAnalisSurface file logging (logs/, JSONL per inspection + event log + minute summaries), see D17.
+- 2026-10-21: seam geometry check added (D18): seam.{h,cpp}, per-camera `seam` settings/API/UI card, overlay (cyan band, green centre, red bad points), reason `seam_deviation`; camera 4 of frames36 preconfigured.
+- 2026-10-21: rebuild-and-run.{ps1,cmd} / run.{ps1,cmd} + scripts/common.ps1 (copied from cppAnalisSurface): auto-install VS Build Tools, CMake, git, vcpkg, libraries; run opens the UI on frames36.
