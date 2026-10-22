@@ -396,6 +396,25 @@ function segDist(p, a, b) {
 canvas.addEventListener("pointerdown", (ev) => {
   if (ev.button !== 0) return;
   const pt = canvasPoint(ev);
+  if (ev.shiftKey && !LINES.some(({ key }) => S.ln[key].pick || S.ln[key].roiSel || S.ln[key].skipMode)) {                                  // Shift+click on a line: add a control point there
+    for (const { key } of LINES) {
+      const d = S.ln[key].d;
+      let best = -1, bp = null, bd = hitRadius() * 2.5;
+      for (let sg = 0; sg + 1 < d.pts.length; sg++) {
+        const c = seamSegment(d.pts, sg);
+        for (let n = 0; n < c.length; n++) {
+          const dist = Math.hypot(pt[0] - c[n][0], pt[1] - c[n][1]);
+          if (dist < bd) { bd = dist; best = sg; bp = [Math.round(c[n][0]), Math.round(c[n][1])]; }
+        }
+      }
+      if (best < 0) continue;
+      d.pts.splice(best + 1, 0, bp);
+      // segment numbers after the split: an excluded segment stays excluded as both halves
+      d.skip = (d.skip || []).flatMap((x) => (x < best ? [x] : x === best ? [best, best + 1] : [x + 1]));
+      fillLineUi(key); draw(); saveLine(key);
+      return;
+    }
+  }
   for (const { key } of LINES) {
     const l = S.ln[key], d = l.d;
     if (l.skipMode && d.pts.length >= 2) {            // toggle the nearest line segment
@@ -561,7 +580,7 @@ function fillLineUi(key) {
     l.roiSel ? `кликай по точкам ROI вдоль линии (выбрано: ${l.roiSel.length}), затем «Готово»` :
     l.pick ? `кликай по линии (точек: ${n}), затем «Готово»` :
     n < 2 ? "линия не задана (нужно минимум 2 точки)" :
-    `точек: ${n}. Тяни точку мышью, ПКМ — удалить` + (ln.step ? "; для кромки ставь больше точек вдоль изгиба" : "");
+    `точек: ${n}. Тяни точку мышью, ПКМ — удалить, Shift+клик по линии — добавить точку` + (ln.step ? "; для кромки ставь больше точек вдоль изгиба" : "");
 }
 
 async function saveLine(key) {
