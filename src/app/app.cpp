@@ -5,7 +5,10 @@
 #include <algorithm>
 #include <chrono>
 #include <fstream>
+#include <cstdio>
 #include <future>
+#include <iomanip>
+#include <sstream>
 
 namespace cd {
 
@@ -52,11 +55,15 @@ static bool parseRoi(const json& a, std::vector<cv::Point>& out, std::string& er
 }
 
 static json seamToJson(const SeamParams& s) {
-    return {{"enabled", s.enabled}, {"p0", {cvRound(s.p0.x), cvRound(s.p0.y)}}, {"p1", {cvRound(s.p1.x), cvRound(s.p1.y)}},
-            {"band", s.bandHalf}, {"tol_mid", s.tolMid}, {"tol_edge", s.tolEdge}, {"edge_frac", s.edgeFrac}};
+    json pts = json::array();
+    for (auto& q : s.pts) pts.push_back({cvRound(q.x), cvRound(q.y)});
+    return {{"enabled", s.enabled}, {"mode", s.mode == SeamParams::Step ? "step" : "ridge"}, {"pts", pts}, {"skip", s.skip},
+            {"polarity", s.polarity}, {"fit_deg", s.fitDeg}, {"smooth_win", s.smoothWin}, {"band", s.bandHalf}, {"tol_mid", s.tolMid},
+            {"tol_edge", s.tolEdge}, {"edge_frac", s.edgeFrac}, {"min_contrast", s.minContrast}, {"max_gap", s.maxGap}};
 }
 
 // Validates and applies the fields present in `b` (partial update). Points are in original image px.
+// Legacy configs carry the two line ends as "p0"/"p1"; they are read as a two-point "pts".
 static bool applySeam(const json& b, const cv::Size& imgSize, SeamParams& s, std::string& err) {
     if (!b.is_object()) { err = "seam must be an object"; return false; }
     auto num = [&](const char* k, double lo, double hi, double& dst) {
@@ -65,10 +72,8 @@ static bool applySeam(const json& b, const cv::Size& imgSize, SeamParams& s, std
         dst = b[k].get<double>();
         return true;
     };
-    auto pt = [&](const char* k, cv::Point2d& dst) {
-        if (!b.contains(k)) return true;
-        const json& a = b[k];
-        if (!a.is_array() || a.size() != 2 || !a[0].is_number() || !a[1].is_number()) { err = std::string("bad seam point ") + k; return false; }
+    auto parsePt = [&](const json& a, cv::Point2d& dst) {
+        if (!a.is_array() || a.size() != 2 || !a[0].is_number() || !a[1].is_number()) { err = "bad seam point"; return false; }
         double x = a[0].get<double>(), y = a[1].get<double>();
         if (imgSize.width > 0 && (x < 0 || y < 0 || x >= imgSize.width || y >= imgSize.height)) { err = "seam point outside image"; return false; }
         dst = {x, y};
@@ -78,8 +83,40 @@ static bool applySeam(const json& b, const cv::Size& imgSize, SeamParams& s, std
         if (!b["enabled"].is_boolean()) { err = "bad seam value for enabled"; return false; }
         s.enabled = b["enabled"].get<bool>();
     }
-    return pt("p0", s.p0) && pt("p1", s.p1) && num("band", 5, 200, s.bandHalf) && num("tol_mid", 0.1, 50, s.tolMid) &&
-           num("tol_edge", 0.1, 50, s.tolEdge) && num("edge_frac", 0, 0.5, s.edgeFrac);
+    if (b.contains("mode")) {
+        if (!b["mode"].is_string() || (b["mode"] != "ridge" && b["mode"] != "step")) { err = "bad seam value for mode"; return false; }
+        s.mode = b["mode"] == "step" ? SeamParams::Step : SeamParams::Ridge;
+    }
+    if (b.contains("pts")) {
+        const json& a = b["pts"];
+        if (!a.is_array() || a.size() > 64) { err = "seam pts must be an array of up to 64 points"; return false; }
+        std::vector<cv::Point2d> pts(a.size());
+        for (size_t i = 0; i < a.size(); ++i)
+            if (!parsePt(a[i], pts[i])) return false;
+        s.pts = std::move(pts);
+        s.skip.clear();                                // segment numbers refer to the old points
+    } else if (b.contains("p0") && b.contains("p1")) {
+        cv::Point2d p0, p1;
+        if (!parsePt(b["p0"], p0) || !parsePt(b["p1"], p1)) return false;
+        s.pts = (p0 == p1) ? std::vector<cv::Point2d>{} : std::vector<cv::Point2d>{p0, p1};
+        s.skip.clear();
+    }
+    if (b.contains("skip")) {
+        const json& a = b["skip"];
+        if (!a.is_array() || a.size() > 64) { err = "seam skip must be an array of segment numbers"; return false; }
+        std::vector<int> skip;
+        for (auto& v : a) {
+            if (!v.is_number_integer() || v < 0 || v > 62) { err = "bad seam skip segment"; return false; }
+            skip.push_back(v.get<int>());
+        }
+        s.skip = std::move(skip);
+    }
+    double polarity = s.polarity, fitDeg = s.fitDeg;
+    if (!num("polarity", -1, 1, polarity) || !num("fit_deg", 0, 6, fitDeg)) return false;
+    s.polarity = int(polarity);
+    s.fitDeg = int(fitDeg);
+    return num("band", 5, 200, s.bandHalf) && num("tol_mid", 0.1, 50, s.tolMid) && num("tol_edge", 0.1, 50, s.tolEdge) &&
+           num("edge_frac", 0, 0.5, s.edgeFrac) && num("smooth_win", 15, 400, s.smoothWin) && num("min_contrast", 1, 100, s.minContrast) && num("max_gap", 0, 1, s.maxGap);
 }
 
 App::App(fs::path sourceDir, fs::path configPath, fs::path logDir)
@@ -126,6 +163,13 @@ void App::load() {
         applyParams(cj, c.p, err);
         if (cj.contains("roi")) parseRoi(cj["roi"], c.roi, err);
         if (cj.contains("seam")) applySeam(cj["seam"], cv::Size(), c.seam, err);
+        if (cj.contains("edge")) applySeam(cj["edge"], cv::Size(), c.edge, err);
+        else if (c.seam.mode == SeamParams::Step) {      // older config: the single zone was used for the edge
+            c.edge = c.seam;
+            c.seam = SeamParams();
+        }
+        c.seam.mode = SeamParams::Ridge;
+        c.edge.mode = SeamParams::Step;
         std::string ref = cj.value("reference", "");
         if (ref == "upload") {
             cv::Mat m = cv::imread(refImagePath(i).string());
@@ -150,6 +194,7 @@ void App::save() {
         cj["reference"] = c->refName;
         cj["roi"] = roiToJson(c->roi);
         cj["seam"] = seamToJson(c->seam);
+        cj["edge"] = seamToJson(c->edge);
         j["cameras"].push_back(cj);
     }
     fs::create_directories(cfgPath_.parent_path());
@@ -169,6 +214,7 @@ json App::state() {
         cj["reference"] = c.refName;
         cj["roi"] = roiToJson(c.roi);
         cj["seam"] = seamToJson(c.seam);
+        cj["edge"] = seamToJson(c.edge);
         cj["width"] = c.ref.cols;
         cj["height"] = c.ref.rows;
         j["cameras_info"].push_back(cj);
@@ -207,11 +253,15 @@ bool App::setCamera(int cam, const json& b, std::string& err) {
                 err = "roi point outside image";
                 return false;
             }
-        SeamParams seam = c.seam;
+        SeamParams seam = c.seam, edge = c.edge;
         if (b.contains("seam") && !applySeam(b["seam"], c.ref.size(), seam, err)) return false;
+        if (b.contains("edge") && !applySeam(b["edge"], c.ref.size(), edge, err)) return false;
+        seam.mode = SeamParams::Ridge;
+        edge.mode = SeamParams::Step;
         c.p = p;
         c.roi = roi;
         c.seam = seam;
+        c.edge = edge;
         rebuild(c);
     }
     save();
@@ -280,8 +330,77 @@ static void drawDefect(cv::Mat& img, const std::vector<cv::Point>& roi) {
     cv::line(img, c + cv::Point(-4 * r, -3 * r), c + cv::Point(-r, -r), cv::Scalar(30, 30, 30), std::max(2, r / 12));
 }
 
+// Geometry line detail: the reference line (white), the measured edge (green, red where over tolerance), rows with
+// no edge found (magenta) and skipped segments (orange) on the image, and a deviation graph over the bottom strip.
+static void drawSeamDetail(cv::Mat& vis, const SeamParams& sp, const SeamResult& sr, int slot, const char* name) {
+    const int N = int(sr.rowPos.size());
+    if (N < 2) return;
+    const cv::Scalar white(255, 255, 255), green(0, 230, 0), red(0, 0, 255), magenta(255, 0, 255), orange(0, 150, 255);
+    auto over = [&](int i) { return std::fabs(sr.rowDev[i]) > sr.rowTol[i]; };
+
+    // runs of evaluated rows -> polylines
+    auto runs = [&](auto&& draw) {
+        std::vector<cv::Point> ref, edge;
+        for (int i = 0; i <= N; ++i) {
+            if (i < N && sr.rowState[i] == 0) {
+                ref.emplace_back(sr.rowRef[i]);
+                edge.emplace_back(sr.rowEdge[i]);
+            } else if (!ref.empty()) {
+                draw(ref, edge);
+                ref.clear();
+                edge.clear();
+            }
+        }
+    };
+    runs([&](const std::vector<cv::Point>& ref, const std::vector<cv::Point>& edge) {
+        if (ref.size() > 1) cv::polylines(vis, ref, false, white, 1, cv::LINE_AA);
+        if (edge.size() > 1) cv::polylines(vis, edge, false, green, 1, cv::LINE_AA);
+    });
+    for (int i = 0; i < N; ++i) {
+        if (sr.rowState[i] == 3 && i % 3 == 0) cv::circle(vis, sr.rowPos[i], 1, magenta, -1);
+        else if (sr.rowState[i] == 1) cv::circle(vis, sr.rowPos[i], 1, orange, -1);
+        else if (sr.rowState[i] == 0 && over(i)) cv::circle(vis, sr.rowEdge[i], 2, red, -1);
+    }
+
+    // deviation graph
+    const int H = std::min(150, vis.rows / 3), M = 8;
+    cv::Mat panel = vis(cv::Rect(0, vis.rows - H * (slot + 1), vis.cols, H));
+    cv::Mat dark(panel.size(), panel.type(), cv::Scalar(20, 20, 20));
+    cv::addWeighted(panel, 0.3, dark, 0.7, 0, panel);
+    const double tolMax = std::max(sp.tolMid, sp.tolEdge);
+    const double range = std::max(3.0 * tolMax, 3.0);          // px shown above and below zero
+    const double mid = H / 2.0, scale = (H / 2.0 - 16) / range;
+    auto X = [&](int i) { return M + (vis.cols - 2 * M) * double(i) / (N - 1); };
+    auto Y = [&](double d) { return mid - std::clamp(d, -range, range) * scale; };
+    cv::line(panel, {M, int(mid)}, {vis.cols - M, int(mid)}, cv::Scalar(120, 120, 120), 1);
+    std::vector<cv::Point> up, lo;
+    int worst = -1;
+    for (int i = 0; i < N; ++i) {
+        up.emplace_back(int(X(i)), int(Y(sr.rowTol[i])));
+        lo.emplace_back(int(X(i)), int(Y(-sr.rowTol[i])));
+        if (sr.rowState[i] == 0 && (worst < 0 || std::fabs(sr.rowDev[i]) > std::fabs(sr.rowDev[worst]))) worst = i;
+    }
+    cv::polylines(panel, up, false, cv::Scalar(0, 215, 255), 1);
+    cv::polylines(panel, lo, false, cv::Scalar(0, 215, 255), 1);
+    for (int i = 0; i < N; ++i) {
+        const int x = int(X(i));
+        if (sr.rowState[i] == 1) cv::line(panel, {x, 0}, {x, 5}, orange, 1);
+        else if (sr.rowState[i] == 3) cv::line(panel, {x, H - 6}, {x, H - 1}, magenta, 1);
+        else if (sr.rowState[i] == 0) cv::circle(panel, {x, int(Y(sr.rowDev[i]))}, 1, over(i) ? red : green, -1);
+    }
+    char txt[160];
+    std::snprintf(txt, sizeof txt, "%s: deviation, px (yellow = tolerance, scale +-%.1f)   magenta = not found, orange = skipped", name, range);
+    cv::putText(panel, txt, {M, 12}, cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(220, 220, 220), 1, cv::LINE_AA);
+    if (worst >= 0) {
+        std::snprintf(txt, sizeof txt, "max %.2f px", std::fabs(sr.rowDev[worst]));
+        cv::line(panel, {int(X(worst)), 14}, {int(X(worst)), H - 8}, cv::Scalar(255, 255, 255), 1);
+        cv::putText(panel, txt, {std::min(int(X(worst)) + 4, vis.cols - 90), 26}, cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(255, 255, 255), 1, cv::LINE_AA);
+    }
+}
+
 static std::vector<uchar> renderOverlay(const cv::Mat& img, const InspectResult& r, const std::vector<cv::Point>& roi,
-                                        const SeamParams& sp, const SeamResult& sr) {
+                                        const SeamParams& sp, const SeamResult& sr, const SeamParams& ep,
+                                        const SeamResult& er) {
     cv::Mat vis = img.clone();
     if (!r.heatmap.empty()) {
         cv::Mat hm, heat;
@@ -298,20 +417,72 @@ static std::vector<uchar> renderOverlay(const cv::Mat& img, const InspectResult&
     }
     if (roi.size() >= 3) cv::polylines(vis, roi, true, cv::Scalar(0, 255, 255), 2);
     for (auto& z : r.zones) cv::rectangle(vis, z, cv::Scalar(0, 0, 255), 2);
-    if (sp.enabled) {
-        // search band (cyan), located seam centre (green), edge points over tolerance (red)
-        cv::Point2d d = sp.p1 - sp.p0;
-        double L = std::max(1.0, std::hypot(d.x, d.y));
-        cv::Point2d n(-d.y / L * sp.bandHalf, d.x / L * sp.bandHalf);
-        cv::line(vis, sp.p0, sp.p1, cv::Scalar(255, 255, 0), 1);
-        std::vector<cv::Point> band{cv::Point(sp.p0 + n), cv::Point(sp.p1 + n), cv::Point(sp.p1 - n), cv::Point(sp.p0 - n)};
-        cv::polylines(vis, band, true, cv::Scalar(255, 255, 0), 1);
-        for (auto& q : sr.centerPts) cv::circle(vis, q, 1, cv::Scalar(0, 255, 0), -1);
-        for (auto& q : sr.badPts) cv::circle(vis, q, 2, cv::Scalar(0, 0, 255), -1);
-    }
+    int slot = 0;
+    auto zone = [&](const SeamParams& zp, const SeamResult& zr, const char* name, const cv::Scalar& col) {
+        if (!zp.enabled || zr.path.size() < 2) return;
+        // search band and axis, then the measured line and the deviation graph
+        std::vector<cv::Point> axis, sideA, sideB;
+        for (size_t i = 0; i < zr.path.size(); ++i) {
+            cv::Point2f n = zr.pathNormal[i] * float(zp.bandHalf);
+            axis.emplace_back(zr.path[i]);
+            sideA.emplace_back(zr.path[i] + n);
+            sideB.emplace_back(zr.path[i] - n);
+        }
+        cv::polylines(vis, axis, false, col, 1);
+        cv::polylines(vis, sideA, false, col, 1);
+        cv::polylines(vis, sideB, false, col, 1);
+        cv::line(vis, sideA.front(), sideB.front(), col, 1);
+        cv::line(vis, sideA.back(), sideB.back(), col, 1);
+        drawSeamDetail(vis, zp, zr, slot++, name);
+    };
+    zone(sp, sr, "seam", cv::Scalar(255, 255, 0));
+    zone(ep, er, "edge", cv::Scalar(255, 128, 200));
     std::vector<uchar> buf;
     cv::imencode(".jpg", vis, buf, {cv::IMWRITE_JPEG_QUALITY, 80});
     return buf;
+}
+
+// One debug set per manual inspection with the geometry line on: <date_time>_camN_<frame>.{txt,png,jpg} in logs/seam
+// (parameters, result, per-row deviation table, the exact input image and the overlay). Only the newest kKeep sets stay.
+static void writeSeamDebug(const fs::path& dir, int id, const std::string& frame, const char* zone, const std::string& source,
+                           const cv::Mat& img, const SeamParams& sp, const SeamResult& sr,
+                           const std::vector<uchar>& overlay, const json& verdict) {
+    constexpr size_t kKeep = 60;
+    std::error_code ec;
+    fs::create_directories(dir, ec);
+    const int64_t ms = nowMs();
+    std::time_t tt = std::time_t(ms / 1000);
+    std::tm tm{};
+    localtime_s(&tm, &tt);
+    std::ostringstream stem;
+    stem << std::put_time(&tm, "%Y-%m-%d_%H-%M-%S") << "_" << std::setw(3) << std::setfill('0') << ms % 1000 << "_cam" << id << "_" << frame << "_" << zone;
+    const fs::path base = dir / stem.str();
+
+    std::ofstream t(base.string() + ".txt");
+    t << "zone " << zone << ", camera " << id << ", frame " << frame << ", source " << source << "\n";
+    t << "verdict: " << verdict.value("verdict", "") << ", reason: " << verdict.value("reason", "") << "\n";
+    t << "params: " << seamToJson(sp).dump() << "\n";
+    t << "result: found=" << sr.found << " reject=" << sr.reject << " gap_reject=" << sr.gapReject << " coverage=" << sr.coverage
+      << " longest_gap=" << sr.longestGap << " ratio=" << sr.ratio << " max_dev=" << sr.maxDev << " worst_t=" << sr.worstT
+      << " ms=" << sr.ms << " bad_points=" << sr.badPts.size() << "\n";
+    if (sr.rowPos.empty()) t << "line was not built (disabled, fewer than 2 points, shorter than 50 px or outside the image)\n";
+    t << "state: 0 evaluated, 1 skipped segment, 2 line end ignored, 3 no edge found\n";
+    t << "row x y state dev_px\n";
+    for (size_t i = 0; i < sr.rowPos.size(); ++i) {
+        t << i << " " << std::fixed << std::setprecision(1) << sr.rowPos[i].x << " " << sr.rowPos[i].y << " " << int(sr.rowState[i]) << " ";
+        if (std::isnan(sr.rowDev[i])) t << "-"; else t << std::setprecision(2) << sr.rowDev[i];
+        t << "\n";
+    }
+    t.close();
+    cv::imwrite(base.string() + ".png", img);
+    std::ofstream(base.string() + ".jpg", std::ios::binary).write(reinterpret_cast<const char*>(overlay.data()), overlay.size());
+
+    std::vector<fs::path> sets;
+    for (auto& e : fs::directory_iterator(dir, ec))
+        if (e.path().extension() == ".txt") sets.push_back(e.path());
+    std::sort(sets.begin(), sets.end());
+    for (size_t i = 0; i + kKeep < sets.size(); ++i)
+        for (const char* ext : {".txt", ".png", ".jpg"}) fs::remove(fs::path(sets[i]).replace_extension(ext), ec);
 }
 
 json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string& name,
@@ -320,10 +491,12 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
     if (defect) { img = imgIn.clone(); drawDefect(img, c.roi); }
     InspectResult r = c.insp.inspect(img, c.p);
     SeamResult sr = measureSeam(img, c.seam);
-    // the seam adds its own reject reason; an existing reason of the main inspection stays the primary one
-    const bool seamReject = sr.reject && r.reason != "no_reference" && r.reason != "size_mismatch";
-    const bool reject = r.reject || seamReject;
-    const std::string reason = r.reason.empty() && seamReject ? "seam_deviation" : r.reason;
+    SeamResult er = measureSeam(img, c.edge);
+    // each geometry zone adds its own reject reason; an existing reason of the main inspection stays the primary one
+    const bool refOk = r.reason != "no_reference" && r.reason != "size_mismatch";
+    const bool seamReject = sr.reject && refOk, edgeReject = er.reject && refOk;
+    const bool reject = r.reject || seamReject || edgeReject;
+    const std::string reason = !r.reason.empty() ? r.reason : seamReject ? "seam_deviation" : edgeReject ? "edge_deviation" : "";
 
     json j;
     j["cam"] = id;
@@ -334,21 +507,29 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
     j["reject"] = reject;
     j["verdict"] = reject ? "REJECT" : (r.reason == "no_reference" || r.reason == "size_mismatch" ? "NO_REFERENCE" : "OK");
     j["reason"] = reason;
-    if (c.seam.enabled)
-        j["seam"] = {{"found", sr.found}, {"reject", sr.reject}, {"ratio", std::round(sr.ratio * 100) / 100},
-                     {"max_dev", std::round(sr.maxDev * 100) / 100}, {"worst_t", std::round(sr.worstT * 1000) / 1000},
-                     {"coverage", std::round(sr.coverage * 100) / 100}, {"ms", std::round(sr.ms * 100) / 100}};
+    auto zoneJson = [](const SeamResult& z) {
+        return json{{"found", z.found}, {"reject", z.reject}, {"ratio", std::round(z.ratio * 100) / 100},
+                    {"max_dev", std::round(z.maxDev * 100) / 100}, {"worst_t", std::round(z.worstT * 1000) / 1000},
+                    {"coverage", std::round(z.coverage * 100) / 100}, {"gap", std::round(z.longestGap * 1000) / 1000},
+                    {"noise", std::round(z.noise * 100) / 100}, {"gap_reject", z.gapReject},
+                    {"ms", std::round(z.ms * 100) / 100}};
+    };
+    if (c.seam.enabled) j["seam"] = zoneJson(sr);
+    if (c.edge.enabled) j["edge"] = zoneJson(er);
     j["threshold"] = c.p.rejectThreshold;
     j["sensitivity"] = c.p.sensitivity;
     j["shift"] = {std::round(r.shift.x * 100) / 100, std::round(r.shift.y * 100) / 100};
     j["zones"] = json::array();
     for (auto& z : r.zones) j["zones"].push_back({z.x, z.y, z.width, z.height});
-    j["ms"] = std::round((r.ms + sr.ms) * 100) / 100;
+    j["ms"] = std::round((r.ms + sr.ms + er.ms) * 100) / 100;
     j["ts"] = nowMs();
 
     if (keepOverlay) {
-        c.overlay = renderOverlay(img, r, c.roi, c.seam, sr);
+        c.overlay = renderOverlay(img, r, c.roi, c.seam, sr, c.edge, er);
         j["ver"] = ++c.ver;
+        const fs::path dbg = log_.rejectsDir().parent_path() / "seam";
+        if (c.seam.enabled) writeSeamDebug(dbg, id, name, "seam", source, img, c.seam, sr, c.overlay, j);
+        if (c.edge.enabled) writeSeamDebug(dbg, id, name, "edge", source, img, c.edge, er, c.overlay, j);
     }
     c.last = j;
 

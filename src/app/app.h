@@ -50,7 +50,18 @@ private:
         cv::Mat ref;
         std::vector<cv::Point> roi;
         InspectParams p;
-        SeamParams seam;              // seam straightness check (KB D18)
+        SeamParams seam;              // zone 1: label seam, a thin bright line (KB D18)
+        SeamParams edge = [] {        // zone 2: label edge, a light/dark boundary (KB D19)
+            SeamParams s;
+            s.mode = SeamParams::Step;
+            s.polarity = -1;
+            s.bandHalf = 10;
+            s.tolMid = s.tolEdge = 1.5;
+            s.edgeFrac = 0;
+            s.minContrast = 10;
+            s.maxGap = 0.25;
+            return s;
+        }();
         Inspector insp;
         json last;
         std::vector<uchar> overlay;

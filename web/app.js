@@ -1,6 +1,23 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
+
+/* Two independent geometry zones per camera: the label seam (a thin bright line) and the label edge (a boundary). */
+const LINES = [
+  { key: "seam", title: "Стык этикетки", hint: "тонкая яркая линия", color: "#00e5ff", step: false },
+  { key: "edge", title: "Кромка этикетки", hint: "граница светлое/тёмное", color: "#b388ff", step: true },
+];
+// name: [min, max, step, decimals, label]
+const LINE_PARAM_DEFS = {
+  band: [10, 80, 1, 0, "Полоса поиска (±), px"],
+  tol_mid: [0.2, 5, 0.1, 1, "Допуск в середине, px"],
+  tol_edge: [0.5, 15, 0.5, 1, "Допуск на краях линии, px"],
+  edge_frac: [0, 0.4, 0.01, 2, "Длина краевой части (доля)"],
+  smooth_win: [20, 200, 5, 0, "Окно сравнения, px"],
+  min_contrast: [2, 40, 1, 0, "Мин. контраст, ур. серого"],
+  max_gap: [0.05, 1, 0.05, 2, "Макс. разрыв линии (доля)"],
+};
+const lineParams = (ln) => (ln.step ? ["band", "tol_mid", "tol_edge", "edge_frac", "smooth_win", "min_contrast", "max_gap"] : ["band", "tol_mid", "tol_edge", "edge_frac"]);
 const S = {
   cams: [],            // static info per camera (frames, params, roi, ...)
   status: null,
@@ -10,9 +27,7 @@ const S = {
   img: { ref: null, frame: null },
   lastVer: [],         // last overlay version shown per camera
   drag: -1,
-  seam: null,          // working copy of the seam settings of the current camera
-  seamPick: 0,         // 0 = off, 1/2 = waiting for the first/second seam end click
-  seamDrag: -1,
+  ln: {},              // per zone key: { d: working copy of the settings, pick, skipMode, roiSel, drag }
 };
 
 /* ---------- helpers ---------- */
@@ -60,9 +75,10 @@ function verdictBadge(v) {
   return el("span", "badge " + cls, text);
 }
 
-function seamText(s) {
-  if (!s) return "Отклонение линии стыка.";
-  return `Линия стыка искривлена: отклонение ${fmt(s.max_dev, 2)} px на ${Math.round(s.worst_t * 100)}% длины стыка (${fmt(s.ratio, 2)}× от допуска).`;
+function lineText(name, s) {
+  if (!s) return name + ": отклонение линии.";
+  if (s.gap_reject) return `${name}: в линии разрыв ${Math.round(s.gap * 100)}% длины — линия не найдена на этом участке.`;
+  return `${name}: линия искривлена, отклонение ${fmt(s.max_dev, 2)} px на ${Math.round(s.worst_t * 100)}% длины (${fmt(s.ratio, 2)}× от допуска).`;
 }
 
 function reasonText(r) {
@@ -72,7 +88,9 @@ function reasonText(r) {
     case "shift_exceeded":
       return `Кадр сдвинут относительно эталона на (${fmt(r.shift && r.shift[0])}, ${fmt(r.shift && r.shift[1])}) px — больше допустимого. Увеличь допуск на сдвиг или проверь камеру.`;
     case "seam_deviation":
-      return seamText(r.seam);
+      return lineText("Стык", r.seam);
+    case "edge_deviation":
+      return lineText("Кромка", r.edge);
     case "size_mismatch":
       return "Размер кадра не совпадает с размером эталона этой камеры — сравнение невозможно.";
     case "no_reference":
@@ -210,9 +228,10 @@ function selectCam(i) {
   $("refName").textContent = c.reference === "upload" ? "загруженный файл" : c.reference || "—";
   PARAMS.forEach(([k, d]) => { $(k).value = c[k]; $("v_" + k).textContent = fmt(c[k], d); });
   S.roi = c.roi.map((p) => p.slice());
-  S.seam = JSON.parse(JSON.stringify(c.seam));
-  S.seamPick = 0;
-  fillSeamUi();
+  LINES.forEach(({ key }) => {
+    S.ln[key] = { d: JSON.parse(JSON.stringify(c[key])), pick: false, skipMode: false, roiSel: null, drag: -1 };
+    fillLineUi(key);
+  });
   $("result").replaceChildren();
   $("allResults").replaceChildren();
   setMode("ref");
@@ -279,36 +298,72 @@ function draw() {
     S.roi.forEach((p, i) => {
       ctx.beginPath();
       ctx.arc(p[0], p[1], 5 * k, 0, Math.PI * 2);
-      ctx.fillStyle = i === S.drag ? "#fff" : roiColor;
+      const sel = LINES.find(({ key }) => S.ln[key] && S.ln[key].roiSel && S.ln[key].roiSel.includes(i));
+      ctx.fillStyle = i === S.drag ? "#fff" : sel ? sel.color : roiColor;
       ctx.fill();
       ctx.lineWidth = 1.5 * k;
       ctx.strokeStyle = "#000";
       ctx.stroke();
     });
   }
-  drawSeam(k);
+  LINES.forEach((ln) => drawLine(ln, k));
   $("roiInfo").textContent = S.roi.length
     ? `точек: ${S.roi.length}` + (S.roi.length < 3 ? " (нужно минимум 3)" : "")
     : "ROI не задан — проверяется весь кадр";
 }
 
-function drawSeam(k) {
-  const sm = S.seam;
-  if (!sm || !sm.p0 || !sm.p1 || (sm.p0[0] === sm.p1[0] && sm.p0[1] === sm.p1[1])) return;
-  const dx = sm.p1[0] - sm.p0[0], dy = sm.p1[1] - sm.p0[1], L = Math.hypot(dx, dy) || 1;
-  const nx = (-dy / L) * sm.band, ny = (dx / L) * sm.band;
+/* Catmull-Rom through the control points, same as the server (a straight line for two points). */
+function seamSegment(pts, s) {
+  const n = pts.length;
+  const p0 = pts[s > 0 ? s - 1 : s], p1 = pts[s], p2 = pts[s + 1], p3 = pts[s + 2 < n ? s + 2 : s + 1];
+  const steps = Math.max(8, Math.round(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / 4));
+  const out = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps, t2 = t * t, t3 = t2 * t;
+    out.push([0, 1].map((c) => 0.5 * (2 * p1[c] + (p2[c] - p0[c]) * t + (2 * p0[c] - 5 * p1[c] + 4 * p2[c] - p3[c]) * t2 +
+      (3 * p1[c] - p0[c] - 3 * p2[c] + p3[c]) * t3)));
+  }
+  return out;
+}
+
+function seamSpline(pts) {
+  let out = [];
+  for (let s = 0; s + 1 < pts.length; s++) out = out.concat(seamSegment(pts, s).slice(s ? 1 : 0));
+  return out;
+}
+
+function drawLine(ln, k) {
+  const l = S.ln[ln.key];
+  if (!l || !l.d.pts || !l.d.pts.length) return;
+  const sm = l.d;
   ctx.save();
-  ctx.strokeStyle = sm.enabled ? "#00e5ff" : "rgba(0,229,255,0.45)";
   ctx.lineWidth = 1.5 * k;
-  ctx.beginPath();
-  ctx.moveTo(sm.p0[0] + nx, sm.p0[1] + ny); ctx.lineTo(sm.p1[0] + nx, sm.p1[1] + ny);
-  ctx.lineTo(sm.p1[0] - nx, sm.p1[1] - ny); ctx.lineTo(sm.p0[0] - nx, sm.p0[1] - ny);
-  ctx.closePath();
-  ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(sm.p0[0], sm.p0[1]); ctx.lineTo(sm.p1[0], sm.p1[1]); ctx.stroke();
-  [sm.p0, sm.p1].forEach((p, i) => {
+  const skip = sm.skip || [];
+  for (let sg = 0; sg + 1 < sm.pts.length; sg++) {
+    const c = seamSegment(sm.pts, sg);
+    const off = skip.includes(sg);
+    ctx.strokeStyle = off ? "#ff9800" : sm.enabled ? ln.color : ln.color + "73";
+    ctx.setLineDash(off ? [6 * k, 5 * k] : []);
+    if (!off) {
+      const side = (sign) => c.map((p, i) => {
+        const a = c[Math.max(i - 1, 0)], b = c[Math.min(i + 1, c.length - 1)];
+        const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+        return [p[0] - ((b[1] - a[1]) / len) * sm.band * sign, p[1] + ((b[0] - a[0]) / len) * sm.band * sign];
+      });
+      [1, -1].forEach((sign) => {
+        ctx.beginPath();
+        side(sign).forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+        ctx.stroke();
+      });
+    }
+    ctx.beginPath();
+    c.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  sm.pts.forEach((p, i) => {
     ctx.beginPath(); ctx.arc(p[0], p[1], 5 * k, 0, Math.PI * 2);
-    ctx.fillStyle = i === S.seamDrag ? "#fff" : "#00e5ff"; ctx.fill();
+    ctx.fillStyle = i === l.drag ? "#fff" : ln.color; ctx.fill();
     ctx.lineWidth = 1.5 * k; ctx.strokeStyle = "#000"; ctx.stroke();
   });
   ctx.restore();
@@ -341,17 +396,45 @@ function segDist(p, a, b) {
 canvas.addEventListener("pointerdown", (ev) => {
   if (ev.button !== 0) return;
   const pt = canvasPoint(ev);
-  if (S.seamPick) {                                   // placing the seam line ends
-    if (S.seamPick === 1) { S.seam.p0 = pt; S.seam.p1 = pt; S.seamPick = 2; }
-    else { S.seam.p1 = pt; S.seamPick = 0; saveSeam(); }
-    fillSeamUi();
-    draw();
-    return;
+  for (const { key } of LINES) {
+    const l = S.ln[key], d = l.d;
+    if (l.skipMode && d.pts.length >= 2) {            // toggle the nearest line segment
+      let best = -1, bd = hitRadius() * 2.5;
+      for (let sg = 0; sg + 1 < d.pts.length; sg++) {
+        const c = seamSegment(d.pts, sg);
+        for (let n = 0; n + 1 < c.length; n++) {
+          const dist = segDist(pt, c[n], c[n + 1]);
+          if (dist < bd) { bd = dist; best = sg; }
+        }
+      }
+      if (best >= 0) {
+        const at = d.skip.indexOf(best);
+        if (at >= 0) d.skip.splice(at, 1); else d.skip.push(best);
+        fillLineUi(key); draw(); saveLine(key);
+      }
+      return;
+    }
+    if (l.roiSel) {                                   // picking existing ROI vertices as the line
+      const h = hitPoint(pt);
+      if (h >= 0) {
+        const at = l.roiSel.indexOf(h);
+        if (at >= 0) l.roiSel.splice(at, 1); else l.roiSel.push(h);
+        fillLineUi(key);
+        draw();
+      }
+      return;
+    }
+    if (l.pick) {                                     // placing the control points of the line
+      d.pts.push(pt);
+      fillLineUi(key);
+      draw();
+      return;
+    }
   }
-  if (S.seam && S.seam.p0 && S.seam.p1) {             // drag an existing seam end
-    const hr = hitRadius();
-    const e = [S.seam.p0, S.seam.p1].findIndex((p) => Math.hypot(p[0] - pt[0], p[1] - pt[1]) <= hr);
-    if (e >= 0 && hitPoint(pt) < 0) { S.seamDrag = e; canvas.setPointerCapture(ev.pointerId); draw(); return; }
+  for (const { key } of LINES) {                      // drag an existing control point
+    const l = S.ln[key];
+    const e = l.d.pts.findIndex((p) => Math.hypot(p[0] - pt[0], p[1] - pt[1]) <= hitRadius());
+    if (e >= 0 && hitPoint(pt) < 0) { l.drag = e; canvas.setPointerCapture(ev.pointerId); draw(); return; }
   }
   let i = hitPoint(pt);
   if (i < 0) {
@@ -371,15 +454,20 @@ canvas.addEventListener("pointerdown", (ev) => {
 });
 
 canvas.addEventListener("pointermove", (ev) => {
-  if (S.seamDrag >= 0) { S.seam[S.seamDrag ? "p1" : "p0"] = canvasPoint(ev); draw(); return; }
-  if (S.seamPick === 2) { S.seam.p1 = canvasPoint(ev); draw(); return; }
+  for (const { key } of LINES) {
+    const l = S.ln[key];
+    if (l.drag >= 0) { l.d.pts[l.drag] = canvasPoint(ev); draw(); return; }
+  }
   if (S.drag < 0) return;
   S.roi[S.drag] = canvasPoint(ev);
   draw();
 });
 
 canvas.addEventListener("pointerup", () => {
-  if (S.seamDrag >= 0) { S.seamDrag = -1; draw(); saveSeam(); return; }
+  for (const { key } of LINES) {
+    const l = S.ln[key];
+    if (l.drag >= 0) { l.drag = -1; draw(); saveLine(key); return; }
+  }
   if (S.drag < 0) return;
   S.drag = -1;
   draw();
@@ -388,7 +476,14 @@ canvas.addEventListener("pointerup", () => {
 
 canvas.addEventListener("contextmenu", (ev) => {
   ev.preventDefault();
-  const i = hitPoint(canvasPoint(ev));
+  const pt = canvasPoint(ev);
+  const hr = hitRadius();
+  for (const { key } of LINES) {
+    const d = S.ln[key].d;
+    const si = d.pts.findIndex((p) => Math.hypot(p[0] - pt[0], p[1] - pt[1]) <= hr);
+    if (si >= 0) { d.pts.splice(si, 1); d.skip = []; draw(); fillLineUi(key); saveLine(key); return; }
+  }
+  const i = hitPoint(pt);
   if (i >= 0) { S.roi.splice(i, 1); draw(); saveRoi(); }
 });
 
@@ -414,50 +509,165 @@ async function saveRoi() {
   } catch (e) { /* toast shown */ }
 }
 
-/* ----- seam (label seam straightness) ----- */
+/* ----- geometry zones (spline through control points; one card per zone) ----- */
 
-const SEAM_PARAMS = [["band", 0], ["tol_mid", 1], ["tol_edge", 1], ["edge_frac", 2]];
+function buildLineCards() {
+  const host = $("lineCards");
+  LINES.forEach((ln) => {
+    const k = ln.key;
+    const card = el("div", "card");
+    card.innerHTML = `
+      <h2>${ln.title} <span class="muted small">— ${ln.hint}</span></h2>
+      <div class="row"><label class="check"><input type="checkbox" id="${k}_enabled"> проверять геометрию</label></div>
+      ${ln.step ? `<div class="row"><label>Яркая сторона&nbsp;
+        <select id="${k}_polarity">
+          <option value="0">любая</option>
+          <option value="1">справа/снизу от линии</option>
+          <option value="-1">слева/сверху от линии</option>
+        </select></label></div>` : ""}
+      <div class="row">
+        <button id="${k}_fromRoi">Взять из точек ROI</button> <button id="${k}_pick">Задать вручную</button>
+        <button id="${k}_done" hidden>Готово</button> <button id="${k}_skip" hidden>Исключить участки</button>
+        ${ln.step ? `<button id="${k}_preset" title="допуск 1.5 px, контраст 10, окно 60 px">Значения для кромки</button>` : ""}
+        <button id="${k}_clear">Сбросить</button>
+      </div>
+      <div class="muted small" id="${k}_info">&nbsp;</div>
+      ${lineParams(ln).map((p) => {
+        const [mn, mx, st, , label] = LINE_PARAM_DEFS[p];
+        return `<div class="param"><label>${label} <b id="v_${k}_${p}"></b></label>
+          <input type="range" id="${k}_${p}" min="${mn}" max="${mx}" step="${st}"></div>`;
+      }).join("")}`;
+    host.append(card);
+  });
+}
+buildLineCards();
 
-function fillSeamUi() {
-  const sm = S.seam;
-  $("seamEnabled").checked = !!sm.enabled;
-  SEAM_PARAMS.forEach(([k, d]) => { $("seam_" + k).value = sm[k]; $("v_seam_" + k).textContent = fmt(sm[k], d); });
-  $("seamInfo").textContent = S.seamPick === 1 ? "кликни по НАЧАЛУ стыка (верхний конец)" :
-    S.seamPick === 2 ? "кликни по КОНЦУ стыка (нижний конец)" :
-    (sm.p0[0] === sm.p1[0] && sm.p0[1] === sm.p1[1]) ? "линия стыка не задана" : "концы линии можно перетащить мышью";
+function fillLineUi(key) {
+  const ln = LINES.find((x) => x.key === key), l = S.ln[key], d = l.d;
+  const busy = l.pick || !!l.roiSel;
+  $(key + "_enabled").checked = !!d.enabled;
+  if (ln.step) {
+    $(key + "_polarity").value = String(d.polarity || 0);
+    $(key + "_preset").hidden = false;
+  }
+  $(key + "_pick").hidden = busy;
+  $(key + "_fromRoi").hidden = busy;
+  $(key + "_done").hidden = !busy;
+  $(key + "_skip").hidden = busy || d.pts.length < 2;
+  $(key + "_skip").textContent = l.skipMode ? "Закончить исключение" : "Исключить участки";
+  lineParams(ln).forEach((p) => { $(`${key}_${p}`).value = d[p]; $(`v_${key}_${p}`).textContent = fmt(d[p], LINE_PARAM_DEFS[p][3]); });
+  const n = d.pts.length;
+  $(key + "_info").textContent = l.skipMode ? `кликай по участкам линии, которые не проверять (оранжевые, исключено: ${(d.skip || []).length}); повторный клик возвращает участок` :
+    l.roiSel ? `кликай по точкам ROI вдоль линии (выбрано: ${l.roiSel.length}), затем «Готово»` :
+    l.pick ? `кликай по линии (точек: ${n}), затем «Готово»` :
+    n < 2 ? "линия не задана (нужно минимум 2 точки)" :
+    `точек: ${n}. Тяни точку мышью, ПКМ — удалить` + (ln.step ? "; для кромки ставь больше точек вдоль изгиба" : "");
 }
 
-async function saveSeam() {
-  const sm = S.seam;
-  const body = { enabled: sm.enabled, p0: sm.p0, p1: sm.p1 };
-  SEAM_PARAMS.forEach(([k]) => (body[k] = sm[k]));
+async function saveLine(key) {
+  const ln = LINES.find((x) => x.key === key), l = S.ln[key], d = l.d;
+  if (d.pts.length === 1 || l.pick || l.roiSel) return;      // an unfinished line is only a draft
+  const body = { enabled: d.enabled && d.pts.length >= 2, pts: d.pts, skip: d.skip || [] };
+  if (ln.step) body.polarity = d.polarity || 0;
+  lineParams(ln).forEach((p) => (body[p] = d[p]));
   try {
-    await post("/api/camera?cam=" + S.cam, { seam: body });
-    cur().seam = JSON.parse(JSON.stringify(sm));
+    await post("/api/camera?cam=" + S.cam, { [key]: body });
+    cur()[key] = JSON.parse(JSON.stringify(d));
     flashSaved();
   } catch (e) { /* toast shown */ }
 }
 
-$("seamPick").addEventListener("click", () => { S.seamPick = 1; fillSeamUi(); });
-$("seamEnabled").addEventListener("change", () => {
-  const sm = S.seam;
-  if ($("seamEnabled").checked && sm.p0[0] === sm.p1[0] && sm.p0[1] === sm.p1[1]) {
-    $("seamEnabled").checked = false;
-    toast("Сначала задай линию стыка на кадре", true);
-    return;
-  }
-  sm.enabled = $("seamEnabled").checked;
-  draw();
-  saveSeam();
-});
-let seamTimer;
-SEAM_PARAMS.forEach(([k, d]) => {
-  $("seam_" + k).addEventListener("input", () => {
-    S.seam[k] = Number($("seam_" + k).value);
-    $("v_seam_" + k).textContent = fmt(S.seam[k], d);
+/* ROI vertices (polygon order) picked by the user, rotated so the run does not start in the middle of the
+   chosen stretch: the line starts after the largest gap between the picked indices. */
+function orderedRoiPick(sel, n) {
+  const a = sel.slice().sort((x, y) => x - y);
+  if (a.length < 2) return a;
+  let best = 0, bestGap = -1;
+  a.forEach((v, i) => {
+    const gap = (a[(i + 1) % a.length] - v + n) % n || n;
+    if (gap > bestGap) { bestGap = gap; best = (i + 1) % a.length; }
+  });
+  return a.slice(best).concat(a.slice(0, best));
+}
+
+/* Only one zone can be in an editing mode (picking / excluding) at a time. */
+function stopOtherModes(key) {
+  LINES.forEach(({ key: o }) => {
+    if (o === key) return;
+    const l = S.ln[o];
+    if (l.pick || l.skipMode || l.roiSel) { l.pick = false; l.skipMode = false; l.roiSel = null; fillLineUi(o); saveLine(o); }
+  });
+}
+
+let lineTimer = {};
+LINES.forEach((ln) => {
+  const k = ln.key;
+  const L = () => S.ln[k];
+  const redraw = () => { fillLineUi(k); draw(); };
+
+  $(k + "_enabled").addEventListener("change", () => {
+    if ($(k + "_enabled").checked && L().d.pts.length < 2) {
+      $(k + "_enabled").checked = false;
+      toast("Сначала задай линию на кадре", true);
+      return;
+    }
+    L().d.enabled = $(k + "_enabled").checked;
     draw();
-    clearTimeout(seamTimer);
-    seamTimer = setTimeout(saveSeam, 300);
+    saveLine(k);
+  });
+  if (ln.step) {
+    $(k + "_polarity").addEventListener("change", () => { L().d.polarity = Number($(k + "_polarity").value); saveLine(k); });
+    /* Working values for a label edge measured as a step: ~1.5 px tolerance, a 60 px local reference, tolerant to gaps. */
+    $(k + "_preset").addEventListener("click", () => {
+      Object.assign(L().d, { band: 10, tol_mid: 1.5, tol_edge: 1.5, edge_frac: 0, smooth_win: 60, min_contrast: 10, max_gap: 0.25, polarity: L().d.polarity || -1 });
+      redraw(); saveLine(k);
+      toast("Значения для кромки применены");
+    });
+  }
+  $(k + "_skip").addEventListener("click", () => {
+    stopOtherModes(k);
+    L().skipMode = !L().skipMode;
+    redraw();
+  });
+  $(k + "_fromRoi").addEventListener("click", () => {
+    if (S.roi.length < 3) { toast("Сначала задай ROI", true); return; }
+    stopOtherModes(k);
+    Object.assign(L(), { roiSel: [], pick: false, skipMode: false });
+    redraw();
+  });
+  $(k + "_pick").addEventListener("click", () => {
+    stopOtherModes(k);
+    Object.assign(L().d, { pts: [], skip: [], enabled: false });
+    Object.assign(L(), { pick: true, roiSel: null, skipMode: false });
+    redraw();
+  });
+  $(k + "_done").addEventListener("click", () => {
+    const l = L();
+    if (l.roiSel) {
+      if (l.roiSel.length < 2) { toast("Выбери минимум 2 точки ROI", true); return; }
+      l.d.pts = orderedRoiPick(l.roiSel, S.roi.length).map((i) => S.roi[i].slice());
+      l.d.skip = [];
+      l.roiSel = null;
+    } else {
+      if (l.d.pts.length < 2) { toast("Нужно минимум 2 точки", true); return; }
+      l.pick = false;
+    }
+    l.d.enabled = true;
+    redraw(); saveLine(k);
+  });
+  $(k + "_clear").addEventListener("click", () => {
+    Object.assign(L().d, { pts: [], skip: [], enabled: false });
+    Object.assign(L(), { pick: false, roiSel: null, skipMode: false });
+    redraw(); saveLine(k);
+  });
+  lineParams(ln).forEach((p) => {
+    $(`${k}_${p}`).addEventListener("input", () => {
+      L().d[p] = Number($(`${k}_${p}`).value);
+      $(`v_${k}_${p}`).textContent = fmt(L().d[p], LINE_PARAM_DEFS[p][3]);
+      draw();
+      clearTimeout(lineTimer[k]);
+      lineTimer[k] = setTimeout(() => saveLine(k), 300);
+    });
   });
 });
 
@@ -532,7 +742,11 @@ function renderResult(r) {
   add("Порог брака", fmt(r.threshold, 2) + "%");
   add("Чувствительность", fmt(r.sensitivity, 2));
   add("Сдвиг, px", r.shift ? `${fmt(r.shift[0])}, ${fmt(r.shift[1])}` : "—");
-  if (r.seam) add("Стык", !r.seam.found ? "не найден" : `${fmt(r.seam.max_dev, 2)} px на ${Math.round(r.seam.worst_t * 100)}% (${fmt(r.seam.ratio, 2)}× допуска)`);
+  [["seam", "Стык"], ["edge", "Кромка"]].forEach(([key, name]) => {
+    const z = r[key];
+    if (!z) return;
+    add(name, !z.found ? "не найден" : `${fmt(z.max_dev, 2)} px на ${Math.round(z.worst_t * 100)}% (${fmt(z.ratio, 2)}× допуска)` + (z.reject ? " — БРАК" : "") + (z.noise != null ? `; шум ${fmt(z.noise, 2)} px (допуск лучше ≥ ${fmt(Math.max(z.noise * 1.5, 0.5), 1)})` : ""));
+  });
   add("Время", fmt(r.ms, 1) + " мс");
   box.append(kv);
   const zones = r.zones || [];

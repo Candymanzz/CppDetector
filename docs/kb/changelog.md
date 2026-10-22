@@ -14,3 +14,5 @@
 - 2026-10-21: cppAnalisSurface file logging (logs/, JSONL per inspection + event log + minute summaries), see D17.
 - 2026-10-21: seam geometry check added (D18): seam.{h,cpp}, per-camera `seam` settings/API/UI card, overlay (cyan band, green centre, red bad points), reason `seam_deviation`; camera 4 of frames36 preconfigured.
 - 2026-10-21: rebuild-and-run.{ps1,cmd} / run.{ps1,cmd} + scripts/common.ps1 (copied from cppAnalisSurface): auto-install VS Build Tools, CMake, git, vcpkg, libraries; run opens the UI on frames36.
+- 2026-10-22: seam check generalised to a polyline (D19): control points + Catmull-Rom axis, modes ridge (seam) / step (label edge), polarity, local reference fit, skip segments, max_gap; "Взять из точек ROI" in the UI; legacy p0/p1 configs still load.
+- 2026-10-22: geometry check split into two independent zones per camera, "Стык" (seam) and "Кромка" (edge); old step-mode seam config migrates to edge; per-zone deviation graph in the overlay and per-zone debug sets in logs/seam.

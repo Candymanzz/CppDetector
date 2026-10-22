@@ -80,20 +80,7 @@
           <div class="muted small" id="saveState">&nbsp;</div>
         </div>
 
-        <div class="card">
-          <h2>Стык этикетки</h2>
-          <div class="row"><label class="check"><input type="checkbox" id="seamEnabled"> проверять геометрию стыка</label></div>
-          <div class="row"><button id="seamPick">Задать линию стыка</button></div>
-          <div class="muted small" id="seamInfo">&nbsp;</div>
-          <div class="param"><label>Полоса поиска (±), px <b id="v_seam_band"></b></label>
-            <input type="range" id="seam_band" min="10" max="80" step="1"></div>
-          <div class="param"><label>Допуск в середине, px <b id="v_seam_tol_mid"></b></label>
-            <input type="range" id="seam_tol_mid" min="0.2" max="5" step="0.1"></div>
-          <div class="param"><label>Допуск на краях стыка, px <b id="v_seam_tol_edge"></b></label>
-            <input type="range" id="seam_tol_edge" min="0.5" max="15" step="0.5"></div>
-          <div class="param"><label>Длина краевой части (доля) <b id="v_seam_edge_frac"></b></label>
-            <input type="range" id="seam_edge_frac" min="0" max="0.4" step="0.01"></div>
-        </div>
+        <div id="lineCards"></div>
 
         <div class="card">
           <h2>Проверка</h2>
