@@ -94,7 +94,7 @@ InspectResult Inspector::inspect(const cv::Mat& bgr, const InspectParams& p) con
                              cvRound(bb.width / p.downscale), cvRound(bb.height / p.downscale));
     }
     flagged = cv::countNonZero(kept);
-    r.score = 100.0 * flagged / roiArea_;
+    r.score = roiArea_ > 0 ? std::min(100.0, 100.0 * flagged / roiArea_ * kScoreScale) : 0.0;
     if (r.reason.empty() && r.score > p.rejectThreshold) {
         r.reject = true;
         r.reason = "score_over_threshold";
