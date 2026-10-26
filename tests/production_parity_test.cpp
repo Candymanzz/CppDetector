@@ -96,16 +96,21 @@ void syntheticTests() {
     one(line, line, p, {}, &seam);
     auto bent = line.clone(); cv::line(bent, {180,120}, {190,160}, {250,250,250}, 4);
     one(line, bent, p, {}, &seam);
-    // The native reference cache is deliberately not changed in this port.
-    // Check sequence parity, not an assumption that the source's cache bug was fixed.
+    // Repeated square-ROI inspections must preserve parity, results and the shared cache.
     const std::vector<cv::Point> square{{40,20},{320,20},{320,300},{40,300}};
     cd::Inspector local; local.setReference(ref, square, p);
     cas::Reference production(ref.clone()); production.setRoi(nativeRoi(square, ref.size()));
     auto s = nativeSettings(p, nullptr, ref.size());
     auto prepared = production.prepared(1);
     auto before = prepared->refSmall.clone();
-    for (int i=0; i<60; ++i) compare(local.inspect(ref,p), cas::inspectFrame(production,ref,s,true), production);
-    std::cout << "source cache mutation after repeated square ROI: " << cv::norm(before,prepared->refSmall,cv::NORM_INF) << "\n";
+    const auto expected = cas::inspectFrame(production,ref,s,true);
+    for (int i=0; i<60; ++i) {
+        const auto result = local.inspect(ref,p);
+        compare(result, cas::inspectFrame(production,ref,s,true), production);
+        compare(result, expected, production);
+    }
+    require(cv::norm(before,prepared->refSmall,cv::NORM_INF) == 0,
+            "repeated inspections must not change the cached reference thumbnail");
 }
 
 void profileTests(const std::filesystem::path& dir) {

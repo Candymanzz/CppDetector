@@ -1,12 +1,15 @@
 # Current inspection: position-x-y mirror (2026-10-26)
 
-CppDetector branch 123 is now a local UI harness for the unchanged native core from defect-detector-v3,
-position-x-y commit 885a79ed. See src/production/SOURCE.md for provenance and compatibility details.
+CppDetector branch 123 is now a local UI harness for the native core from defect-detector-v3,
+position-x-y commit 885a79ed plus the reference-cache correction from cpp-detector commit bfd9b54a.
+See src/production/SOURCE.md for provenance and compatibility details.
 Earlier full-frame alignment, amplified score and polyline/edge decisions are historical, not the active backend.
 
 Pipeline: native reference preparation and ROI bounding box -> grey/blur/downscale -> phase correlation on an
 ROI thumbnail (max side 256, Hanning/confidence rules) -> translation compensation -> ROI brightness normalisation
 -> rectangular min/max comparison envelope -> sensitivity threshold -> morphology/minimum blob area -> score/verdict.
+Phase correlation receives a private copy of the reference thumbnail so repeated and concurrent inspections
+cannot mutate the shared prepared-reference cache through OpenCV's in-place Hann window application.
 
 Score: native anomaly_score = min(1, anomalous_ROI_area_percent / 5).
 Local UI score and reject_threshold use 0..100 percent; verdict is native score >= native threshold.

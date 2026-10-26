@@ -1,5 +1,7 @@
 # Changelog
 
+- 2026-10-26: ported the reference-cache correction from defect-detector-v3 cpp-detector (bfd9b54a): clone the alignment thumbnail before phaseCorrelate so its in-place Hann window cannot mutate shared reference data. Added repeated/concurrent warm/cold cache regressions and changed square-ROI adapter parity from cache diagnostics to immutable-cache/stable-result assertions.
+
 - 2026-10-26: superseded the X/Y-only port with a full local mirror of position-x-y core 885a79ed. Native score, ROI-thumbnail alignment/confidence, original-pixel settings, min-area scaling, seam and heatmap now run behind the existing UI; edge no longer affects verdicts. Added separate native profiles/logs, preserved old scenes/configs, native defaults button and parity tests.
 
 - 2026-10-26: ported the independent X/Y shift tolerance from defect-detector-v3 position-x-y (885a79ed): per-axis alignment limits and rectangular comparison envelope, two web sliders, backward-compatible legacy config loading, per-axis result/log diagnostics and CTest coverage. CppDetector's existing score/downscale/geometry behavior is preserved.

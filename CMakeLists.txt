@@ -7,7 +7,7 @@ find_package(httplib CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(Threads REQUIRED)
 
-# Exact native core snapshot from defect-detector-v3 position-x-y, commit 885a79ed.
+# Native core snapshot 885a79ed plus reference-cache fix bfd9b54a; see src/production/SOURCE.md.
 add_library(production_core STATIC
   src/production/core/reference.cpp src/production/core/settings.cpp
   src/production/core/inspector.cpp src/production/core/seam.cpp src/production/core/performance_log.cpp)
