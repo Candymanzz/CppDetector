@@ -1,108 +1,74 @@
 #include "inspector.h"
+#include "../production/core/seam.h"
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
 #include <chrono>
 
 namespace cd {
 
-cv::Mat Inspector::prepare(const cv::Mat& bgr, double downscale) const {
-    cv::Mat g;
-    cv::cvtColor(bgr, g, cv::COLOR_BGR2GRAY);
-    if (downscale != 1.0) cv::resize(g, g, cv::Size(), downscale, downscale, cv::INTER_AREA);
-    cv::GaussianBlur(g, g, cv::Size(5, 5), 0);
-    return g;
+void Inspector::setReference(const cv::Mat& bgr, const std::vector<cv::Point>& roi, const InspectParams&) {
+    if (bgr.empty()) { reference_.reset(); return; }
+    reference_ = std::make_shared<cas::Reference>(bgr.clone());
+    cas::NormPolygon normalised;
+    for (const auto& p : roi)
+        normalised.emplace_back(p.x / double(std::max(1, bgr.cols - 1)),
+                                p.y / double(std::max(1, bgr.rows - 1)));
+    reference_->setRoi(std::move(normalised));
 }
 
-void Inspector::setReference(const cv::Mat& bgr, const std::vector<cv::Point>& roi, const InspectParams& p) {
-    refGray_ = prepare(bgr, p.downscale);
-    refDownscale_ = p.downscale;
-    refSize_ = bgr.size();
-    roi_ = roi;
-    roiMask_ = cv::Mat::zeros(refGray_.size(), CV_8U);
-    if (roi.empty()) {
-        roiMask_.setTo(255);
-    } else {
-        std::vector<cv::Point> scaled;
-        for (auto& pt : roi) scaled.emplace_back(cvRound(pt.x * p.downscale), cvRound(pt.y * p.downscale));
-        cv::fillPoly(roiMask_, std::vector<std::vector<cv::Point>>{scaled}, 255);
-    }
-    roiArea_ = cv::countNonZero(roiMask_);
-}
-
-InspectResult Inspector::inspect(const cv::Mat& bgr, const InspectParams& p) const {
-    auto t0 = std::chrono::steady_clock::now();
+InspectResult Inspector::inspect(const cv::Mat& bgr, const InspectParams& p, const SeamParams* seam) const {
     InspectResult r;
-    if (!hasReference() || p.downscale != refDownscale_ || roiArea_ == 0) {
-        r.reason = "no_reference";
-        return r;
-    }
-    if (bgr.size() != refSize_) {
-        r.reason = "size_mismatch";
-        return r;
-    }
-    cv::Mat cur = prepare(bgr, p.downscale);
+    if (!hasReference()) { r.reason = "no_reference"; return r; }
+    if (bgr.empty() || bgr.size() != reference_->size()) { r.reason = "size_mismatch"; return r; }
 
-    // translation only (cheap), see KB D2
-    cv::Mat a, b;
-    refGray_.convertTo(a, CV_32F);
-    cur.convertTo(b, CV_32F);
-    r.shift = cv::phaseCorrelate(a, b);
-    int maxShiftX = std::max(p.shiftToleranceX * 4, 8);
-    int maxShiftY = std::max(p.shiftToleranceY * 4, 8);
-    r.shiftLimit = cv::Point2d(maxShiftX, maxShiftY);
-    if (std::abs(r.shift.x) > maxShiftX || std::abs(r.shift.y) > maxShiftY) {
-        r.reject = true;
-        r.reason = "shift_exceeded";
+    auto& s = r.settings;
+    s.sensitivity = p.sensitivity;
+    s.threshold = p.rejectThreshold / 100.0;
+    s.shiftToleranceX = p.shiftToleranceX; s.shiftToleranceY = p.shiftToleranceY;
+    s.inspectScale = p.downscale; s.minBlobArea = p.minBlobArea;
+    if (seam && seam->pts.size() >= 2) {
+        s.seam.enabled = seam->enabled;
+        s.seam.p0x = seam->pts.front().x / bgr.cols; s.seam.p0y = seam->pts.front().y / bgr.rows;
+        s.seam.p1x = seam->pts.back().x / bgr.cols; s.seam.p1y = seam->pts.back().y / bgr.rows;
+        s.seam.band = seam->bandHalf; s.seam.tolMid = seam->tolMid;
+        s.seam.tolEdge = seam->tolEdge; s.seam.edgeFrac = seam->edgeFrac;
     }
-    cv::Mat m = (cv::Mat_<double>(2, 3) << 1, 0, -r.shift.x, 0, 1, -r.shift.y);
-    cv::Mat aligned;
-    cv::warpAffine(cur, aligned, m, cur.size(), cv::INTER_LINEAR, cv::BORDER_REPLICATE);
+    auto& out = r.native;
+    out = cas::inspectFrame(*reference_, bgr, s, true);
 
-    // brightness normalization inside ROI (gain/offset by mean+std)
-    cv::Scalar mr, sr, mc, sc;
-    cv::meanStdDev(refGray_, mr, sr, roiMask_);
-    cv::meanStdDev(aligned, mc, sc, roiMask_);
-    double gain = sc[0] > 1.0 ? std::clamp(sr[0] / sc[0], 0.5, 2.0) : 1.0;
-    aligned.convertTo(aligned, CV_8U, gain, mr[0] - mc[0] * gain);
-
-    // micro-shift tolerance: distance to the min/max envelope of the reference
-    r.envelopeKernel = cv::Size(2 * p.shiftToleranceX + 1, 2 * p.shiftToleranceY + 1);
-    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, r.envelopeKernel);
-    cv::Mat refMin, refMax, lo, hi, diff;
-    cv::erode(refGray_, refMin, kernel);
-    cv::dilate(refGray_, refMax, kernel);
-    cv::subtract(refMin, aligned, lo);
-    cv::subtract(aligned, refMax, hi);
-    cv::max(lo, hi, diff);
-    diff.setTo(0, ~roiMask_);
-    r.heatmap = diff;
-
-    // sensitivity -> diff threshold: 0 -> 80, 1 -> 5
-    int thr = cvRound(80.0 - 75.0 * std::clamp(p.sensitivity, 0.0, 1.0));
-    r.diffThreshold = thr;
-    cv::Mat bin;
-    cv::threshold(diff, bin, thr, 255, cv::THRESH_BINARY);
-    cv::morphologyEx(bin, bin, cv::MORPH_OPEN, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3)));
-
-    std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(bin, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-    int flagged = 0;
-    cv::Mat kept = cv::Mat::zeros(bin.size(), CV_8U);
-    for (size_t i = 0; i < contours.size(); ++i) {
-        if (cv::contourArea(contours[i]) < p.minBlobArea) continue;
-        cv::drawContours(kept, contours, (int)i, 255, cv::FILLED);
-        cv::Rect bb = cv::boundingRect(contours[i]);
-        r.zones.emplace_back(cvRound(bb.x / p.downscale), cvRound(bb.y / p.downscale),
-                             cvRound(bb.width / p.downscale), cvRound(bb.height / p.downscale));
+    // Same seam calculation and decision merge as cppAnalisSurface Service::applySeam (885a79ed).
+    if (s.seam.enabled && s.seam.hasLine() && out.reason != "size_mismatch") {
+        const auto sr = cas::measureSeam(bgr, s.seam);
+        out.seamEnabled = true; out.seamFound = sr.found; out.seamReject = sr.reject;
+        out.seamRatio = sr.ratio; out.seamMaxDev = sr.maxDev; out.seamWorstT = sr.worstT;
+        out.seamCoverage = sr.coverage; out.seamMs = sr.ms; out.totalMs += sr.ms;
+        if (sr.reject) {
+            out.reject = true;
+            if (out.reason.empty()) out.reason = "seam_deviation";
+            if (!sr.badPts.empty()) {
+                cv::Rect bb = cv::boundingRect(sr.badPts);
+                bb.x -= 12; bb.y -= 12; bb.width += 24; bb.height += 24;
+                bb &= cv::Rect(0, 0, bgr.cols, bgr.rows);
+                if (bb.area() > 0) out.zones.push_back(bb);
+            }
+        }
+        auto& ui = r.seam;
+        ui.enabled = true; ui.found = sr.found; ui.reject = sr.reject;
+        ui.coverage = sr.coverage; ui.ratio = sr.ratio; ui.maxDev = sr.maxDev;
+        ui.worstT = sr.worstT; ui.centerPts = sr.centerPts; ui.badPts = sr.badPts; ui.ms = sr.ms;
+        ui.path = {cv::Point2f(seam->pts.front()), cv::Point2f(seam->pts.back())};
+        cv::Point2f direction = ui.path.back() - ui.path.front();
+        const float length = std::max(1e-6f, float(cv::norm(direction)));
+        const cv::Point2f normal(-direction.y / length, direction.x / length);
+        ui.pathNormal = {normal, normal};
     }
-    flagged = cv::countNonZero(kept);
-    r.score = roiArea_ > 0 ? std::min(100.0, 100.0 * flagged / roiArea_ * kScoreScale) : 0.0;
-    if (r.reason.empty() && r.score > p.rejectThreshold) {
-        r.reject = true;
-        r.reason = "score_over_threshold";
-    }
-    r.ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+
+    r.score = out.anomalyScore * 100.0; r.reject = out.reject; r.reason = out.reason;
+    r.shift = out.shift; r.shiftLimit = out.shiftLimit; r.envelopeKernel = out.envelopeKernel;
+    r.zones = out.zones; r.diffThreshold = out.pixelThreshold; r.ms = out.totalMs;
+    const auto visualStart = std::chrono::steady_clock::now();
+    r.heatmap = cas::buildHeatmap(out, reference_->roi(), 512);
+    r.heatmapMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - visualStart).count();
     return r;
 }
-
-} // namespace cd
+}

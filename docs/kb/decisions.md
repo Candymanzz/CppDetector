@@ -1,5 +1,13 @@
 # Decisions
 
+## D20 - Local production-core mirror (2026-10-26)
+Context: user needs to test the same inspection/settings as position-x-y in this local UI before deploying.
+Decision: vendor the unchanged 885a79ed native core; use a thin unit/UI adapter, identical native seam and no edge verdict.
+Native defaults/units/score replace the old local amplified score and working-pixel semantics. Preserve the existing UI.
+Keep old configs/references intact; import scene geometry into a separate _position-x-y profile, with fresh native defaults.
+Why: local outcomes must predict the source detector given the same images, ROI, settings and OpenCV build.
+Consequences: no production repo/deployment change; native parity tests and provenance are required for updates.
+
 ## D1 - Build stack (2026-10-20)
 Context: no C++ OpenCV on machine; Python OpenCV unusable; MSVC Build Tools 2022 present.
 Decision: CMake + vcpkg manifest (vcpkg at D:\vcpkg), opencv4 minimal features (jpeg, png), cpp-httplib, nlohmann-json.

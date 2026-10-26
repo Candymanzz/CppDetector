@@ -26,6 +26,7 @@
 </header>
 
 <main>
+  <p class="muted hint" id="engineInfo">Локальный стенд position-x-y · 885a79ed. Подключение к детектору…</p>
   <!-- ===== Camera grid ===== -->
   <section id="tab-grid" class="tab active">
     <div class="grid" id="grid"></div>
@@ -70,15 +71,17 @@
           <div class="param"><label>Чувствительность <b id="v_sensitivity"></b></label>
             <input type="range" id="sensitivity" min="0" max="1" step="0.01"></div>
           <div class="param"><label>Порог брака, % <b id="v_reject_threshold"></b></label>
-            <input type="range" id="reject_threshold" min="0" max="100" step="0.5"></div>
-          <div class="param" title="Влево/вправо. Допуск сравнения в рабочих пикселях после Downscale; предел компенсации X = max(8, допуск × 4)."><label>Допуск на сдвиг X, px <b id="v_shift_tolerance_x"></b></label>
+            <input type="range" id="reject_threshold" min="1" max="100" step="0.5"></div>
+          <div class="param" title="Влево/вправо, пиксели исходного кадра. При масштабе 100% предел компенсации X = max(8, допуск × 4)."><label>Допуск на сдвиг X, px <b id="v_shift_tolerance_x"></b></label>
             <input type="range" id="shift_tolerance_x" min="0" max="15" step="1"></div>
-          <div class="param" title="Вверх/вниз. Допуск сравнения в рабочих пикселях после Downscale; предел компенсации Y = max(8, допуск × 4)."><label>Допуск на сдвиг Y, px <b id="v_shift_tolerance_y"></b></label>
+          <div class="param" title="Вверх/вниз, пиксели исходного кадра. При масштабе 100% предел компенсации Y = max(8, допуск × 4)."><label>Допуск на сдвиг Y, px <b id="v_shift_tolerance_y"></b></label>
             <input type="range" id="shift_tolerance_y" min="0" max="15" step="1"></div>
           <div class="param"><label>Downscale <b id="v_downscale"></b></label>
             <input type="range" id="downscale" min="0.2" max="1" step="0.05"></div>
-          <div class="param"><label>Мин. площадь пятна, px <b id="v_min_blob_area"></b></label>
+          <div class="param"><label>Мин. площадь пятна, px² исходного кадра <b id="v_min_blob_area"></b></label>
             <input type="range" id="min_blob_area" min="1" max="500" step="1"></div>
+          <p class="muted small">Шкала как в position-x-y: 100% оценки = 5% аномальной площади ROI. Пиксели допусков и площадь относятся к исходному кадру, независимо от Downscale. Нулевой допуск не отключает позиционирование.</p>
+          <button id="resetDetector">По умолчанию position-x-y</button>
           <div class="muted small" id="saveState">&nbsp;</div>
         </div>
 
@@ -126,6 +129,6 @@
   </section>
 </main>
 <div id="toast" class="toast" role="status"></div>
-<script src="app.js"></script>
+<script src="app.js?engine=position-x-y-885a79ed"></script>
 </body>
 </html>

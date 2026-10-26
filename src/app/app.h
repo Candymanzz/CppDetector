@@ -19,7 +19,7 @@ constexpr int kCameras = 10;
 // Owns cameras (reference, ROI, params), the emulated frame stream and the decision log.
 class App {
 public:
-    App(fs::path sourceDir, fs::path configPath, fs::path logDir);
+    App(fs::path sourceDir, fs::path configPath, fs::path logDir, fs::path legacyConfigPath = {});
     ~App();
 
     json state();    // full snapshot for the UI
@@ -81,7 +81,8 @@ private:
     void tick();
     void loop();
 
-    fs::path source_, cfgPath_;
+    fs::path source_, cfgPath_, legacyCfgPath_;
+    bool importedLegacy_ = false;
     DecisionLog log_;
     std::unique_ptr<Cam> cams_[kCameras];
     std::mutex saveM_;

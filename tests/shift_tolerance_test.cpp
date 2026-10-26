@@ -57,16 +57,16 @@ void inspectorTests() {
     require(zero.envelopeKernel == cv::Size(1, 1) && zero.shiftLimit == cv::Point2d(8, 8),
             "zero preserves the old positioning minimum and removes comparison expansion");
     const auto scaled = inspect(ref, translated(ref, 20, 0), 3, 0, 0.5);
-    require(scaled.shiftLimit == cv::Point2d(12, 8) && scaled.envelopeKernel == cv::Size(7, 1)
-            && scaled.reason != "shift_exceeded", "downscale must preserve this project's working-pixel semantics");
+    require(scaled.shiftLimit == cv::Point2d(16, 16) && scaled.envelopeKernel == cv::Size(5, 1)
+            && scaled.reason == "shift_exceeded", "downscale must use original-frame units like production");
 
     const cv::Rect patch(110, 120, 90, 100);
     auto horizontal = ref.clone(), vertical = ref.clone();
     translated(ref, 3, 0)(patch).copyTo(horizontal(patch));
     translated(ref, 0, 3)(patch).copyTo(vertical(patch));
-    require(cv::sum(inspect(ref, horizontal, 3, 0).heatmap)[0] < cv::sum(inspect(ref, horizontal, 0, 3).heatmap)[0],
+    require(cv::sum(inspect(ref, horizontal, 3, 0).native.diff)[0] < cv::sum(inspect(ref, horizontal, 0, 3).native.diff)[0],
             "horizontal envelope must better tolerate a local horizontal movement");
-    require(cv::sum(inspect(ref, vertical, 0, 3).heatmap)[0] < cv::sum(inspect(ref, vertical, 3, 0).heatmap)[0],
+    require(cv::sum(inspect(ref, vertical, 0, 3).native.diff)[0] < cv::sum(inspect(ref, vertical, 3, 0).native.diff)[0],
             "vertical envelope must better tolerate a local vertical movement");
 }
 

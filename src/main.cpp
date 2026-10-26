@@ -11,6 +11,7 @@
 #endif
 
 int main(int argc, char** argv) {
+    cv::setNumThreads(1); // identical to the production service: parallelism comes from cameras
     namespace fs = std::filesystem;
     fs::path frames = fs::path(CD_SOURCE_DIR) / "frame" / "frames36";
     fs::path webDir = fs::path(CD_SOURCE_DIR) / "web";
@@ -27,7 +28,9 @@ int main(int argc, char** argv) {
 
     fs::path data = fs::path(CD_SOURCE_DIR);
     // settings are kept per dataset (folder name), so different frame sets do not overwrite each other
-    cd::App app(frames, data / "config" / ("config_" + frames.filename().string() + ".json"), data / "logs");
+    const auto stem = "config_" + frames.filename().string();
+    cd::App app(frames, data / "config" / (stem + "_position-x-y.json"), data / "logs" / "position-x-y",
+                data / "config" / (stem + ".json"));
 
     httplib::Server svr;
     svr.new_task_queue = [] { return new httplib::ThreadPool(8); };
