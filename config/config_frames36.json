@@ -1,7 +1,7 @@
 {
   "cameras": [
     {
-      "downscale": 1.0,
+      "downscale": 0.3,
       "edge": {
         "band": 10.0,
         "edge_frac": 0.0,
@@ -11,99 +11,144 @@
         "min_contrast": 10.0,
         "mode": "step",
         "polarity": -1,
-        "pts": [],
+        "pts": [
+          [
+            229,
+            170
+          ],
+          [
+            278,
+            132
+          ],
+          [
+            355,
+            97
+          ],
+          [
+            425,
+            80
+          ],
+          [
+            476,
+            71
+          ],
+          [
+            537,
+            66
+          ],
+          [
+            603,
+            65
+          ],
+          [
+            668,
+            26
+          ],
+          [
+            730,
+            85
+          ],
+          [
+            788,
+            108
+          ],
+          [
+            826,
+            136
+          ]
+        ],
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
-      "min_blob_area": 1,
-      "reference": "upload",
-      "reject_threshold": 0.0,
+      "min_blob_area": 6,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
       "roi": [
         [
-          198,
-          665
+          203,
+          213
         ],
         [
-          202,
-          202
+          229,
+          170
         ],
         [
-          263,
-          139
+          278,
+          132
         ],
         [
-          360,
-          98
+          355,
+          97
         ],
         [
-          465,
+          425,
+          80
+        ],
+        [
+          476,
           71
         ],
         [
-          546,
-          67
-        ],
-        [
-          618,
+          537,
           66
         ],
         [
-          686,
-          75
+          603,
+          65
         ],
         [
-          810,
-          112
+          662,
+          36
         ],
         [
-          851,
-          164
+          730,
+          85
         ],
         [
-          867,
-          229
+          788,
+          108
         ],
         [
-          886,
-          374
+          826,
+          136
         ],
         [
-          908,
-          494
+          852,
+          159
         ],
         [
-          911,
-          592
+          946,
+          632
         ],
         [
-          869,
-          648
-        ],
-        [
-          756,
+          729,
           683
         ],
         [
-          599,
-          697
+          534,
+          711
         ],
         [
-          394,
-          694
+          358,
+          717
         ],
         [
-          346,
-          710
+          275,
+          719
         ],
         [
-          282,
-          716
+          262,
+          688
         ],
         [
-          264,
-          693
+          215,
+          679
+        ],
+        [
+          197,
+          678
         ]
       ],
       "seam": {
@@ -115,140 +160,14 @@
         "min_contrast": 8.0,
         "mode": "ridge",
         "polarity": 0,
-        "pts": [
-          [
-            304,
-            703
-          ],
-          [
-            288,
-            153
-          ]
-        ],
+        "pts": [],
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 5.0,
         "tol_mid": 1.0
       },
       "sensitivity": 1.0,
-      "shift_tolerance": 3
-    },
-    {
-      "downscale": 1.0,
-      "edge": {
-        "band": 10.0,
-        "edge_frac": 0.0,
-        "enabled": false,
-        "fit_deg": 0,
-        "max_gap": 0.25,
-        "min_contrast": 10.0,
-        "mode": "step",
-        "polarity": -1,
-        "pts": [],
-        "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 1.5,
-        "tol_mid": 1.5
-      },
-      "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 2.0,
-      "roi": [],
-      "seam": {
-        "band": 30.0,
-        "edge_frac": 0.12,
-        "enabled": false,
-        "fit_deg": 0,
-        "max_gap": 1.0,
-        "min_contrast": 8.0,
-        "mode": "ridge",
-        "polarity": 0,
-        "pts": [],
-        "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 5.0,
-        "tol_mid": 1.0
-      },
-      "sensitivity": 0.5,
-      "shift_tolerance": 3
-    },
-    {
-      "downscale": 1.0,
-      "edge": {
-        "band": 10.0,
-        "edge_frac": 0.0,
-        "enabled": false,
-        "fit_deg": 0,
-        "max_gap": 0.25,
-        "min_contrast": 10.0,
-        "mode": "step",
-        "polarity": -1,
-        "pts": [],
-        "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 1.5,
-        "tol_mid": 1.5
-      },
-      "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 2.0,
-      "roi": [],
-      "seam": {
-        "band": 30.0,
-        "edge_frac": 0.12,
-        "enabled": false,
-        "fit_deg": 0,
-        "max_gap": 1.0,
-        "min_contrast": 8.0,
-        "mode": "ridge",
-        "polarity": 0,
-        "pts": [],
-        "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 5.0,
-        "tol_mid": 1.0
-      },
-      "sensitivity": 0.5,
-      "shift_tolerance": 3
-    },
-    {
-      "downscale": 1.0,
-      "edge": {
-        "band": 10.0,
-        "edge_frac": 0.0,
-        "enabled": false,
-        "fit_deg": 0,
-        "max_gap": 0.25,
-        "min_contrast": 10.0,
-        "mode": "step",
-        "polarity": -1,
-        "pts": [],
-        "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 1.5,
-        "tol_mid": 1.5
-      },
-      "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 2.0,
-      "roi": [],
-      "seam": {
-        "band": 30.0,
-        "edge_frac": 0.12,
-        "enabled": false,
-        "fit_deg": 0,
-        "max_gap": 1.0,
-        "min_contrast": 8.0,
-        "mode": "ridge",
-        "polarity": 0,
-        "pts": [],
-        "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 5.0,
-        "tol_mid": 1.0
-      },
-      "sensitivity": 0.5,
-      "shift_tolerance": 3
+      "shift_tolerance": 6
     },
     {
       "downscale": 1.0,
@@ -256,6 +175,457 @@
         "band": 10.0,
         "edge_frac": 0.0,
         "enabled": true,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [
+          [
+            1018,
+            389
+          ],
+          [
+            980,
+            349
+          ],
+          [
+            934,
+            303
+          ],
+          [
+            870,
+            265
+          ],
+          [
+            816,
+            240
+          ],
+          [
+            767,
+            222
+          ],
+          [
+            707,
+            204
+          ],
+          [
+            636,
+            194
+          ],
+          [
+            574,
+            199
+          ],
+          [
+            517,
+            210
+          ]
+        ],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [
+        [
+          942,
+          830
+        ],
+        [
+          1029,
+          428
+        ],
+        [
+          1018,
+          389
+        ],
+        [
+          980,
+          349
+        ],
+        [
+          934,
+          303
+        ],
+        [
+          870,
+          265
+        ],
+        [
+          816,
+          240
+        ],
+        [
+          767,
+          222
+        ],
+        [
+          707,
+          204
+        ],
+        [
+          636,
+          194
+        ],
+        [
+          574,
+          199
+        ],
+        [
+          517,
+          210
+        ],
+        [
+          483,
+          229
+        ],
+        [
+          282,
+          591
+        ],
+        [
+          344,
+          632
+        ],
+        [
+          430,
+          667
+        ],
+        [
+          525,
+          707
+        ],
+        [
+          648,
+          756
+        ],
+        [
+          747,
+          795
+        ],
+        [
+          777,
+          816
+        ],
+        [
+          808,
+          787
+        ]
+      ],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance": 3
+    },
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [
+        [
+          942,
+          568
+        ],
+        [
+          936,
+          433
+        ],
+        [
+          881,
+          352
+        ],
+        [
+          826,
+          331
+        ],
+        [
+          696,
+          329
+        ],
+        [
+          609,
+          352
+        ],
+        [
+          590,
+          419
+        ],
+        [
+          551,
+          473
+        ],
+        [
+          556,
+          539
+        ],
+        [
+          587,
+          618
+        ],
+        [
+          677,
+          694
+        ],
+        [
+          740,
+          694
+        ],
+        [
+          790,
+          691
+        ],
+        [
+          865,
+          658
+        ],
+        [
+          896,
+          632
+        ]
+      ],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance": 3
+    },
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [
+          [
+            758,
+            137
+          ],
+          [
+            680,
+            112
+          ],
+          [
+            632,
+            100
+          ],
+          [
+            528,
+            100
+          ],
+          [
+            484,
+            103
+          ],
+          [
+            426,
+            113
+          ],
+          [
+            369,
+            125
+          ],
+          [
+            322,
+            140
+          ],
+          [
+            276,
+            166
+          ],
+          [
+            242,
+            185
+          ],
+          [
+            223,
+            202
+          ],
+          [
+            191,
+            227
+          ]
+        ],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [
+        [
+          178,
+          786
+        ],
+        [
+          305,
+          787
+        ],
+        [
+          490,
+          761
+        ],
+        [
+          688,
+          726
+        ],
+        [
+          807,
+          703
+        ],
+        [
+          869,
+          689
+        ],
+        [
+          893,
+          665
+        ],
+        [
+          947,
+          628
+        ],
+        [
+          823,
+          182
+        ],
+        [
+          758,
+          137
+        ],
+        [
+          680,
+          112
+        ],
+        [
+          632,
+          100
+        ],
+        [
+          528,
+          100
+        ],
+        [
+          484,
+          103
+        ],
+        [
+          426,
+          113
+        ],
+        [
+          369,
+          125
+        ],
+        [
+          322,
+          140
+        ],
+        [
+          276,
+          166
+        ],
+        [
+          242,
+          185
+        ],
+        [
+          223,
+          202
+        ],
+        [
+          191,
+          227
+        ],
+        [
+          171,
+          260
+        ]
+      ],
+      "seam": {
+        "band": 10.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [
+          [
+            949,
+            631
+          ],
+          [
+            816,
+            174
+          ]
+        ],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance": 3
+    },
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
         "fit_deg": 0,
         "max_gap": 0.25,
         "min_contrast": 10.0,
@@ -451,7 +821,7 @@
       "seam": {
         "band": 10.0,
         "edge_frac": 0.12,
-        "enabled": true,
+        "enabled": false,
         "fit_deg": 0,
         "max_gap": 1.0,
         "min_contrast": 8.0,
@@ -480,13 +850,240 @@
       "edge": {
         "band": 10.0,
         "edge_frac": 0.0,
-        "enabled": false,
+        "enabled": true,
         "fit_deg": 0,
         "max_gap": 0.25,
         "min_contrast": 10.0,
         "mode": "step",
         "polarity": -1,
-        "pts": [],
+        "pts": [
+          [
+            818,
+            172
+          ],
+          [
+            768,
+            138
+          ],
+          [
+            684,
+            116
+          ],
+          [
+            616,
+            114
+          ],
+          [
+            534,
+            118
+          ],
+          [
+            452,
+            132
+          ],
+          [
+            387,
+            153
+          ],
+          [
+            331,
+            179
+          ],
+          [
+            285,
+            207
+          ],
+          [
+            257,
+            237
+          ]
+        ],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [
+        [
+          958,
+          615
+        ],
+        [
+          829,
+          193
+        ],
+        [
+          818,
+          172
+        ],
+        [
+          768,
+          138
+        ],
+        [
+          684,
+          116
+        ],
+        [
+          616,
+          114
+        ],
+        [
+          534,
+          118
+        ],
+        [
+          452,
+          132
+        ],
+        [
+          387,
+          153
+        ],
+        [
+          331,
+          179
+        ],
+        [
+          285,
+          207
+        ],
+        [
+          257,
+          237
+        ],
+        [
+          235,
+          272
+        ],
+        [
+          249,
+          676
+        ],
+        [
+          387,
+          655
+        ],
+        [
+          449,
+          693
+        ],
+        [
+          699,
+          658
+        ],
+        [
+          832,
+          633
+        ]
+      ],
+      "seam": {
+        "band": 10.0,
+        "edge_frac": 0.12,
+        "enabled": true,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [
+          [
+            306,
+            687
+          ],
+          [
+            281,
+            214
+          ]
+        ],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance": 3
+    },
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": true,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [
+          [
+            316,
+            267
+          ],
+          [
+            331,
+            243
+          ],
+          [
+            350,
+            224
+          ],
+          [
+            371,
+            207
+          ],
+          [
+            391,
+            193
+          ],
+          [
+            426,
+            170
+          ],
+          [
+            498,
+            141
+          ],
+          [
+            567,
+            120
+          ],
+          [
+            639,
+            108
+          ],
+          [
+            708,
+            99
+          ],
+          [
+            750,
+            100
+          ],
+          [
+            789,
+            102
+          ],
+          [
+            836,
+            107
+          ],
+          [
+            881,
+            117
+          ],
+          [
+            910,
+            126
+          ],
+          [
+            930,
+            135
+          ]
+        ],
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 1.5,
@@ -497,15 +1094,24 @@
       "reject_threshold": 2.0,
       "roi": [],
       "seam": {
-        "band": 30.0,
+        "band": 10.0,
         "edge_frac": 0.12,
-        "enabled": false,
+        "enabled": true,
         "fit_deg": 0,
         "max_gap": 1.0,
         "min_contrast": 8.0,
         "mode": "ridge",
         "polarity": 0,
-        "pts": [],
+        "pts": [
+          [
+            1065,
+            672
+          ],
+          [
+            925,
+            138
+          ]
+        ],
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 5.0,
@@ -534,7 +1140,56 @@
       "min_blob_area": 20,
       "reference": "f_0000001",
       "reject_threshold": 2.0,
-      "roi": [],
+      "roi": [
+        [
+          940,
+          461
+        ],
+        [
+          815,
+          302
+        ],
+        [
+          697,
+          258
+        ],
+        [
+          499,
+          307
+        ],
+        [
+          430,
+          406
+        ],
+        [
+          432,
+          553
+        ],
+        [
+          484,
+          652
+        ],
+        [
+          546,
+          714
+        ],
+        [
+          715,
+          758
+        ],
+        [
+          822,
+          730
+        ],
+        [
+          885,
+          670
+        ],
+        [
+          926,
+          585
+        ]
+      ],
       "seam": {
         "band": 30.0,
         "edge_frac": 0.12,
@@ -558,13 +1213,42 @@
       "edge": {
         "band": 10.0,
         "edge_frac": 0.0,
-        "enabled": false,
+        "enabled": true,
         "fit_deg": 0,
         "max_gap": 0.25,
         "min_contrast": 10.0,
         "mode": "step",
         "polarity": -1,
-        "pts": [],
+        "pts": [
+          [
+            857,
+            220
+          ],
+          [
+            763,
+            175
+          ],
+          [
+            675,
+            148
+          ],
+          [
+            587,
+            136
+          ],
+          [
+            477,
+            139
+          ],
+          [
+            378,
+            159
+          ],
+          [
+            302,
+            199
+          ]
+        ],
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 1.5,
@@ -573,7 +1257,72 @@
       "min_blob_area": 20,
       "reference": "f_0000001",
       "reject_threshold": 2.0,
-      "roi": [],
+      "roi": [
+        [
+          964,
+          748
+        ],
+        [
+          912,
+          288
+        ],
+        [
+          857,
+          220
+        ],
+        [
+          763,
+          175
+        ],
+        [
+          675,
+          148
+        ],
+        [
+          587,
+          136
+        ],
+        [
+          477,
+          139
+        ],
+        [
+          378,
+          159
+        ],
+        [
+          302,
+          199
+        ],
+        [
+          265,
+          235
+        ],
+        [
+          130,
+          741
+        ],
+        [
+          266,
+          767
+        ],
+        [
+          491,
+          754
+        ],
+        [
+          645,
+          760
+        ],
+        [
+          735,
+          772
+        ],
+        [
+          794,
+          728
+        ]
+      ],
       "seam": {
         "band": 30.0,
         "edge_frac": 0.12,
@@ -597,13 +1346,46 @@
       "edge": {
         "band": 10.0,
         "edge_frac": 0.0,
-        "enabled": false,
+        "enabled": true,
         "fit_deg": 0,
         "max_gap": 0.25,
         "min_contrast": 10.0,
         "mode": "step",
         "polarity": -1,
-        "pts": [],
+        "pts": [
+          [
+            1048,
+            377
+          ],
+          [
+            1004,
+            316
+          ],
+          [
+            953,
+            276
+          ],
+          [
+            872,
+            232
+          ],
+          [
+            787,
+            197
+          ],
+          [
+            681,
+            177
+          ],
+          [
+            602,
+            178
+          ],
+          [
+            541,
+            197
+          ]
+        ],
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 1.5,
@@ -612,46 +1394,68 @@
       "min_blob_area": 20,
       "reference": "f_0000001",
       "reject_threshold": 2.0,
-      "roi": [],
-      "seam": {
-        "band": 30.0,
-        "edge_frac": 0.12,
-        "enabled": false,
-        "fit_deg": 0,
-        "max_gap": 1.0,
-        "min_contrast": 8.0,
-        "mode": "ridge",
-        "polarity": 0,
-        "pts": [],
-        "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 5.0,
-        "tol_mid": 1.0
-      },
-      "sensitivity": 0.5,
-      "shift_tolerance": 3
-    },
-    {
-      "downscale": 1.0,
-      "edge": {
-        "band": 10.0,
-        "edge_frac": 0.0,
-        "enabled": false,
-        "fit_deg": 0,
-        "max_gap": 0.25,
-        "min_contrast": 10.0,
-        "mode": "step",
-        "polarity": -1,
-        "pts": [],
-        "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 1.5,
-        "tol_mid": 1.5
-      },
-      "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 2.0,
-      "roi": [],
+      "roi": [
+        [
+          957,
+          876
+        ],
+        [
+          1066,
+          437
+        ],
+        [
+          1048,
+          377
+        ],
+        [
+          1004,
+          316
+        ],
+        [
+          953,
+          276
+        ],
+        [
+          872,
+          232
+        ],
+        [
+          787,
+          197
+        ],
+        [
+          681,
+          177
+        ],
+        [
+          602,
+          178
+        ],
+        [
+          541,
+          197
+        ],
+        [
+          520,
+          215
+        ],
+        [
+          318,
+          522
+        ],
+        [
+          400,
+          564
+        ],
+        [
+          414,
+          621
+        ],
+        [
+          690,
+          740
+        ]
+      ],
       "seam": {
         "band": 30.0,
         "edge_frac": 0.12,

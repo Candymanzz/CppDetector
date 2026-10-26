@@ -5,14 +5,14 @@
 
 namespace cd {
 
-// Real defects are small, so their share of the ROI is tiny (a visible scratch is ~0.04%). The score is
-// stretched so that such defects land in a readable 0..100 range: score = min(100, flagged-area-% * kScoreScale).
-// With kScoreScale = 1000, 0.043% of the ROI is shown as 43 and 0.1% of the ROI saturates at 100.
-constexpr double kScoreScale = 1000.0;
+// Real defects are small, so their share of the ROI is tiny. The score is stretched so that such defects land
+// in a readable 0..100 range: score = min(100, flagged-area-% * kScoreScale).
+// With kScoreScale = 500, 0..0.2% of the ROI is spread over 0..100 and 0.2% and more saturate at 100.
+constexpr double kScoreScale = 500.0;
 
 struct InspectParams {
     double sensitivity = 0.5;       // 0..1, higher = stricter (lower diff threshold)
-    double rejectThreshold = 20.0;  // 0..100, same scale as score; score > threshold -> reject
+    double rejectThreshold = 10.0;  // 0..100, same scale as score; score > threshold -> reject
     int shiftTolerance = 3;         // px, micro-shift tolerance
     double downscale = 1.0;         // 1.0 = original
     int minBlobArea = 20;           // px at working resolution

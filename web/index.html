@@ -42,6 +42,7 @@
           <button data-mode="frame">Выбранный кадр</button>
           <button data-mode="result">Результат</button>
           <span class="muted" id="viewInfo"></span>
+          <button id="runOne" class="primary run-one">Проверить кадр</button>
         </div>
         <div class="canvas-wrap"><canvas id="canvas"></canvas></div>
         <div class="roi-tools">
@@ -51,6 +52,21 @@
           <span class="muted" id="roiInfo"></span>
         </div>
         <p class="muted small">ROI: клик — добавить точку (рядом с ребром — вставить в него), перетаскивание — двигать точку, правая кнопка по точке — удалить. Изменения сохраняются автоматически.</p>
+        <div class="card check-card">
+          <h2>Проверка</h2>
+          <div class="row">
+            <select id="testSelect"></select>
+          </div>
+          <div class="row"><label class="check"><input type="checkbox" id="testDefect"> внести тестовый дефект</label></div>
+          <div class="row">
+            <label class="filebtn">Загрузить кадр и проверить<input type="file" id="testFile" accept="image/*" hidden></label>
+          </div>
+          <div class="row"><button id="runAll">Проверить все кадры камеры</button></div>
+          <div class="row"><select id="testFileSelect" title="Файлы из frame/test-pr-ph"></select><button id="runTestFile">Проверить файл</button></div>
+          <div class="row"><button id="runAllTestFiles">Проверить все файлы test-pr-ph</button></div>
+          <div id="result" class="result"></div>
+          <div id="allResults"></div>
+        </div>
       </div>
 
       <aside class="side">
@@ -82,22 +98,6 @@
 
         <div id="lineCards"></div>
 
-        <div class="card">
-          <h2>Проверка</h2>
-          <div class="row">
-            <select id="testSelect"></select>
-          </div>
-          <div class="row"><label class="check"><input type="checkbox" id="testDefect"> внести тестовый дефект</label></div>
-          <div class="row">
-            <button id="runOne" class="primary">Проверить кадр</button>
-            <label class="filebtn">Загрузить кадр и проверить<input type="file" id="testFile" accept="image/*" hidden></label>
-          </div>
-          <div class="row"><button id="runAll">Проверить все кадры камеры</button></div>
-          <div class="row"><select id="testFileSelect" title="Файлы из frame/test-pr-ph"></select><button id="runTestFile">Проверить файл</button></div>
-          <div class="row"><button id="runAllTestFiles">Проверить все файлы test-pr-ph</button></div>
-          <div id="result" class="result"></div>
-          <div id="allResults"></div>
-        </div>
       </aside>
     </div>
   </section>
