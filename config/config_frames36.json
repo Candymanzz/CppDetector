@@ -251,7 +251,7 @@
       "shift_tolerance": 3
     },
     {
-      "downscale": 1.0,
+      "downscale": 0.45,
       "edge": {
         "band": 10.0,
         "edge_frac": 0.0,
@@ -472,7 +472,7 @@
         "tol_edge": 5.0,
         "tol_mid": 1.0
       },
-      "sensitivity": 1.0,
+      "sensitivity": 0.56,
       "shift_tolerance": 3
     },
     {
@@ -673,5 +673,5 @@
   ],
   "defect": false,
   "period_ms": 200,
-  "source_dir": "D:\\Pj\\CppDetector\\frames36"
+  "source_dir": "C:\\Users\\ShablinskiyM\\Desktop\\huinya pashi\\CppDetector\\frames36"
 }
