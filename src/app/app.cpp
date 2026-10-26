@@ -21,7 +21,8 @@ static int64_t nowMs() {
 
 static json paramsToJson(const InspectParams& p) {
     return {{"sensitivity", p.sensitivity}, {"reject_threshold", p.rejectThreshold},
-            {"shift_tolerance", p.shiftTolerance}, {"downscale", p.downscale}, {"min_blob_area", p.minBlobArea}};
+            {"shift_tolerance_x", p.shiftToleranceX}, {"shift_tolerance_y", p.shiftToleranceY},
+            {"downscale", p.downscale}, {"min_blob_area", p.minBlobArea}};
 }
 
 static json roiToJson(const std::vector<cv::Point>& roi) {
@@ -38,8 +39,15 @@ static bool applyParams(const json& b, InspectParams& p, std::string& err) {
         dst = static_cast<std::remove_reference_t<decltype(dst)>>(b[k].get<double>());
         return true;
     };
+    // Old configs/clients set both axes; explicit X/Y fields override the shared value.
+    if (b.contains("shift_tolerance")) {
+        int legacy = p.shiftToleranceX;
+        if (!num("shift_tolerance", 0, 30, legacy)) return false;
+        p.shiftToleranceX = p.shiftToleranceY = legacy;
+    }
     return num("sensitivity", 0, 1, p.sensitivity) && num("reject_threshold", 0, 100, p.rejectThreshold) &&
-           num("shift_tolerance", 0, 30, p.shiftTolerance) && num("downscale", 0.1, 1, p.downscale) &&
+           num("shift_tolerance_x", 0, 30, p.shiftToleranceX) && num("shift_tolerance_y", 0, 30, p.shiftToleranceY) &&
+           num("downscale", 0.1, 1, p.downscale) &&
            num("min_blob_area", 1, 100000, p.minBlobArea);
 }
 
@@ -519,6 +527,11 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
     j["threshold"] = c.p.rejectThreshold;
     j["sensitivity"] = c.p.sensitivity;
     j["shift"] = {std::round(r.shift.x * 100) / 100, std::round(r.shift.y * 100) / 100};
+    j["shift_tolerance_x"] = c.p.shiftToleranceX;
+    j["shift_tolerance_y"] = c.p.shiftToleranceY;
+    j["shift_limit"] = {r.shiftLimit.x, r.shiftLimit.y};
+    j["envelope_kernel"] = {r.envelopeKernel.width, r.envelopeKernel.height};
+    j["downscale"] = c.p.downscale;
     j["zones"] = json::array();
     for (auto& z : r.zones) j["zones"].push_back({z.x, z.y, z.width, z.height});
     j["ms"] = std::round((r.ms + sr.ms + er.ms) * 100) / 100;

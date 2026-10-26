@@ -47,8 +47,10 @@ InspectResult Inspector::inspect(const cv::Mat& bgr, const InspectParams& p) con
     refGray_.convertTo(a, CV_32F);
     cur.convertTo(b, CV_32F);
     r.shift = cv::phaseCorrelate(a, b);
-    int maxShift = std::max(p.shiftTolerance * 4, 8);
-    if (std::abs(r.shift.x) > maxShift || std::abs(r.shift.y) > maxShift) {
+    int maxShiftX = std::max(p.shiftToleranceX * 4, 8);
+    int maxShiftY = std::max(p.shiftToleranceY * 4, 8);
+    r.shiftLimit = cv::Point2d(maxShiftX, maxShiftY);
+    if (std::abs(r.shift.x) > maxShiftX || std::abs(r.shift.y) > maxShiftY) {
         r.reject = true;
         r.reason = "shift_exceeded";
     }
@@ -64,8 +66,8 @@ InspectResult Inspector::inspect(const cv::Mat& bgr, const InspectParams& p) con
     aligned.convertTo(aligned, CV_8U, gain, mr[0] - mc[0] * gain);
 
     // micro-shift tolerance: distance to the min/max envelope of the reference
-    int k = 2 * p.shiftTolerance + 1;
-    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(k, k));
+    r.envelopeKernel = cv::Size(2 * p.shiftToleranceX + 1, 2 * p.shiftToleranceY + 1);
+    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, r.envelopeKernel);
     cv::Mat refMin, refMax, lo, hi, diff;
     cv::erode(refGray_, refMin, kernel);
     cv::dilate(refGray_, refMax, kernel);

@@ -71,8 +71,10 @@
             <input type="range" id="sensitivity" min="0" max="1" step="0.01"></div>
           <div class="param"><label>Порог брака, % <b id="v_reject_threshold"></b></label>
             <input type="range" id="reject_threshold" min="0" max="100" step="0.5"></div>
-          <div class="param"><label>Допуск на сдвиг, px <b id="v_shift_tolerance"></b></label>
-            <input type="range" id="shift_tolerance" min="0" max="15" step="1"></div>
+          <div class="param" title="Влево/вправо. Допуск сравнения в рабочих пикселях после Downscale; предел компенсации X = max(8, допуск × 4)."><label>Допуск на сдвиг X, px <b id="v_shift_tolerance_x"></b></label>
+            <input type="range" id="shift_tolerance_x" min="0" max="15" step="1"></div>
+          <div class="param" title="Вверх/вниз. Допуск сравнения в рабочих пикселях после Downscale; предел компенсации Y = max(8, допуск × 4)."><label>Допуск на сдвиг Y, px <b id="v_shift_tolerance_y"></b></label>
+            <input type="range" id="shift_tolerance_y" min="0" max="15" step="1"></div>
           <div class="param"><label>Downscale <b id="v_downscale"></b></label>
             <input type="range" id="downscale" min="0.2" max="1" step="0.05"></div>
           <div class="param"><label>Мин. площадь пятна, px <b id="v_min_blob_area"></b></label>

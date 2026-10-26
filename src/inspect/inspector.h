@@ -13,7 +13,8 @@ constexpr double kScoreScale = 1000.0;
 struct InspectParams {
     double sensitivity = 0.5;       // 0..1, higher = stricter (lower diff threshold)
     double rejectThreshold = 20.0;  // 0..100, same scale as score; score > threshold -> reject
-    int shiftTolerance = 3;         // px, micro-shift tolerance
+    int shiftToleranceX = 3;        // working px, horizontal micro-shift tolerance
+    int shiftToleranceY = 3;        // working px, vertical micro-shift tolerance
     double downscale = 1.0;         // 1.0 = original
     int minBlobArea = 20;           // px at working resolution
 };
@@ -23,6 +24,8 @@ struct InspectResult {
     bool reject = false;
     std::string reason;             // "", "score_over_threshold", "shift_exceeded", "no_reference"
     cv::Point2d shift;              // detected translation (working px)
+    cv::Point2d shiftLimit;         // compensation/rejection limits per axis (working px)
+    cv::Size envelopeKernel{1, 1};  // comparison envelope width (X) and height (Y)
     std::vector<cv::Rect> zones;    // bboxes of anomaly zones (original coords)
     cv::Mat heatmap;                // CV_8U diff map (working resolution)
     int diffThreshold = 0;          // diff level treated as anomalous (sensitivity mapped)

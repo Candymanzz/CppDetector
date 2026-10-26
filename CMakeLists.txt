@@ -24,3 +24,14 @@ endif()
 target_link_libraries(cppdetector PRIVATE
   opencv_core opencv_imgproc opencv_imgcodecs
   httplib::httplib nlohmann_json::nlohmann_json)
+
+include(CTest)
+if(BUILD_TESTING)
+  add_executable(shift_tolerance_test
+    tests/shift_tolerance_test.cpp src/inspect/inspector.cpp src/inspect/auto_roi.cpp
+    src/inspect/seam.cpp src/app/app.cpp src/app/decision_log.cpp)
+  target_include_directories(shift_tolerance_test PRIVATE src)
+  target_link_libraries(shift_tolerance_test PRIVATE
+    opencv_core opencv_imgproc opencv_imgcodecs nlohmann_json::nlohmann_json)
+  add_test(NAME shift_tolerance_test COMMAND shift_tolerance_test)
+endif()

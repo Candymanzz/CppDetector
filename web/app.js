@@ -215,7 +215,7 @@ function fillSelect(sel, frames, selected) {
 }
 
 const PARAMS = [
-  ["sensitivity", 2], ["reject_threshold", 2], ["shift_tolerance", 0], ["downscale", 2], ["min_blob_area", 0],
+  ["sensitivity", 2], ["reject_threshold", 2], ["shift_tolerance_x", 0], ["shift_tolerance_y", 0], ["downscale", 2], ["min_blob_area", 0],
 ];
 
 function selectCam(i) {
