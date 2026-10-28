@@ -11,7 +11,7 @@ namespace cd {
 constexpr double kScoreScale = 500.0;
 
 struct InspectParams {
-    double sensitivity = 0.5;       // 0..1, higher = stricter (lower diff threshold)
+    double sensitivity = 0.5;       // 0..2, higher = stricter (lower diff threshold)
     double rejectThreshold = 10.0;  // 0..100, same scale as score; score > threshold -> reject
     int shiftTolerance = 3;         // px, micro-shift tolerance
     double downscale = 1.0;         // 1.0 = original

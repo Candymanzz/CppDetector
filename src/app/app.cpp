@@ -38,7 +38,7 @@ static bool applyParams(const json& b, InspectParams& p, std::string& err) {
         dst = static_cast<std::remove_reference_t<decltype(dst)>>(b[k].get<double>());
         return true;
     };
-    return num("sensitivity", 0, 1, p.sensitivity) && num("reject_threshold", 0, 100, p.rejectThreshold) &&
+    return num("sensitivity", 0, 2, p.sensitivity) && num("reject_threshold", 0, 100, p.rejectThreshold) &&
            num("shift_tolerance", 0, 30, p.shiftTolerance) && num("downscale", 0.1, 1, p.downscale) &&
            num("min_blob_area", 1, 100000, p.minBlobArea);
 }
