@@ -1,5 +1,7 @@
 # Changelog
 
+- 2026-10-28: fixed the half-pixel alignment zero offset for odd DFT sizes (D25). Reference/current thumbnails and Hann windows use equal even optimal DFT canvases with zero padding; original thumbnail geometry remains the coordinate scale. Added repeated self-alignment and signed/subpixel translation regressions, plus real-frame ROI checks for 0.5-4 mm tolerances.
+
 - 2026-10-28: audited surface inspection and seam handling (D24). Fixed inconsistent fractional-scale resizing, counted connected anomaly pixels without filling clean holes, applied configured seam contrast, and rejected failed enabled seam measurements with seam_not_found. Added geometry validation and invalidation after reference resolution changes. Serialized camera setting writes, flushed changes before inspection, and disabled the stored seam after deleting an endpoint. Added regression coverage and checked actual browser interactions and frames36.
 
 - 2026-10-27: deferred calibration at the user's request: removed its UI and point-picking workflow, enabled mm controls immediately with provisional per-camera scales, preserved digital-scale conversion and added estimated-scale/save validation.

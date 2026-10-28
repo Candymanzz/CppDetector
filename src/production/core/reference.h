@@ -17,9 +17,9 @@ struct Prepared {
     cv::Mat roiMask;          // CV_8U 0/255 at work size (full frame when no ROI)
     int roiArea = 0;          // pixels in roiMask
     cv::Rect region;          // ROI bounding box + padding (analysis is limited to it)
-    cv::Size smallSize;       // size used for the cheap shift estimation
-    cv::Mat refSmall;         // CV_32F reference region resized to smallSize
-    cv::Mat hann;             // CV_32F Hanning window of smallSize
+    cv::Size smallSize;       // unpadded thumbnail size; converts correlation shifts back to ROI pixels
+    cv::Mat refSmall;         // CV_32F thumbnail, zero-padded to even optimal DFT dimensions
+    cv::Mat hann;             // thumbnail's Hanning window with the same right/bottom zero padding
 };
 
 // One reference frame of one camera-scoped product plus its ROI.

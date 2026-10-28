@@ -54,11 +54,15 @@ InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Sett
     cv::Mat small, smallF;
     cv::resize(cur(region), small, prep->smallSize, 0, 0, cv::INTER_AREA);
     small.convertTo(smallF, CV_32F);
+    // Match the cached reference's even DFT canvas without resizing the content.
+    cv::copyMakeBorder(smallF, smallF, 0, prep->refSmall.rows - smallF.rows,
+                      0, prep->refSmall.cols - smallF.cols, cv::BORDER_CONSTANT, 0);
     double response = 0;
     // OpenCV may apply the Hann window in-place when no DFT padding is needed.
     // Never pass the shared immutable cache as its writable working buffer.
     cv::Mat referenceSmall = prep->refSmall.clone();
     cv::Point2d sh = cv::phaseCorrelate(referenceSmall, smallF, prep->hann, &response);
+    // Padding adds no spatial scale: retain the original, unpadded thumbnail size.
     sh.x *= static_cast<double>(region.width) / prep->smallSize.width;
     sh.y *= static_cast<double>(region.height) / prep->smallSize.height;
     out.shiftResponse = response;

@@ -9,6 +9,12 @@ namespace {
 
 constexpr int kShiftEstimateMaxSide = 256;   // shift is estimated on a thumbnail of the ROI box
 
+int evenOptimalDftSize(int size) {
+    int optimal = cv::getOptimalDFTSize(size);
+    while (optimal % 2 != 0) optimal = cv::getOptimalDFTSize(optimal + 1);
+    return optimal;
+}
+
 cv::Mat toBlurredGray(const cv::Mat& bgr, double scale) {
     cv::Mat g;
     if (bgr.channels() == 1) g = bgr.clone();
@@ -89,6 +95,15 @@ std::shared_ptr<const Prepared> Reference::build(double scale, const NormPolygon
     cv::resize(p->refGray(box), small, p->smallSize, 0, 0, cv::INTER_AREA);
     small.convertTo(p->refSmall, CV_32F);
     cv::createHanningWindow(p->hann, p->smallSize, CV_32F);
+
+    // phaseCorrelate measures its peak relative to width/2, height/2. An odd DFT
+    // dimension introduces a half-pixel zero offset even for identical images.
+    // Pad pixels and their existing window, preserving thumbnail geometry/scale.
+    const cv::Size phaseSize(evenOptimalDftSize(p->smallSize.width), evenOptimalDftSize(p->smallSize.height));
+    cv::copyMakeBorder(p->refSmall, p->refSmall, 0, phaseSize.height - p->smallSize.height,
+                      0, phaseSize.width - p->smallSize.width, cv::BORDER_CONSTANT, 0);
+    cv::copyMakeBorder(p->hann, p->hann, 0, phaseSize.height - p->smallSize.height,
+                      0, phaseSize.width - p->smallSize.width, cv::BORDER_CONSTANT, 0);
     return p;
 }
 

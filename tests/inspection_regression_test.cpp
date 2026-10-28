@@ -29,6 +29,70 @@ void identicalDownscaled() {
     }
 }
 
+void identicalRoiAlignment() {
+    cv::Mat image(321, 383, CV_8UC3);
+    cv::RNG(28).fill(image, cv::RNG::UNIFORM, 20, 235);
+    cd::InspectParams p;
+    p.horizontalShiftMm = p.verticalShiftMm = 0;
+    int cases = 0;
+    for (int width : {59, 79, 91, 101, 123, 137, 173, 191, 233, 257}) {
+        for (bool vertical : {false, true}) {
+            const std::vector<cv::Point> roi = vertical
+                ? std::vector<cv::Point>{{30,30},{200,30},{200,30+width},{30,30+width}}
+                : std::vector<cv::Point>{{30,30},{30+width,30},{30+width,200},{30,200}};
+            cd::Inspector inspector;
+            inspector.setReference(image, roi, p);
+            for (double scale : {1.0, 0.7, 0.5, 0.2}) {
+                p.downscale = scale;
+                for (int repeat = 0; repeat < 2; ++repeat) {
+                    const auto r = inspector.inspect(image, p);
+                    if (r.reject || r.score != 0 || cv::norm(r.native.rawShift) > 1e-5) {
+                        std::cerr << "  self ROI width=" << width << " vertical=" << vertical << " scale=" << scale
+                                  << " raw=" << r.native.rawShift << " score=" << r.score << " reason=" << r.reason << '\n';
+                        throw std::runtime_error("identical ROI images must have zero measured shift and pass even with zero tolerance");
+                    }
+                    ++cases;
+                }
+            }
+        }
+    }
+    std::cout << "  identical ROI comparisons=" << cases << '\n';
+}
+
+void knownRoiTranslations() {
+    cv::Mat texture(80, 80, CV_8UC3), image;
+    cv::RNG(20261028).fill(texture, cv::RNG::UNIFORM, 25, 230);
+    cv::resize(texture, image, {400,400}, 0, 0, cv::INTER_CUBIC);
+    int cases = 0;
+    for (bool vertical : {false, true}) {
+        cas::Reference reference(image.clone());
+        reference.setRoi(vertical ? cas::NormPolygon{{.25,.25},{.675,.25},{.675,.45},{.25,.45}}
+                                  : cas::NormPolygon{{.25,.25},{.45,.25},{.45,.675},{.25,.675}});
+        cas::Settings s;
+        s.alignmentLimitX = s.alignmentLimitY = 100;
+        for (double scale : {1.0, 0.7, 0.5, 0.2}) {
+            s.inspectScale = scale;
+            for (double shift : {-5.0, -1.0, -0.5, 0.5, 1.0, 5.0}) {
+                // Express the motion in analysis pixels, then verify the returned original-pixel units.
+                const cv::Point2d expected = vertical ? cv::Point2d(0,shift / scale) : cv::Point2d(shift / scale,0);
+                const cv::Mat transform = (cv::Mat_<double>(2,3) << 1,0,expected.x,0,1,expected.y);
+                cv::Mat moved;
+                cv::warpAffine(image, moved, transform, image.size(), cv::INTER_LINEAR, cv::BORDER_REPLICATE);
+                const auto r = cas::inspectFrame(reference, moved, s, true);
+                const double error = cv::norm(r.rawShift - expected);
+                // Phase-centroid interpolation is approximate; allow half an analysis pixel.
+                if (r.shiftResponse < 0.3 || error > 0.5 / scale) {
+                    std::cerr << "  translation scale=" << scale << " expected=" << expected << " actual=" << r.rawShift
+                              << " response=" << r.shiftResponse << " error=" << error << '\n';
+                    throw std::runtime_error("alignment padding must retain real signed translations and original-pixel coordinate conversion");
+                }
+                ++cases;
+            }
+        }
+    }
+    std::cout << "  known signed/subpixel translations=" << cases << '\n';
+}
+
 void ringDefect() {
     cv::Mat image(320, 384, CV_8UC3, cv::Scalar::all(130));
     cv::Mat frame = image.clone();
@@ -160,6 +224,8 @@ int main(int argc, char** argv) {
         catch (const std::exception& e) { ++failures; std::cerr << "FAIL " << name << ": " << e.what() << '\n'; }
     };
     run("identical_downscaled", identicalDownscaled);
+    run("identical_roi_alignment", identicalRoiAlignment);
+    run("known_roi_translations", knownRoiTranslations);
     run("ring_defect", ringDefect);
     run("missing_seam", missingSeam);
     run("seam_contrast", seamContrast);

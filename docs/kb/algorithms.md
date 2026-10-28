@@ -12,6 +12,9 @@ Reference/current resizing uses identical rounded destination dimensions at ever
 counts of 8-connected anomalous pixels after morphology; clean holes are excluded from both size filtering and score.
 Phase correlation receives a private copy of the reference thumbnail so repeated and concurrent inspections
 cannot mutate the shared prepared-reference cache through OpenCV's in-place Hann window application.
+Since D25, reference/current thumbnails and their Hann window are zero-padded to equal even optimal DFT
+dimensions. This removes a false half-pixel zero shift on identical inputs with odd DFT sizes. Padding does
+not resize the thumbnail: shifts still use its original unpadded width/height for conversion to image pixels.
 
 Score (local calibration D21, 2026-10-27): anomaly_score = min(1, anomalous_ROI_area_percent / 5 * 3).
 The score is three times the previous value until it saturates at 100%, at about 1.667% anomalous ROI area.

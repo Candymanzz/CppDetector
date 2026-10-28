@@ -207,6 +207,21 @@ void realFrames(const std::filesystem::path& root) {
         std::cout<<"PARITY camera "<<camera<<": "<<files.size()<<" frames"<<std::endl;
     }
     std::cout<<"real frames: "<<frames<<"\n";
+    const auto self=cv::imread((root/"camera_4/f_0000002/frame.jpg").string());
+    require(!self.empty(),"missing real self-alignment regression frame");
+    cd::InspectParams p; p.estimatedMmPerPixel={0.27,0.34};
+    cd::Inspector inspector; inspector.setReference(self,{{300,200},{755,200},{755,850},{300,850}},p);
+    int selfCases=0;
+    for(double scale:{1.0,0.7,0.5,0.2}) for(double tolerance:{0.5,1.0,2.0,4.0}) {
+        p.downscale=scale;p.horizontalShiftMm=p.verticalShiftMm=tolerance;
+        for(int repeat=0;repeat<2;++repeat) {
+            const auto r=inspector.inspect(self,p);
+            require(!r.reject && r.score==0 && cv::norm(r.native.rawShift)<1e-5,
+                    "real identical ROI frame must have zero shift across scales and 0.5-4 mm tolerances");
+            ++selfCases;
+        }
+    }
+    std::cout<<"real ROI self-alignment: "<<selfCases<<" comparisons\n";
 }
 }
 int main(int argc,char**argv) {

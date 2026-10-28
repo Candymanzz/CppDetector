@@ -1,5 +1,19 @@
 # Decisions
 
+## D25 - Remove the half-pixel alignment zero offset (2026-10-28)
+
+Context: identical reference/current thumbnails can produce a confident 0.5-pixel shift when phaseCorrelate
+uses an odd optimal DFT dimension. At Downscale 0.2 the real camera-4 ROI reproduced a false 0.675 mm shift
+and shift_exceeded with a 0.5 mm tolerance, despite bitwise-equal prepared inputs.
+Decision: zero-pad reference/current thumbnails and the existing Hann window on the right/bottom to equal,
+even optimal DFT dimensions. Cache the padded reference/window. Retain the unpadded thumbnail size for
+conversion to ROI/original-image coordinates; padding does not change image scale. Keep the private reference
+clone before correlation, because OpenCV can modify working buffers. Do not alter thresholds or discard measured shifts.
+Validation: regression fails before the fix; identical-input cases cover horizontal/vertical ROIs, repeated calls and
+four scales. Known signed/subpixel motions retain their direction and original-image units within half an analysis
+pixel. Existing cache/concurrency, metric and adapter/core parity tests remain required, including the actual camera-4
+self-comparison and tolerances 0.5-4 mm when frames36 is supplied to production_parity_test.
+
 ## D24 - Inspection and seam correctness audit (2026-10-28)
 
 At the user's request, correct abnormal inspection behavior in the local harness:

@@ -6,7 +6,7 @@ Reference-cache correction: bfd9b54ae708482ce83d7961ff8b2f0970deb3fc (`fix etalo
 from https://github.com/Candymanzz/defect-detector-v3/tree/cpp-detector (2026-10-26).
 
 The 11 files in core/ are copied from cppAnalisSurface/src/core/ at the base commit,
-with the reference-cache correction, local score calibration, metric support and D24 inspection fixes described below.
+with the reference-cache correction, local score calibration, metric support and D24/D25 fixes described below.
 They are intentionally isolated from the local UI. Further calculation changes require an explicit recorded decision.
 Update the snapshot and its provenance together; run production_parity_test afterwards.
 OpenCV is an external dependency: numerical parity requires the same library version/build as production.
@@ -53,3 +53,11 @@ pixel counts, retaining clean holes instead of filling external contours. SeamSe
 the adapter; enabled measurements that cannot locate/fit the line reject, including early exits and invalid geometry.
 These are intentional local corrections to the pinned snapshot. inspection_regression_test checks the behavior
 independently of adapter/core parity; see the D24 decision and the audit report for validation and limits.
+
+Alignment zero-offset correction (2026-10-28, D25, local change): reference/current thumbnails and the
+thumbnail's Hann window are zero-padded on the right/bottom to equal even optimal DFT dimensions before
+phaseCorrelate. This avoids the half-pixel zero shift from an odd DFT dimension. Prepared::smallSize remains
+the unpadded spatial size, while refSmall/hann contain the padded canvas; original-pixel conversion still uses
+smallSize. The cached padded reference is cloned for each correlation, preserving the earlier cache fix.
+Regression checks cover repeated self-comparisons with horizontal/vertical ROIs, signed/subpixel translations,
+and the real camera-4 ROI at different scales and 0.5-4 mm tolerances in the optional real-frame parity run.
