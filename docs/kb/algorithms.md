@@ -3,24 +3,35 @@
 CppDetector branch 123 is now a local UI harness for the native core from defect-detector-v3,
 position-x-y commit 885a79ed plus the reference-cache correction from cpp-detector commit bfd9b54a.
 See src/production/SOURCE.md for provenance and compatibility details.
-Earlier full-frame alignment, amplified score and polyline/edge decisions are historical, not the active backend.
+The local score calibration x3 is described below. Earlier full-frame alignment and polyline/edge decisions are historical.
 
 Pipeline: native reference preparation and ROI bounding box -> grey/blur/downscale -> phase correlation on an
 ROI thumbnail (max side 256, Hanning/confidence rules) -> translation compensation -> ROI brightness normalisation
 -> rectangular min/max comparison envelope -> sensitivity threshold -> morphology/minimum blob area -> score/verdict.
+Reference/current resizing uses identical rounded destination dimensions at every scale (D24). Blob areas are
+counts of 8-connected anomalous pixels after morphology; clean holes are excluded from both size filtering and score.
 Phase correlation receives a private copy of the reference thumbnail so repeated and concurrent inspections
 cannot mutate the shared prepared-reference cache through OpenCV's in-place Hann window application.
 
-Score: native anomaly_score = min(1, anomalous_ROI_area_percent / 5).
+Score (local calibration D21, 2026-10-27): anomaly_score = min(1, anomalous_ROI_area_percent / 5 * 3).
+The score is three times the previous value until it saturates at 100%, at about 1.667% anomalous ROI area.
 Local UI score and reject_threshold use 0..100 percent; verdict is native score >= native threshold.
+The existing default threshold 25% now rejects at about 0.417% anomalous ROI area; score_multiplier=3 is logged.
 Defaults: sensitivity=0.5, reject_threshold=25, shift_tolerance_x/y=3, downscale=1, min_blob_area=20.
-All pixel tolerances and areas are ORIGINAL-image units. The core converts them using inspect_scale and its square.
-Position limits = max(8,4*round(tolerance*scale))/scale per axis, in original px.
-Zero tolerance removes envelope expansion on that axis, not alignment. No rotation correction is added.
+The UI provides horizontal/vertical tolerances in mm immediately, using provisional per-camera scales (D23).
+Metric tolerances are converted to fractional original-image pixels,
+then rounded once at the analysis resolution. The same physical values bound global alignment independent of Downscale.
+For direct legacy pixel callers without metric tolerances, position limits remain max(8,4*round(tolerance*scale))/scale in original px.
+Areas remain original-image px squared. No rotation correction is added.
+See metric-calibration.md for local physical calibration, digital resize, sampling error and perspective limitations.
 
 Only the native two-endpoint bright-seam straightness check may additionally reject.
 The legacy edge/step/polyline calculation is not called or linked into the active backend.
-A seam rejection uses native Service::applySeam merge rules, preserving any earlier surface rejection reason.
+A seam rejection preserves any earlier surface rejection reason. Since D24 an enabled check also rejects when
+the line cannot be measured, with reason seam_not_found. Surface score can still be zero for this rejection.
+Configured min_contrast is applied; line endpoints must be at least 50 original-image pixels apart. Replacing the
+reference at a different resolution clears old ROI and seam geometry. Camera writes are serialized and pending
+changes are saved before manual inspection or starting the emulated stream.
 Local per-camera ROI editing, uploaded references, frame testing, deliberate test-defect injection, camera grid
 and colour overlays remain UI features; artificial defects are explicitly marked in logs.
 

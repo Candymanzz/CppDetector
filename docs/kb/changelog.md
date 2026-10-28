@@ -1,5 +1,13 @@
 # Changelog
 
+- 2026-10-28: audited surface inspection and seam handling (D24). Fixed inconsistent fractional-scale resizing, counted connected anomaly pixels without filling clean holes, applied configured seam contrast, and rejected failed enabled seam measurements with seam_not_found. Added geometry validation and invalidation after reference resolution changes. Serialized camera setting writes, flushed changes before inspection, and disabled the stored seam after deleting an endpoint. Added regression coverage and checked actual browser interactions and frames36.
+
+- 2026-10-27: deferred calibration at the user's request: removed its UI and point-picking workflow, enabled mm controls immediately with provisional per-camera scales, preserved digital-scale conversion and added estimated-scale/save validation.
+
+- 2026-10-27: added per-camera local metric calibration and horizontal/vertical displacement controls in mm. Normalized measurement spans follow digital image resizing; fractional pixel conversion is rounded once at analysis scale. Calibrated alignment uses the configured physical limit instead of the legacy fourfold margin. Added physical result/log diagnostics, calibration UI, migration/scale/limit/restart tests and documented the limits of oblique curved-surface measurements.
+
+- 2026-10-27: applied the user-requested local score multiplier x3 before saturation and threshold comparison. Added score_multiplier to inspection results/logs and regression coverage for clean frames, proportional scores, saturation and rejection; recorded the local calibration as D21.
+
 - 2026-10-26: ported the reference-cache correction from defect-detector-v3 cpp-detector (bfd9b54a): clone the alignment thumbnail before phaseCorrelate so its in-place Hann window cannot mutate shared reference data. Added repeated/concurrent warm/cold cache regressions and changed square-ROI adapter parity from cache diagnostics to immutable-cache/stable-result assertions.
 
 - 2026-10-26: superseded the X/Y-only port with a full local mirror of position-x-y core 885a79ed. Native score, ROI-thumbnail alignment/confidence, original-pixel settings, min-area scaling, seam and heatmap now run behind the existing UI; edge no longer affects verdicts. Added separate native profiles/logs, preserved old scenes/configs, native defaults button and parity tests.

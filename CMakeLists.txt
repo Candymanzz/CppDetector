@@ -7,7 +7,7 @@ find_package(httplib CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(Threads REQUIRED)
 
-# Native core snapshot 885a79ed plus reference-cache fix bfd9b54a; see src/production/SOURCE.md.
+# Native core 885a79ed with cache/inspection fixes, local score x3 and mm support; see src/production/SOURCE.md.
 add_library(production_core STATIC
   src/production/core/reference.cpp src/production/core/settings.cpp
   src/production/core/inspector.cpp src/production/core/seam.cpp src/production/core/performance_log.cpp)
@@ -36,4 +36,7 @@ if(BUILD_TESTING)
   add_executable(production_parity_test tests/production_parity_test.cpp)
   target_link_libraries(production_parity_test PRIVATE local_inspection)
   add_test(NAME production_parity_test COMMAND production_parity_test)
+  add_executable(inspection_regression_test tests/inspection_regression_test.cpp)
+  target_link_libraries(inspection_regression_test PRIVATE local_inspection)
+  add_test(NAME inspection_regression_test COMMAND inspection_regression_test)
 endif()

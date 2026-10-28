@@ -9,7 +9,7 @@ namespace cas {
 
 struct InspectOutcome {
     double areaPercent = 0.0;        // anomalous pixels / ROI pixels * 100
-    double anomalyScore = 0.0;       // min(1, areaPercent / kScoreFullScalePercent)
+    double anomalyScore = 0.0;       // min(1, areaPercent / kScoreFullScalePercent * kScoreMultiplier)
     bool reject = false;
     std::string reason;              // "", "score_over_threshold", "shift_exceeded"
     cv::Point2d shift;               // detected translation, original-frame pixels
@@ -49,7 +49,7 @@ struct InspectOutcome {
 // Throws std::invalid_argument when the frame size differs from the reference size.
 InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Settings& s, bool keepVisuals);
 
-// Gray-u8 heatmap: anomaly energy gated by the accepted blobs + a soft halo, ROI-masked,
+// Gray-u8 heatmap: threshold-normalised anomaly energy (including small/sub-threshold hints), ROI-masked,
 // at most `maxWidth` wide (0 = work resolution).
 cv::Mat buildHeatmap(const InspectOutcome& out, const NormPolygon& roi, int maxWidth);
 

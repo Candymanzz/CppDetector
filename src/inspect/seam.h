@@ -4,11 +4,10 @@
 
 namespace cd {
 
-// Geometry line check (KB D18, generalised to a polyline). We do not compare the line with the reference
-// (the bucket pose changes every shot); we measure how smooth it is.
-//   Ridge = thin bright line (label seam): both edges of the line are measured.
-//   Step  = boundary between two regions (label edge on the bucket bottom): one edge is measured.
-// The line is given by control points; a Catmull-Rom spline through them is the search axis.
+// UI/profile container. The active Inspector uses the native two-endpoint bright-seam check:
+// enabled, pts.front/back, bandHalf, tolMid/tolEdge, edgeFrac and minContrast.
+// Other fields below belong to the historical polyline/step detector (seam.cpp), which is not linked.
+// The seam is measured for smoothness in the current frame, independently of the surface reference.
 struct SeamParams {
     enum Mode { Ridge = 0, Step = 1 };
     bool enabled = false;

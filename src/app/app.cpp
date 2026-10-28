@@ -19,10 +19,50 @@ static int64_t nowMs() {
                std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
+static json calibrationAxisJson(const CalibrationAxis& a) {
+    return {{"p0",{a.p0.x,a.p0.y}},{"p1",{a.p1.x,a.p1.y}},{"length_mm",a.lengthMm}};
+}
+
 static json paramsToJson(const InspectParams& p) {
-    return {{"sensitivity", p.sensitivity}, {"reject_threshold", p.rejectThreshold},
+    json j = {{"sensitivity", p.sensitivity}, {"reject_threshold", p.rejectThreshold},
             {"shift_tolerance_x", p.shiftToleranceX}, {"shift_tolerance_y", p.shiftToleranceY},
             {"downscale", p.downscale}, {"min_blob_area", p.minBlobArea}};
+    j["calibration"] = {{"horizontal",calibrationAxisJson(p.calibration.horizontal)},
+                         {"vertical",calibrationAxisJson(p.calibration.vertical)}};
+    j["horizontal_shift_tolerance_mm"] = p.horizontalShiftMm ? json(*p.horizontalShiftMm) : json(nullptr);
+    j["vertical_shift_tolerance_mm"] = p.verticalShiftMm ? json(*p.verticalShiftMm) : json(nullptr);
+    j["estimated_mm_per_pixel"] = {p.estimatedMmPerPixel.x,p.estimatedMmPerPixel.y};
+    j["metric_scale_source"] = p.calibration.ready() ? "calibrated" : "estimated";
+    return j;
+}
+
+static void initialiseMetricTolerances(InspectParams& p, cv::Size size) {
+    const auto units = p.mmPerPixel(size);
+    if (!p.horizontalShiftMm) p.horizontalShiftMm = p.shiftToleranceX*units.x;
+    if (!p.verticalShiftMm) p.verticalShiftMm = p.shiftToleranceY*units.y;
+}
+
+static bool applyCalibrationAxis(const json& j, CalibrationAxis& a, bool horizontal, std::string& err) {
+    if (!j.is_object()) {err="calibration axis must be an object";return false;}
+    CalibrationAxis next = a;
+    for (auto item : {std::make_pair("p0",&next.p0),std::make_pair("p1",&next.p1)}) {
+        if (!j.contains(item.first)) continue;
+        const auto& point = j[item.first];
+        if (!point.is_array() || point.size()!=2 || !point[0].is_number() || !point[1].is_number()) {
+            err="calibration points must be normalized [x,y]";return false;
+        }
+        const double x=point[0].get<double>(),y=point[1].get<double>();
+        if (!std::isfinite(x)||!std::isfinite(y)||x<0||x>1||y<0||y>1) {err="calibration point outside image";return false;}
+        *item.second={x,y};
+    }
+    if (j.contains("length_mm")) {
+        if (!j["length_mm"].is_number()) {err="calibration length must be a number";return false;}
+        next.lengthMm=j["length_mm"].get<double>();
+        if (!std::isfinite(next.lengthMm)||next.lengthMm<0||next.lengthMm>100000||
+            (next.lengthMm>0 && next.lengthMm<0.001)) {err="invalid calibration length";return false;}
+    }
+    if (next.lengthMm>0 && !next.valid(horizontal)) {err="calibration measurement must have nonzero span along its axis";return false;}
+    a=next;return true;
 }
 
 static json roiToJson(const std::vector<cv::Point>& roi) {
@@ -39,7 +79,7 @@ static bool applyParams(const json& b, InspectParams& p, std::string& err) {
     }
     auto num = [&](const char* k, double lo, double hi, auto& dst) {
         if (!b.contains(k)) return true;
-        if (!b[k].is_number() || b[k] < lo || b[k] > hi) { err = std::string("bad value for ") + k; return false; }
+        if (!b[k].is_number() || !std::isfinite(b[k].get<double>()) || b[k] < lo || b[k] > hi) { err = std::string("bad value for ") + k; return false; }
         dst = static_cast<std::remove_reference_t<decltype(dst)>>(b[k].get<double>());
         return true;
     };
@@ -49,6 +89,36 @@ static bool applyParams(const json& b, InspectParams& p, std::string& err) {
         if (!num("shift_tolerance", 0, 30, legacy)) return false;
         p.shiftToleranceX = p.shiftToleranceY = legacy;
     }
+    if (b.contains("shift_tolerance") || b.contains("shift_tolerance_x")) p.horizontalShiftMm.reset();
+    if (b.contains("shift_tolerance") || b.contains("shift_tolerance_y")) p.verticalShiftMm.reset();
+    if (b.contains("calibration")) {
+        const auto& c=b["calibration"];
+        if (c.is_null()) {p.calibration={};p.horizontalShiftMm.reset();p.verticalShiftMm.reset();}
+        else {
+            if (!c.is_object()) {err="calibration must be an object";return false;}
+            if (c.contains("horizontal") && !applyCalibrationAxis(c["horizontal"],p.calibration.horizontal,true,err)) return false;
+            if (c.contains("vertical") && !applyCalibrationAxis(c["vertical"],p.calibration.vertical,false,err)) return false;
+        }
+        if (!p.calibration.ready()) {p.horizontalShiftMm.reset();p.verticalShiftMm.reset();}
+    }
+    for (auto item : {std::make_pair("horizontal_shift_tolerance_mm",&p.horizontalShiftMm),
+                      std::make_pair("vertical_shift_tolerance_mm",&p.verticalShiftMm)}) {
+        if (!b.contains(item.first) || b[item.first].is_null()) continue;
+        double value=0;
+        if (!num(item.first,0,30,value) || !std::isfinite(value)) {err="invalid tolerance in millimeters";return false;}
+        *item.second=value;
+    }
+    if (b.contains("estimated_mm_per_pixel")) {
+        const auto& units=b["estimated_mm_per_pixel"];
+        if (!units.is_array()||units.size()!=2||!units[0].is_number()||!units[1].is_number()) {
+            err="estimated_mm_per_pixel must contain two positive scales";return false;
+        }
+        const double x=units[0].get<double>(),y=units[1].get<double>();
+        if (!std::isfinite(x)||!std::isfinite(y)||x<0.00001||y<0.00001||x>100||y>100) {
+            err="invalid estimated millimeter scale";return false;
+        }
+        p.estimatedMmPerPixel={x,y};
+    }
     return num("sensitivity", 0, 1, p.sensitivity) && num("reject_threshold", 0, 100, p.rejectThreshold) &&
            num("shift_tolerance_x", 0, 30, p.shiftToleranceX) && num("shift_tolerance_y", 0, 30, p.shiftToleranceY) &&
            num("downscale", 0.1, 1, p.downscale) &&
@@ -56,13 +126,20 @@ static bool applyParams(const json& b, InspectParams& p, std::string& err) {
 }
 
 static bool parseRoi(const json& a, std::vector<cv::Point>& out, std::string& err) {
-    out.clear();
-    if (!a.is_array()) { err = "roi must be an array"; return false; }
+    std::vector<cv::Point> next;
+    if (!a.is_array() || a.size() > 1024) { err = "roi must be an array of at most 1024 points"; return false; }
     for (auto& pt : a) {
         if (!pt.is_array() || pt.size() != 2 || !pt[0].is_number() || !pt[1].is_number()) { err = "bad roi point"; return false; }
-        out.emplace_back(cvRound(pt[0].get<double>()), cvRound(pt[1].get<double>()));
+        const double x = pt[0].get<double>(), y = pt[1].get<double>();
+        if (!std::isfinite(x) || !std::isfinite(y) || std::abs(x) > 1000000 || std::abs(y) > 1000000) {
+            err = "invalid roi coordinate"; return false;
+        }
+        next.emplace_back(cvRound(x), cvRound(y));
     }
-    if (!out.empty() && out.size() < 3) { err = "roi needs at least 3 points"; out.clear(); return false; }
+    if (!next.empty() && (next.size() < 3 || std::abs(cv::contourArea(next)) < 0.5)) {
+        err = "roi needs at least 3 points enclosing a nonzero area"; return false;
+    }
+    out = std::move(next);
     return true;
 }
 
@@ -80,13 +157,16 @@ static bool applySeam(const json& b, const cv::Size& imgSize, SeamParams& s, std
     if (!b.is_object()) { err = "seam must be an object"; return false; }
     auto num = [&](const char* k, double lo, double hi, double& dst) {
         if (!b.contains(k)) return true;
-        if (!b[k].is_number() || b[k] < lo || b[k] > hi) { err = std::string("bad seam value for ") + k; return false; }
+        if (!b[k].is_number() || !std::isfinite(b[k].get<double>()) || b[k] < lo || b[k] > hi) { err = std::string("bad seam value for ") + k; return false; }
         dst = b[k].get<double>();
         return true;
     };
     auto parsePt = [&](const json& a, cv::Point2d& dst) {
         if (!a.is_array() || a.size() != 2 || !a[0].is_number() || !a[1].is_number()) { err = "bad seam point"; return false; }
         double x = a[0].get<double>(), y = a[1].get<double>();
+        if (!std::isfinite(x) || !std::isfinite(y) || x < 0 || y < 0 || x > 1000000 || y > 1000000) {
+            err = "invalid seam coordinate"; return false;
+        }
         if (imgSize.width > 0 && (x < 0 || y < 0 || x >= imgSize.width || y >= imgSize.height)) { err = "seam point outside image"; return false; }
         dst = {x, y};
         return true;
@@ -134,8 +214,13 @@ static bool applySeam(const json& b, const cv::Size& imgSize, SeamParams& s, std
 App::App(fs::path sourceDir, fs::path configPath, fs::path logDir, fs::path legacyConfigPath)
     : source_(std::move(sourceDir)), cfgPath_(std::move(configPath)), legacyCfgPath_(std::move(legacyConfigPath)),
       log_(std::move(logDir)) {
+    // Provisional estimates from the 1224x1024 bucket views; not a measured calibration.
+    const cv::Point2d estimatedScales[kCameras] = {
+        {0.25,0.33},{0.28,0.32},{0.31,0.31},{0.25,0.32},{0.27,0.34},
+        {0.27,0.34},{0.25,0.33},{0.22,0.23},{0.22,0.32},{0.28,0.33}};
     for (int i = 0; i < kCameras; ++i) {
         auto c = std::make_unique<Cam>();
+        c->p.estimatedMmPerPixel=estimatedScales[i];
         c->dir = source_ / ("camera_" + std::to_string(i));
         std::error_code ec;
         for (auto& d : fs::directory_iterator(c->dir, ec))
@@ -159,6 +244,7 @@ App::~App() {
 }
 
 void App::rebuild(Cam& c) {
+    initialiseMetricTolerances(c.p,c.ref.size());
     if (!c.ref.empty()) c.insp.setReference(c.ref, c.roi, c.p);
 }
 
@@ -254,6 +340,9 @@ json App::state() {
         cj["edge"] = seamToJson(c.edge);
         cj["width"] = c.ref.cols;
         cj["height"] = c.ref.rows;
+        cj["calibration_ready"] = c.p.calibration.ready();
+        const auto units=c.p.mmPerPixel(c.ref.size());
+        cj["mm_per_pixel"]={units.x,units.y};
         j["cameras_info"].push_back(cj);
     }
     return j;
@@ -295,6 +384,10 @@ bool App::setCamera(int cam, const json& b, std::string& err) {
             }
         SeamParams seam = c.seam;
         if (b.contains("seam") && !applySeam(b["seam"], c.ref.size(), seam, err)) return false;
+        if (seam.enabled && (c.ref.empty() || seam.pts.size() != 2 ||
+            cv::norm(seam.pts[1] - seam.pts[0]) < 50)) {
+            err = "enabled seam needs two endpoints at least 50 pixels apart"; return false;
+        }
         seam.mode = SeamParams::Ridge;
         c.p = p;
         c.roi = roi;
@@ -332,7 +425,7 @@ bool App::setReferenceFromFrame(int cam, const std::string& frame, std::string& 
         std::lock_guard<std::mutex> lk(c.m);
         cv::Mat m;
         if (!readFrame(c, frame, m)) { err = "unknown frame"; return false; }
-        if (!c.ref.empty() && m.size() != c.ref.size()) c.roi.clear();
+        if (!c.ref.empty() && m.size() != c.ref.size()) { c.roi.clear(); c.seam = SeamParams(); }
         c.ref = m;
         c.refName = frame;
         rebuild(c);
@@ -347,7 +440,7 @@ bool App::setReferenceFromImage(int cam, const cv::Mat& img, std::string& err) {
     Cam& c = *cams_[cam];
     {
         std::lock_guard<std::mutex> lk(c.m);
-        if (!c.ref.empty() && img.size() != c.ref.size()) c.roi.clear();
+        if (!c.ref.empty() && img.size() != c.ref.size()) { c.roi.clear(); c.seam = SeamParams(); }
         c.ref = img;
         c.refName = "upload";
         fs::create_directories(cfgPath_.parent_path());
@@ -541,6 +634,7 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
     j["inspection_engine"] = kInspectionEngine;
     j["engine_source_commit"] = kEngineSourceCommit;
     j["native_settings"] = r.settings.toJson();
+    j["score_multiplier"] = cas::kScoreMultiplier;
     j["anomaly_score"] = r.native.anomalyScore;
     j["area_percent"] = r.native.areaPercent;
     j["score"] = std::round(r.score * 1000) / 1000;
@@ -560,8 +654,28 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
     j["shift_raw"] = {r.native.rawShift.x, r.native.rawShift.y};
     j["shift_response"] = r.native.shiftResponse;
     j["shift_units"] = "original_px";
-    j["shift_tolerance_x"] = c.p.shiftToleranceX;
-    j["shift_tolerance_y"] = c.p.shiftToleranceY;
+    j["shift_mm"] = nullptr;
+    j["shift_raw_mm"] = nullptr;
+    j["shift_limit_mm"] = nullptr;
+    j["effective_shift_tolerance_mm"] = nullptr;
+    j["calibration_ready"] = c.p.calibration.ready();
+    j["metric_scale_source"] = c.p.calibration.ready() ? "calibrated" : "estimated";
+    if (!c.ref.empty()) {
+        const auto units=c.p.mmPerPixel(c.ref.size());
+        j["mm_per_pixel"]={units.x,units.y};
+        j["shift_mm"]={r.shift.x*units.x,r.shift.y*units.y};
+        j["shift_raw_mm"]={r.native.rawShift.x*units.x,r.native.rawShift.y*units.y};
+        j["shift_limit_mm"]={r.shiftLimit.x*units.x,r.shiftLimit.y*units.y};
+        j["horizontal_shift_tolerance_mm"]=c.p.horizontalShiftMm ? json(*c.p.horizontalShiftMm) : json(nullptr);
+        j["vertical_shift_tolerance_mm"]=c.p.verticalShiftMm ? json(*c.p.verticalShiftMm) : json(nullptr);
+        if (r.native.scale>0) {
+            j["effective_shift_tolerance_mm"]={(r.envelopeKernel.width-1)/2*units.x/r.native.scale,
+                                               (r.envelopeKernel.height-1)/2*units.y/r.native.scale};
+            j["analysis_pixel_mm"]={units.x/r.native.scale,units.y/r.native.scale};
+        }
+    }
+    j["shift_tolerance_x"] = r.settings.shiftToleranceX;
+    j["shift_tolerance_y"] = r.settings.shiftToleranceY;
     j["shift_limit"] = {r.shiftLimit.x, r.shiftLimit.y};
     j["envelope_kernel"] = {r.envelopeKernel.width, r.envelopeKernel.height};
     j["downscale"] = c.p.downscale;

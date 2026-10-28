@@ -16,7 +16,7 @@ const LINE_PARAM_DEFS = {
   min_contrast: [2, 40, 1, 0, "Мин. контраст, ур. серого"],
   max_gap: [0.05, 1, 0.05, 2, "Макс. разрыв линии (доля)"],
 };
-const lineParams = (ln) => (ln.step ? ["band", "tol_mid", "tol_edge", "edge_frac", "smooth_win", "min_contrast", "max_gap"] : ["band", "tol_mid", "tol_edge", "edge_frac"]);
+const lineParams = (ln) => (ln.step ? ["band", "tol_mid", "tol_edge", "edge_frac", "smooth_win", "min_contrast", "max_gap"] : ["band", "tol_mid", "tol_edge", "edge_frac", "min_contrast"]);
 const S = {
   cams: [],            // static info per camera (frames, params, roi, ...)
   status: null,
@@ -68,6 +68,35 @@ function el(tag, cls, text) {
 const fmt = (v, d = 2) => (typeof v === "number" ? v.toFixed(d) : "—");
 const cur = () => S.cams[S.cam];
 
+// Serialize snapshots per camera, including changes still waiting for the debounce.
+const cameraWrites = new Map(), scheduledSaves = new Map();
+function cancelScheduledSave(cam, key) {
+  const id = `${cam}:${key}`, job = scheduledSaves.get(id);
+  if (job) { clearTimeout(job.timer); scheduledSaves.delete(id); }
+}
+function scheduleSave(cam, key, save) {
+  cancelScheduledSave(cam, key);
+  const id = `${cam}:${key}`;
+  scheduledSaves.set(id, { cam, save, timer: setTimeout(() => {
+    scheduledSaves.delete(id); save();
+  }, 300) });
+}
+function queueCameraSave(cam, body) {
+  const snapshot = JSON.parse(JSON.stringify(body));
+  const next = (cameraWrites.get(cam) || Promise.resolve()).catch(() => {}).then(() =>
+    post("/api/camera?cam=" + cam, snapshot));
+  cameraWrites.set(cam, next);
+  next.catch(() => {}); // keep the failure available to flushSettings
+  return next;
+}
+async function flushSettings(cam) {
+  for (const [id, job] of [...scheduledSaves]) {
+    if (job.cam !== cam) continue;
+    clearTimeout(job.timer); scheduledSaves.delete(id); job.save();
+  }
+  await cameraWrites.get(cam);
+}
+
 function verdictBadge(v) {
   const map = { OK: ["ok", "OK"], REJECT: ["bad", "БРАК"], NO_REFERENCE: ["warn", "нет эталона"] };
   const [cls, text] = map[v] || ["warn", v || "—"];
@@ -84,10 +113,15 @@ function reasonText(r) {
   switch (r.reason) {
     case "score_over_threshold":
       return `Оценка ${fmt(r.score, 3)}% достигла порога ${fmt(r.threshold, 2)}% — найдено зон: ${(r.zones || []).length}.`;
-    case "shift_exceeded":
-      return `Оценённый сдвиг (${fmt(r.shift_raw?.[0])}, ${fmt(r.shift_raw?.[1])}) px исходного кадра; пределы (${fmt(r.shift_limit?.[0])}, ${fmt(r.shift_limit?.[1])}) px. Достоверность ${fmt(r.shift_response, 3)}.`;
+    case "shift_exceeded": {
+      const shift = r.shift_raw_mm || r.shift_raw, limit = r.shift_limit_mm || r.shift_limit;
+      const units = r.shift_raw_mm ? "мм" : "px исходного кадра";
+      return `Оценённое смещение (${fmt(shift?.[0], 3)}, ${fmt(shift?.[1], 3)}) ${units}; допуски (${fmt(limit?.[0], 3)}, ${fmt(limit?.[1], 3)}) ${units}. Достоверность ${fmt(r.shift_response, 3)}.`;
+    }
     case "seam_deviation":
       return lineText("Стык", r.seam);
+    case "seam_not_found":
+      return "Проверка стыка включена, но линия не найдена или видна недостаточно хорошо. Проверь две точки линии, полосу поиска и контраст.";
     case "edge_deviation":
       return lineText("Кромка", r.edge);
     case "size_mismatch":
@@ -181,7 +215,11 @@ async function poll() {
 }
 
 $("runBtn").addEventListener("click", async () => {
-  await api("/api/run?on=" + (S.status && S.status.running ? 0 : 1), { method: "POST" });
+  try {
+    const on = !(S.status && S.status.running);
+    if (on) await Promise.all(S.cams.map((_, cam) => flushSettings(cam)));
+    await api("/api/run?on=" + (on ? 1 : 0), { method: "POST" });
+  } catch (e) { /* toast shown */ }
 });
 $("period").addEventListener("change", () => post("/api/global", { period_ms: Number($("period").value) }).catch(() => {}));
 $("globalDefect").addEventListener("change", () => post("/api/global", { defect: $("globalDefect").checked }));
@@ -214,8 +252,13 @@ function fillSelect(sel, frames, selected) {
 }
 
 const PARAMS = [
-  ["sensitivity", 2], ["reject_threshold", 2], ["shift_tolerance_x", 0], ["shift_tolerance_y", 0], ["downscale", 2], ["min_blob_area", 0],
+  ["sensitivity", 2], ["reject_threshold", 2], ["horizontal_shift_tolerance_mm", 2], ["vertical_shift_tolerance_mm", 2], ["downscale", 2], ["min_blob_area", 0],
 ];
+function refreshMetricUi() {
+  $("metricStatus").textContent = cur().metric_scale_source === "calibrated"
+    ? "Допуски заданы в мм. Значения учитывают разрешение кадра и Downscale."
+    : "Миллиметры пока приблизительные. Масштаб уточним опытным путём.";
+}
 
 function selectCam(i) {
   S.cam = i;
@@ -225,7 +268,8 @@ function selectCam(i) {
   fillSelect($("refSelect"), c.frames, c.reference);
   fillSelect($("testSelect"), c.frames, c.frames[1] || c.frames[0]);
   $("refName").textContent = c.reference === "upload" ? "загруженный файл" : c.reference || "—";
-  PARAMS.forEach(([k, d]) => { $(k).value = c[k]; $("v_" + k).textContent = fmt(c[k], d); });
+  PARAMS.forEach(([k, d]) => { $(k).value = c[k] ?? 0; $("v_" + k).textContent = c[k] == null ? "—" : fmt(c[k], d); });
+  refreshMetricUi();
   S.roi = c.roi.map((p) => p.slice());
   LINES.forEach(({ key }) => {
     S.ln[key] = { d: JSON.parse(JSON.stringify(c[key])), pick: false, skipMode: false, roiSel: null, drag: -1 };
@@ -238,23 +282,29 @@ function selectCam(i) {
 }
 
 function reloadRefImage() {
+  const cam = S.cam;
   const img = new Image();
-  img.onload = () => { S.img.ref = img; draw(); };
-  img.src = `/api/frame?cam=${S.cam}&frame=&t=${Date.now()}`;
+  S.img.ref = null;
+  img.onload = () => { if (S.cam === cam) { S.img.ref = img; draw(); } };
+  img.src = `/api/frame?cam=${cam}&frame=&t=${Date.now()}`;
 }
 
 function loadFrameImage() {
+  const cam = S.cam;
   const name = $("testSelect").value;
   if (!name) return;
   const img = new Image();
-  img.onload = () => { S.img.frame = img; if (S.mode === "frame") draw(); };
-  img.src = `/api/frame?cam=${S.cam}&frame=${encodeURIComponent(name)}`;
+  S.img.frame = null;
+  img.onload = () => { if (S.cam === cam && $("testSelect").value === name) { S.img.frame = img; if (S.mode === "frame") draw(); } };
+  img.src = `/api/frame?cam=${cam}&frame=${encodeURIComponent(name)}`;
 }
 
 function loadResultImage(ver) {
+  const cam = S.cam;
   const img = new Image();
-  img.onload = () => { S.img.result = img; if (S.mode === "result") draw(); };
-  img.src = `/api/overlay?cam=${S.cam}&v=${ver || Date.now()}`;
+  S.img.result = null;
+  img.onload = () => { if (S.cam === cam && S.lastResultVer === ver) { S.img.result = img; if (S.mode === "result") draw(); } };
+  img.src = `/api/overlay?cam=${cam}&v=${ver || Date.now()}`;
 }
 
 function setMode(m) {
@@ -482,7 +532,7 @@ canvas.addEventListener("contextmenu", (ev) => {
   for (const { key } of LINES) {
     const d = S.ln[key].d;
     const si = d.pts.findIndex((p) => Math.hypot(p[0] - pt[0], p[1] - pt[1]) <= hr);
-    if (si >= 0) { d.pts.splice(si, 1); d.skip = []; draw(); fillLineUi(key); saveLine(key); return; }
+    if (si >= 0) { d.pts.splice(si, 1); d.skip = []; if (d.pts.length < 2) d.enabled = false; draw(); fillLineUi(key); saveLine(key); return; }
   }
   const i = hitPoint(pt);
   if (i >= 0) { S.roi.splice(i, 1); draw(); saveRoi(); }
@@ -501,12 +551,12 @@ $("autoRoi").addEventListener("click", async () => {
   } catch (e) { /* toast shown */ }
 });
 
-async function saveRoi() {
-  if (S.roi.length && S.roi.length < 3) return;       // incomplete polygon stays a local draft
+async function saveRoi(cam = S.cam, roi = S.roi.map((p) => p.slice())) {
+  if (roi.length && roi.length < 3) return;       // incomplete polygon stays a local draft
+  S.cams[cam].roi = roi;
   try {
-    await post("/api/camera?cam=" + S.cam, { roi: S.roi });
-    cur().roi = S.roi.map((p) => p.slice());
-    flashSaved();
+    await queueCameraSave(cam, { roi });
+    if (cam === S.cam) flashSaved();
   } catch (e) { /* toast shown */ }
 }
 
@@ -565,16 +615,18 @@ function fillLineUi(key) {
     "Две точки линии position-x-y. Тяни точку мышью, ПКМ — удалить.";
 }
 
-async function saveLine(key) {
-  const ln = LINES.find((x) => x.key === key), l = S.ln[key], d = l.d;
-  if (d.pts.length === 1 || l.pick || l.roiSel) return;      // an unfinished line is only a draft
+async function saveLine(key, cam = S.cam, draft = null) {
+  const ln = LINES.find((x) => x.key === key), l = S.ln[key];
+  if (!draft && (l.pick || l.roiSel)) return;      // unfinished manual selection stays a draft
+  const d = draft || JSON.parse(JSON.stringify(l.d));
+  cancelScheduledSave(cam, key);
   const body = { enabled: d.enabled && d.pts.length === 2, pts: d.pts };
   if (ln.step) body.polarity = d.polarity || 0;
   lineParams(ln).forEach((p) => (body[p] = d[p]));
+  S.cams[cam][key] = JSON.parse(JSON.stringify(d));
   try {
-    await post("/api/camera?cam=" + S.cam, { [key]: body });
-    cur()[key] = JSON.parse(JSON.stringify(d));
-    flashSaved();
+    await queueCameraSave(cam, { [key]: body });
+    if (cam === S.cam) flashSaved();
   } catch (e) { /* toast shown */ }
 }
 
@@ -600,16 +652,16 @@ function stopOtherModes(key) {
   });
 }
 
-let lineTimer = {};
+const measurableLine = (d) => d.pts.length === 2 && Math.hypot(d.pts[1][0] - d.pts[0][0], d.pts[1][1] - d.pts[0][1]) >= 50;
 LINES.forEach((ln) => {
   const k = ln.key;
   const L = () => S.ln[k];
   const redraw = () => { fillLineUi(k); draw(); };
 
   $(k + "_enabled").addEventListener("change", () => {
-    if ($(k + "_enabled").checked && L().d.pts.length < 2) {
+    if ($(k + "_enabled").checked && !measurableLine(L().d)) {
       $(k + "_enabled").checked = false;
-      toast("Сначала задай линию на кадре", true);
+      toast("Задай две точки стыка на расстоянии не меньше 50 px", true);
       return;
     }
     L().d.enabled = $(k + "_enabled").checked;
@@ -649,10 +701,9 @@ LINES.forEach((ln) => {
       l.d.pts = orderedRoiPick(l.roiSel, S.roi.length).map((i) => S.roi[i].slice());
       l.d.skip = [];
       l.roiSel = null;
-    } else {
-      if (l.d.pts.length < 2) { toast("Нужно минимум 2 точки", true); return; }
-      l.pick = false;
-    }
+    } else if (l.d.pts.length < 2) { toast("Нужно минимум 2 точки", true); return; }
+    if (!measurableLine(l.d)) { toast("Точки стыка должны быть на расстоянии не меньше 50 px", true); return; }
+    l.pick = false;
     l.d.enabled = true;
     redraw(); saveLine(k);
   });
@@ -666,8 +717,9 @@ LINES.forEach((ln) => {
       L().d[p] = Number($(`${k}_${p}`).value);
       $(`v_${k}_${p}`).textContent = fmt(L().d[p], LINE_PARAM_DEFS[p][3]);
       draw();
-      clearTimeout(lineTimer[k]);
-      lineTimer[k] = setTimeout(() => saveLine(k), 300);
+      const cam = S.cam, draft = JSON.parse(JSON.stringify(L().d));
+      S.cams[cam][k] = draft;
+      if (!L().pick && !L().roiSel) scheduleSave(cam, k, () => saveLine(k, cam, draft));
     });
   });
 });
@@ -676,29 +728,35 @@ LINES.forEach((ln) => {
 
 $("resetDetector").addEventListener("click", async () => {
   try {
-    await post("/api/camera?cam=" + S.cam, { sensitivity: 0.5, reject_threshold: 25,
+    const cam = S.cam;
+    await flushSettings(cam);
+    await queueCameraSave(cam, { sensitivity: 0.5, reject_threshold: 25,
       shift_tolerance_x: 3, shift_tolerance_y: 3, downscale: 1, min_blob_area: 20, seam: { enabled: false } });
     await reloadState();
     toast("Настройки position-x-y восстановлены; эталон и ROI сохранены");
   } catch (e) { /* toast shown */ }
 });
 
-let paramTimer;
+function parameterBody() {
+  const body = {};
+  PARAMS.forEach(([k]) => { if (!$(k).disabled) body[k] = Number($(k).value); });
+  return body;
+}
 PARAMS.forEach(([k, d]) => {
   $(k).addEventListener("input", () => {
     $("v_" + k).textContent = fmt(Number($(k).value), d);
-    clearTimeout(paramTimer);
-    paramTimer = setTimeout(saveParams, 300);
+    const cam = S.cam, body = parameterBody();
+    Object.assign(S.cams[cam], body);
+    scheduleSave(cam, "params", () => saveParams(cam, body));
   });
 });
 
-async function saveParams() {
-  const body = {};
-  PARAMS.forEach(([k]) => (body[k] = Number($(k).value)));
+async function saveParams(cam = S.cam, body = parameterBody()) {
+  cancelScheduledSave(cam, "params");
+  Object.assign(S.cams[cam], body);
   try {
-    await post("/api/camera?cam=" + S.cam, body);
-    Object.assign(cur(), body);
-    flashSaved();
+    await queueCameraSave(cam, body);
+    if (cam === S.cam) { refreshMetricUi(); flashSaved(); }
   } catch (e) { /* toast shown */ }
 }
 
@@ -733,6 +791,7 @@ $("refFile").addEventListener("change", async (ev) => {
 });
 
 async function reloadState() {
+  await Promise.all(S.cams.map((_, cam) => flushSettings(cam)));
   const st = await api("/api/state");
   S.cams = st.cameras_info;
   selectCam(S.cam);
@@ -751,7 +810,9 @@ function renderResult(r) {
   add("Кадр", r.frame + (r.defect_injected ? " + тестовый дефект" : ""));
   add("Порог брака", fmt(r.threshold, 2) + "%");
   add("Чувствительность", fmt(r.sensitivity, 2));
-  add("Сдвиг, px", r.shift ? `${fmt(r.shift[0])}, ${fmt(r.shift[1])}` : "—");
+  const shift = r.shift_mm || r.shift;
+  add(r.shift_mm ? "Смещение, мм (гориз., верт.)" : "Смещение, px", shift ? `${fmt(shift[0], 3)}, ${fmt(shift[1], 3)}` : "—");
+  if (r.effective_shift_tolerance_mm) add("Допуски при разрешении анализа, мм", r.effective_shift_tolerance_mm.map((v) => fmt(v, 3)).join(", "));
   [["seam", "Стык"], ["edge", "Кромка"]].forEach(([key, name]) => {
     const z = r[key];
     if (!z) return;
@@ -770,6 +831,7 @@ function renderResult(r) {
 }
 
 function afterInspect(r) {
+  if (r.cam !== S.cam) { refreshLogIfVisible(); return; }
   S.lastResultVer = r.ver;
   renderResult(r);
   loadResultImage(r.ver);
@@ -779,7 +841,9 @@ function afterInspect(r) {
 
 $("runOne").addEventListener("click", async () => {
   try {
+    const cam = S.cam;
     const q = `cam=${S.cam}&frame=${encodeURIComponent($("testSelect").value)}&defect=${$("testDefect").checked ? 1 : 0}`;
+    await flushSettings(cam);
     afterInspect(await api("/api/inspect?" + q, { method: "POST" }));
   } catch (e) { /* toast shown */ }
 });
@@ -791,15 +855,20 @@ $("testFile").addEventListener("change", async (ev) => {
   const fd = new FormData();
   fd.append("file", f);
   try {
-    afterInspect(await api(`/api/inspect_upload?cam=${S.cam}&defect=${$("testDefect").checked ? 1 : 0}`, { method: "POST", body: fd }));
+    const cam = S.cam, defect = $("testDefect").checked ? 1 : 0;
+    await flushSettings(cam);
+    afterInspect(await api(`/api/inspect_upload?cam=${cam}&defect=${defect}`, { method: "POST", body: fd }));
   } catch (e) { /* toast shown */ }
 });
 
 $("runAll").addEventListener("click", async () => {
+  const cam = S.cam, defect = $("testDefect").checked ? 1 : 0;
   const box = $("allResults");
   box.replaceChildren(el("div", "muted small", "проверка…"));
   try {
-    const rows = await api(`/api/inspect_all?cam=${S.cam}&defect=${$("testDefect").checked ? 1 : 0}`, { method: "POST" });
+    await flushSettings(cam);
+    const rows = await api(`/api/inspect_all?cam=${cam}&defect=${defect}`, { method: "POST" });
+    if (S.cam !== cam) return;
     const t = el("table");
     const hd = el("tr");
     ["Кадр", "Score, %", "Вердикт", "мс"].forEach((h) => hd.append(el("th", "", h)));
@@ -923,11 +992,15 @@ $("runTestFile").addEventListener("click", async () => {
   const file = $("testFileSelect").value;
   if (!file) return;
   try {
-    afterInspect(await api(`/api/inspect_testfile?cam=${S.cam}&file=${encodeURIComponent(file)}&defect=${$("testDefect").checked ? 1 : 0}`, { method: "POST" }));
+    const cam = S.cam, defect = $("testDefect").checked ? 1 : 0;
+    await flushSettings(cam);
+    afterInspect(await api(`/api/inspect_testfile?cam=${cam}&file=${encodeURIComponent(file)}&defect=${defect}`, { method: "POST" }));
   } catch (e) { /* toast shown */ }
 });
 
 $("runAllTestFiles").addEventListener("click", async () => {
+  const cam = S.cam;
+  try { await flushSettings(cam); } catch (e) { return; }
   const box = $("allResults");
   box.replaceChildren(el("div", "muted small", "проверка…"));
   const t = el("table");
@@ -936,8 +1009,10 @@ $("runAllTestFiles").addEventListener("click", async () => {
   t.append(hd);
   let last = null;
   for (const f of S.testFiles || []) {
+    if (S.cam !== cam) return;
     try {
-      const r = await api(`/api/inspect_testfile?cam=${S.cam}&file=${encodeURIComponent(f)}&defect=0`, { method: "POST" });
+      const r = await api(`/api/inspect_testfile?cam=${cam}&file=${encodeURIComponent(f)}&defect=0`, { method: "POST" });
+      if (S.cam !== cam) return;
       last = r;
       const tr = el("tr");
       const v = el("td");
@@ -954,6 +1029,7 @@ $("runAllTestFiles").addEventListener("click", async () => {
       t.append(tr);
     }
   }
+  if (S.cam !== cam) return;
   box.replaceChildren(t);
   if (last) afterInspect(last);
   refreshLogIfVisible();

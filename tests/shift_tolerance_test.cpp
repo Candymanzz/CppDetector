@@ -1,6 +1,7 @@
 #include "app/app.h"
 #include "inspect/inspector.h"
 #include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include <chrono>
 #include <cmath>
 #include <filesystem>
@@ -131,6 +132,90 @@ void inspectorTests() {
             "vertical envelope must better tolerate a local vertical movement");
 }
 
+void metricTests(const std::filesystem::path& dir) {
+    const cd::MetricCalibration calibration{{{0.1,0.5},{0.6,0.5},48},{{0.5,0.1},{0.5,0.6},80}};
+    const auto reference=fixture();
+    cd::InspectParams p; p.calibration=calibration;
+    p.horizontalShiftMm=2; p.verticalShiftMm=2;
+    for(int resizeFactor : {1,2}) {
+        cv::Mat resized; cv::resize(reference,resized,{},resizeFactor,resizeFactor,cv::INTER_LINEAR);
+        const auto units=calibration.mmPerPixel(resized.size());
+        const auto pixels=p.tolerancePixels(resized.size());
+        require(std::abs(pixels.x-8*resizeFactor)<1e-10 && std::abs(pixels.y-4*resizeFactor)<1e-10,
+                "physical tolerances must follow resolution and independent axis calibration");
+        cd::Inspector inspector; inspector.setReference(resized,{},p);
+        for(double scale : {1.0,0.7,0.5,0.25}) {
+            p.downscale=scale;
+            const auto r=inspector.inspect(resized,p);
+            require(*p.horizontalShiftMm==2 && *p.verticalShiftMm==2,"digital scale must not change stored millimeters");
+            require(std::abs(r.settings.shiftToleranceX*units.x-2)<1e-10 &&
+                    std::abs(r.settings.shiftToleranceY*units.y-2)<1e-10,"millimeters must reach the core without an early rounding");
+            const double actualX=(r.envelopeKernel.width-1)/2*units.x/scale;
+            const double actualY=(r.envelopeKernel.height-1)/2*units.y/scale;
+            require(std::abs(actualX-2)<=0.5*units.x/scale+1e-10 &&
+                    std::abs(actualY-2)<=0.5*units.y/scale+1e-10,"physical quantization must be bounded by half an analysis pixel");
+            require(std::abs(r.shiftLimit.x*units.x-2)<1e-10 && std::abs(r.shiftLimit.y*units.y-2)<1e-10,
+                    "a calibrated limit of 2 mm must stay 2 mm, without the legacy fourfold margin");
+            const auto allowed=inspector.inspect(translated(resized,6*resizeFactor,0),p);
+            const auto rejected=inspector.inspect(translated(resized,12*resizeFactor,0),p);
+            require(allowed.reason!="shift_exceeded","a 1.5 mm horizontal translation must fit the 2 mm limit at every analysis scale");
+            require(rejected.reason=="shift_exceeded","a 3 mm horizontal translation must exceed the 2 mm limit at every analysis scale");
+            const auto vertical=inspector.inspect(translated(resized,0,6*resizeFactor),p);
+            require(vertical.reason=="shift_exceeded","vertical millimeter limits must use their own axis calibration");
+        }
+    }
+    cas::Settings native;
+    require(native.applyJson({{"shift_tolerance_x",8.4}}).empty() && native.shiftToleranceX==8.4,
+            "native settings must retain fractional calibrated pixels");
+    cas::SettingsPatch::fromJson({{"shift_tolerance_y",3.7}}).applyTo(native);
+    require(native.shiftToleranceY==3.7,"request overrides must retain fractional calibrated pixels");
+
+    const auto root=dir/"metric", config=root/"profile.json";
+    std::filesystem::create_directories(root/"frames"/"camera_0"/"f_0000001");
+    cv::imwrite((root/"frames"/"camera_0"/"f_0000001"/"frame.jpg").string(),reference);
+    const cd::json axes={{"horizontal",{{"p0",{0.1,0.5}},{"p1",{0.6,0.5}},{"length_mm",48}}},
+                         {"vertical",{{"p0",{0.5,0.1}},{"p1",{0.5,0.6}},{"length_mm",80}}}};
+    {
+        cd::App app(root/"frames",config,root/"logs");std::string err;
+        auto initial=app.state()["cameras_info"][0];
+        require(initial["metric_scale_source"]=="estimated" && !initial["horizontal_shift_tolerance_mm"].is_null() &&
+                !initial["vertical_shift_tolerance_mm"].is_null(),"millimeter controls must be available before calibration");
+        require(app.setCamera(0,{{"horizontal_shift_tolerance_mm",2},{"downscale",0.5}},err),"provisional millimeter settings must work without calibration");
+        const auto provisional=app.inspectFrame(0,"f_0000001",false,err);
+        require(provisional["metric_scale_source"]=="estimated" &&
+                std::abs(provisional["shift_limit_mm"][0].get<double>()-2)<1e-10,
+                "estimated scale must apply the requested millimeter limit at half scale");
+        const auto previous=app.state()["cameras_info"][0];
+        require(app.setCamera(0,{{"calibration",axes}},err),"valid axis calibration must save");
+        auto state=app.state()["cameras_info"][0];
+        require(state["calibration_ready"]==true && state["horizontal_shift_tolerance_mm"]==previous["horizontal_shift_tolerance_mm"] &&
+                state["vertical_shift_tolerance_mm"]==previous["vertical_shift_tolerance_mm"],"later calibration must preserve stored millimeter tolerances");
+        require(app.setCamera(0,{{"horizontal_shift_tolerance_mm",2.1},{"vertical_shift_tolerance_mm",2},{"downscale",0.5}},err),
+                "millimeter settings must accept fractional values");
+        const auto r=app.inspectFrame(0,"f_0000001",false,err);
+        require(std::abs(r["native_settings"]["shift_tolerance_x"].get<double>()-8.4)<1e-10 &&
+                r["horizontal_shift_tolerance_mm"]==2.1 && r["vertical_shift_tolerance_mm"]==2,
+                "inspection must expose stored millimeters and fractional pixel conversion");
+        const auto before=app.state()["cameras_info"][0];
+        require(!app.setCamera(0,{{"horizontal_shift_tolerance_mm",4},{"calibration",{{"horizontal",{{"p0",{0,0}},{"p1",{0,0}},{"length_mm",1}}}}}},err),
+                "zero-span calibration must be rejected");
+        require(app.state()["cameras_info"][0]==before,"invalid calibration must not partially change camera settings");
+        require(!app.setCamera(0,{{"horizontal_shift_tolerance_mm",4},{"estimated_mm_per_pixel",{0,0.3}}},err),
+                "invalid provisional scale must be rejected");
+        require(app.state()["cameras_info"][0]==before,"invalid provisional scale must not partially change settings");
+    }
+    {
+        cd::App app(root/"frames",config,root/"logs");
+        const auto c=app.state()["cameras_info"][0];
+        require(c["calibration_ready"]==true && c["horizontal_shift_tolerance_mm"]==2.1 &&
+                c["vertical_shift_tolerance_mm"]==2,"restart must preserve physical calibration and tolerances");
+    }
+    const auto resolved=std::filesystem::weakly_canonical(root);
+    require(resolved.parent_path()==std::filesystem::weakly_canonical(dir) && resolved.filename()=="metric",
+            "metric-test cleanup must stay inside its unique temporary directory");
+    std::filesystem::remove_all(resolved);
+}
+
 void settingsTests(const std::filesystem::path& dir) {
     const auto config = dir / "config" / "test.json";
     std::filesystem::create_directories(config.parent_path());
@@ -185,6 +270,7 @@ int main() {
         inspectorTests();
         settingsTests(dir);
         alignmentCacheTests();
+        metricTests(dir);
         fs::remove(dir / "config" / "test.json");
         fs::remove(dir / "config");
         fs::remove(dir / "logs" / "rejects");

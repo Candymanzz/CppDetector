@@ -93,10 +93,19 @@ SeamResult measureSeam(const cv::Mat& bgr, const SeamParams& p) {
     SeamResult res;
     res.enabled = p.enabled;
     auto done = [&]() {
+        // An enabled check that could not locate/fit the line is an inspection failure.
+        // This includes the early exits; it must never silently turn into a good seam.
+        if (p.enabled && !res.found) res.reject = true;
         res.ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
         return res;
     };
     if (!p.enabled || bgr.empty()) return done();
+    const auto inImage = [&](cv::Point2d q) {
+        return std::isfinite(q.x) && std::isfinite(q.y) && q.x >= 0 && q.y >= 0 &&
+               q.x <= bgr.cols && q.y <= bgr.rows;
+    };
+    if (!inImage(p.p0) || !inImage(p.p1) || !std::isfinite(p.bandHalf) || p.bandHalf < 0 || p.bandHalf > 200)
+        return done();
 
     const cv::Point2d d = p.p1 - p.p0;
     const double L = std::hypot(d.x, d.y);
@@ -114,7 +123,8 @@ SeamResult measureSeam(const cv::Mat& bgr, const SeamParams& p) {
     const cv::Point2d org(box.x, box.y);
 
     cv::Mat g8, g32, g1, bg, ridge, gE;
-    cv::cvtColor(bgr(box), g8, cv::COLOR_BGR2GRAY);
+    if (bgr.channels() == 1) g8 = bgr(box);
+    else cv::cvtColor(bgr(box), g8, cv::COLOR_BGR2GRAY);
     g8.convertTo(g32, CV_32F);
     cv::GaussianBlur(g32, g1, cv::Size(), 1.2);
     cv::GaussianBlur(g1, bg, cv::Size(), 6.0);
@@ -184,7 +194,7 @@ SeamResult measureSeam(const cv::Mat& bgr, const SeamParams& p) {
     }
     res.coverage = evalRows ? double(validRows) / evalRows : 0.0;
     res.found = res.coverage >= 0.5;
-    if (!res.found) {                                   // no seam in this frame: nothing to judge here
+    if (!res.found) {
         res.ratio = res.maxDev = res.worstT = 0;
         res.centerPts.clear();
         res.badPts.clear();
@@ -196,13 +206,14 @@ SeamResult measureSeam(const cv::Mat& bgr, const SeamParams& p) {
 
 SeamResult measureSeam(const cv::Mat& bgr, const SeamSettings& s) {
     SeamParams p;
-    p.enabled = s.enabled && s.hasLine() && !bgr.empty();
+    p.enabled = s.enabled;
     p.p0 = {s.p0x * bgr.cols, s.p0y * bgr.rows};
     p.p1 = {s.p1x * bgr.cols, s.p1y * bgr.rows};
     p.bandHalf = s.band;
     p.tolMid = s.tolMid;
     p.tolEdge = s.tolEdge;
     p.edgeFrac = s.edgeFrac;
+    p.minContrast = s.minContrast;
     return measureSeam(bgr, p);
 }
 

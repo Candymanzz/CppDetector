@@ -11,9 +11,10 @@ namespace cas {
 
 using json = nlohmann::json;
 
-// Score scale: anomaly_score = min(1, flagged-area-percent / kScoreFullScalePercent).
-// With the default threshold 0.25 a frame is rejected when ~1.25% of the ROI area is anomalous.
+// Local score calibration: anomaly_score = min(1, flagged-area-percent / 5 * 3).
+// With the default threshold 0.25 a frame is rejected when ~0.417% of the ROI area is anomalous.
 constexpr double kScoreFullScalePercent = 5.0;
+constexpr double kScoreMultiplier = 3.0;
 
 // Label seam straightness check (a thin bright line along the label edge). Points are normalised 0..1 of the
 // frame, p0 -> p1 follow the seam (approximate: `band` px of search margin absorb the pose of the product).
@@ -24,6 +25,7 @@ struct SeamSettings {
     double tolMid = 1.0;      // px, allowed deviation of the seam from a smooth line (middle part)
     double tolEdge = 5.0;     // px, allowed deviation near both ends of the seam
     double edgeFrac = 0.12;   // share of the seam length treated as an "end" on each side
+    double minContrast = 8;   // minimum gray-level contrast for a measured seam row
 
     bool hasLine() const { return std::abs(p1x - p0x) + std::abs(p1y - p0y) > 1e-6; }
     json toJson() const;
@@ -35,8 +37,9 @@ struct SeamSettings {
 struct Settings {
     double sensitivity = 0.5;     // 0..1, higher = stricter (lower pixel-difference threshold)
     double threshold = 0.25;      // (0..1], reject when anomaly_score >= threshold
-    int shiftToleranceX = 3;      // original-frame px, horizontal comparison tolerance and alignment-limit input
-    int shiftToleranceY = 3;      // original-frame px, vertical comparison tolerance and alignment-limit input
+    double shiftToleranceX = 3;   // original-frame px; retain fractions from physical calibration
+    double shiftToleranceY = 3;   // original-frame px; round only at the final analysis resolution
+    std::optional<double> alignmentLimitX, alignmentLimitY; // calibrated hard limits in original-frame px
     int minBlobArea = 20;         // px of the original frame, smaller anomalies are noise
     double inspectScale = 1.0;    // (0..1], frame is downscaled by this factor before analysis
     SeamSettings seam;            // seam straightness check
@@ -49,7 +52,8 @@ struct Settings {
 // Per-request overrides (never persisted).
 struct SettingsPatch {
     std::optional<double> sensitivity, threshold, inspectScale;
-    std::optional<int> shiftToleranceX, shiftToleranceY, minBlobArea;
+    std::optional<double> shiftToleranceX, shiftToleranceY;
+    std::optional<int> minBlobArea;
     json seam;                                       // partial seam settings (null = none)
     static SettingsPatch fromJson(const json& j);   // ignores missing, wrong-typed or out-of-range fields
     void applyTo(Settings& s) const;

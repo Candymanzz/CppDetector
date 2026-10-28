@@ -5,13 +5,16 @@ namespace cas {
 
 json SeamSettings::toJson() const {
     return {{"enabled", enabled}, {"p0", {p0x, p0y}}, {"p1", {p1x, p1y}}, {"band", band},
-            {"tol_mid", tolMid}, {"tol_edge", tolEdge}, {"edge_frac", edgeFrac}};
+            {"tol_mid", tolMid}, {"tol_edge", tolEdge}, {"edge_frac", edgeFrac}, {"min_contrast", minContrast}};
 }
 
 json Settings::toJson() const {
-    return {{"sensitivity", sensitivity}, {"threshold", threshold},
+    json j = {{"sensitivity", sensitivity}, {"threshold", threshold},
             {"shift_tolerance_x", shiftToleranceX}, {"shift_tolerance_y", shiftToleranceY},
             {"min_blob_area", minBlobArea}, {"inspect_scale", inspectScale}, {"seam", seam.toJson()}};
+    if (alignmentLimitX) j["alignment_limit_x"] = *alignmentLimitX;
+    if (alignmentLimitY) j["alignment_limit_y"] = *alignmentLimitY;
+    return j;
 }
 
 namespace {
@@ -22,7 +25,7 @@ bool readNumber(const json& j, const char* key, double lo, double hi, bool loExc
     const json& v = j[key];
     if (!v.is_number()) { err = std::string(key) + " must be a number"; return false; }
     double d = v.get<double>();
-    if (d > hi || d < lo || (loExclusive && d == lo)) {
+    if (!std::isfinite(d) || d > hi || d < lo || (loExclusive && d == lo)) {
         err = std::string(key) + " out of range";
         return false;
     }
@@ -40,7 +43,7 @@ bool readPoint(const json& j, const char* key, double& x, double& y, std::string
         return false;
     }
     double px = a[0].get<double>(), py = a[1].get<double>();
-    if (px < 0 || px > 1 || py < 0 || py > 1) { err = std::string(key) + " out of range"; return false; }
+    if (!std::isfinite(px) || !std::isfinite(py) || px < 0 || px > 1 || py < 0 || py > 1) { err = std::string(key) + " out of range"; return false; }
     x = px;
     y = py;
     return true;
@@ -58,7 +61,8 @@ std::string SeamSettings::applyJson(const json& j) {
     }
     if (!readPoint(j, "p0", t.p0x, t.p0y, err) || !readPoint(j, "p1", t.p1x, t.p1y, err)) return "seam." + err;
     if (!readNumber(j, "band", 5, 200, false, t.band, err) || !readNumber(j, "tol_mid", 0.1, 50, false, t.tolMid, err) ||
-        !readNumber(j, "tol_edge", 0.1, 50, false, t.tolEdge, err) || !readNumber(j, "edge_frac", 0, 0.5, false, t.edgeFrac, err))
+        !readNumber(j, "tol_edge", 0.1, 50, false, t.tolEdge, err) || !readNumber(j, "edge_frac", 0, 0.5, false, t.edgeFrac, err) ||
+        !readNumber(j, "min_contrast", 1, 100, false, t.minContrast, err))
         return "seam." + err;
     *this = t;
     return "";
@@ -78,14 +82,24 @@ std::string Settings::applyJson(const json& j) {
     if (j.contains("shift_tolerance")) {
         v = tmp.shiftToleranceX;
         if (!readNumber(j, "shift_tolerance", 0, 30, false, v, err)) return err;
-        tmp.shiftToleranceX = tmp.shiftToleranceY = static_cast<int>(v);
+        tmp.shiftToleranceX = tmp.shiftToleranceY = v;
     }
     v = tmp.shiftToleranceX;
     if (!readNumber(j, "shift_tolerance_x", 0, 30, false, v, err)) return err;
-    tmp.shiftToleranceX = static_cast<int>(v);
+    tmp.shiftToleranceX = v;
     v = tmp.shiftToleranceY;
     if (!readNumber(j, "shift_tolerance_y", 0, 30, false, v, err)) return err;
-    tmp.shiftToleranceY = static_cast<int>(v);
+    tmp.shiftToleranceY = v;
+    for (auto item : {std::make_pair("alignment_limit_x",&tmp.alignmentLimitX),
+                      std::make_pair("alignment_limit_y",&tmp.alignmentLimitY)}) {
+        if (!j.contains(item.first)) continue;
+        if (j[item.first].is_null()) item.second->reset();
+        else {
+            double limit=0;
+            if (!readNumber(j,item.first,0,100000,false,limit,err)) return err;
+            *item.second=limit;
+        }
+    }
     v = tmp.minBlobArea;
     if (!readNumber(j, "min_blob_area", 1, 100000, false, v, err)) return err;
     tmp.minBlobArea = static_cast<int>(v);

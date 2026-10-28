@@ -3,7 +3,6 @@
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
 #include <chrono>
-#include <climits>
 #include <cmath>
 #include <stdexcept>
 
@@ -41,15 +40,17 @@ InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Sett
 
     // ---- current frame at work resolution ----
     cv::Mat cur;
-    cv::cvtColor(bgr, cur, cv::COLOR_BGR2GRAY);
+    if (bgr.channels() == 1) cur = bgr.clone();
+    else cv::cvtColor(bgr, cur, cv::COLOR_BGR2GRAY);
     if (scale != 1.0) cv::resize(cur, cur, prep->workSize, 0, 0, cv::INTER_AREA);
     cv::GaussianBlur(cur, cur, cv::Size(5, 5), 0);
 
     // ---- cheap translation estimate on a thumbnail of the ROI box ----
     requestTiming.add("prepare_ms", msSince(tStart));
     const auto tAlign = Clock::now();
-    const int tolWorkX = std::max(0, static_cast<int>(std::lround(s.shiftToleranceX * scale)));
-    const int tolWorkY = std::max(0, static_cast<int>(std::lround(s.shiftToleranceY * scale)));
+    // A larger envelope already covers the entire region; bound allocation for metric inputs.
+    const int tolWorkX = static_cast<int>(std::lround(std::clamp(s.shiftToleranceX * scale,0.0,double(region.width))));
+    const int tolWorkY = static_cast<int>(std::lround(std::clamp(s.shiftToleranceY * scale,0.0,double(region.height))));
     cv::Mat small, smallF;
     cv::resize(cur(region), small, prep->smallSize, 0, 0, cv::INTER_AREA);
     small.convertTo(smallF, CV_32F);
@@ -64,10 +65,10 @@ InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Sett
     if (response < kMinShiftResponse) sh = cv::Point2d(0, 0);
     out.rawShift = cv::Point2d(sh.x / scale, sh.y / scale);
 
-    const double maxShiftX = std::max(8.0, 4.0 * tolWorkX);
-    const double maxShiftY = std::max(8.0, 4.0 * tolWorkY);
+    const double maxShiftX = s.alignmentLimitX ? *s.alignmentLimitX * scale : std::max(8.0, 4.0 * tolWorkX);
+    const double maxShiftY = s.alignmentLimitY ? *s.alignmentLimitY * scale : std::max(8.0, 4.0 * tolWorkY);
     out.shiftLimit = cv::Point2d(maxShiftX / scale, maxShiftY / scale);
-    if (std::abs(sh.x) > maxShiftX || std::abs(sh.y) > maxShiftY) {
+    if (std::abs(sh.x) > maxShiftX + 1e-6 || std::abs(sh.y) > maxShiftY + 1e-6) {
         if (response >= kRejectShiftResponse) {
             out.reject = true;
             out.reason = "shift_exceeded";
@@ -146,23 +147,26 @@ InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Sett
     cv::threshold(diff, bin, thr, 255, cv::THRESH_BINARY);
     cv::morphologyEx(bin, bin, cv::MORPH_OPEN, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3)));
 
-    std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(bin, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+    // Count actual connected pixels. Filling external contours turns rings into solid
+    // discs and can count clean holes (including pixels outside a concave ROI) as defects.
+    cv::bitwise_and(bin, maskR, bin);
+    cv::Mat labels, stats, centroids;
+    const int components = cv::connectedComponentsWithStats(bin, labels, stats, centroids, 8, CV_32S);
     const double minArea = std::max(1.0, s.minBlobArea * scale * scale);
     cv::Mat kept = cv::Mat::zeros(bin.size(), CV_8U);
     out.pixelThreshold = thr;
-    out.blobsTotal = static_cast<int>(contours.size());
-    for (size_t i = 0; i < contours.size(); ++i) {
-        const double area = cv::contourArea(contours[i]);
+    out.blobsTotal = components - 1;
+    for (int i = 1; i < components; ++i) {
+        const double area = stats.at<int>(i, cv::CC_STAT_AREA);
         if (area < minArea) {
             out.largestDroppedBlob = std::max(out.largestDroppedBlob, area);
             continue;
         }
-        cv::drawContours(kept, contours, static_cast<int>(i), 255, cv::FILLED);
-        cv::Rect bb = cv::boundingRect(contours[i]);
+        const cv::Rect bb(stats.at<int>(i, cv::CC_STAT_LEFT), stats.at<int>(i, cv::CC_STAT_TOP),
+                          stats.at<int>(i, cv::CC_STAT_WIDTH), stats.at<int>(i, cv::CC_STAT_HEIGHT));
         {
-            cv::Mat blobMask = cv::Mat::zeros(bb.size(), CV_8U);
-            cv::drawContours(blobMask, contours, static_cast<int>(i), 255, cv::FILLED, cv::LINE_8, cv::noArray(), INT_MAX, -bb.tl());
+            const cv::Mat blobMask = labels(bb) == i;
+            kept(bb).setTo(255, blobMask);
             double mx = 0;
             cv::minMaxLoc(diff(bb), nullptr, &mx, nullptr, nullptr, blobMask);
             out.keptBlobMaxDiff.push_back(static_cast<int>(mx));
@@ -174,7 +178,7 @@ InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Sett
     out.blobsKept = static_cast<int>(out.zones.size());
     const int flagged = cv::countNonZero(kept);
     out.areaPercent = prep->roiArea > 0 ? 100.0 * flagged / prep->roiArea : 0.0;
-    out.anomalyScore = std::min(1.0, out.areaPercent / kScoreFullScalePercent);
+    out.anomalyScore = std::min(1.0, (out.areaPercent / kScoreFullScalePercent) * kScoreMultiplier);
     if (!out.reject && out.anomalyScore >= s.threshold) {
         out.reject = true;
         out.reason = "score_over_threshold";

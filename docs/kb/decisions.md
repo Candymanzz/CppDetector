@@ -1,5 +1,45 @@
 # Decisions
 
+## D24 - Inspection and seam correctness audit (2026-10-28)
+
+At the user's request, correct abnormal inspection behavior in the local harness:
+- Reference and current frame use the same explicit rounded destination size at fractional Downscale. Using fx/fy for only the reference caused an identical 383x321 image to score 4.487% at 0.73.
+- Blob size and score use actual 8-connected foreground pixels after opening. External-contour filling counted a clean ring interior as anomalous (11549 pixels instead of 3930) and used the enclosed area for minimum-size filtering.
+- An enabled seam check that cannot find/fit the seam rejects. The adapter uses seam_not_found unless another rejection already supplied a reason. A missing measurement must not silently certify a good seam; the score remains the surface score.
+- Propagate min_contrast through native settings and expose it in the seam UI. Reject enabled lines shorter than 50 original-image pixels and zero-area ROI geometry; clear old pixel seam geometry when the reference resolution changes. Disabled seam checks retain no influence on the verdict.
+- Capture and serialize camera setting snapshots, flush pending saves before inspection/start, ignore results/images from a different selected camera, and disable the stored line after endpoint deletion.
+
+Evidence: inspection_regression_test covers identical downscales, ring holes/minimum area, missing seams, configured contrast, smooth curvature/local bends, grayscale immutability and invalid geometry. Existing core/adapter parity and shared-cache tests remain required. Real frames and browser checks are recorded in artifacts/inspection-audit-20261028/REPORT.md. Dataset agreement is a consistency check, not a measurement of defect recall against ground truth. The user profile was not changed by the audit; all seam checks in that profile were disabled.
+
+## D23 - Millimeter controls without a calibration step (2026-10-27)
+Context: the user explicitly deferred calibration and requested simple immediately available mm settings.
+Decision: remove the calibration card, measurement overlays and picking workflow; allow physical tolerance fields
+without measured calibration. Use per-camera provisional horizontal/vertical scales estimated from bucket views,
+referenced to 1224x1024 and scaled with input resolution. Identify them as estimated in the UI and logs.
+Preserve existing local pixel tolerances by converting them to provisional mm on first load; retain explicit mm values.
+Expose estimated_mm_per_pixel for later empirical adjustment; existing backend calibration data remain compatible.
+This supersedes D22's requirement to disable mm controls until calibration. Accuracy is provisional by user choice.
+
+## D22 - Calibrated horizontal/vertical displacement tolerances in millimeters (2026-10-27)
+Context: the user needs physical displacement tolerances independent of digital resize and analysis scale.
+Known product dimensions: bottom diameter 190 mm, top diameter 193 mm, axial length interpreted as height 213 mm.
+The views are oblique and the surface is curved; those dimensions alone do not establish a spatially accurate camera calibration.
+Decision: store separate normalized horizontal/vertical measurement spans and their known lengths for each camera.
+Store physical tolerances independently, derive floating-point pixel values at the current resolution, and round only
+when building the analysis envelope. Calibrated global alignment uses the same physical limits, without the old factor four.
+Until both axes are calibrated, keep legacy pixel inspection and disable the millimeter controls rather than fabricate a conversion.
+Expose physical shifts, limits, effective tolerances and analysis pixel size. Document local calibration limits and rounding.
+Validation: unequal axis scales, fractional pixels, doubled input resolution, several Downscale values, physical shifts
+below/above 2 mm, invalid calibration atomicity and restart preservation; inspect the real UI on an isolated profile.
+
+## D21 - Local linear score amplification x3 (2026-10-27)
+Context: real defects have scores that are too small; the user requested a moderate threefold amplification.
+Decision: calculate anomaly_score = min(1, area_percent / 5 * 3) in the local core before threshold comparison.
+Keep the existing profile thresholds; expose score_multiplier=3 in inspection results and decision logs.
+Why: this preserves proportionality to detected area until saturation and makes the displayed score drive rejection.
+Consequences: this explicitly supersedes D20's unchanged-score requirement for CppDetector; the production repo is unaffected.
+Record the calibration in snapshot provenance and cover clean frames, proportional scores, saturation and rejection.
+
 ## D20 - Local production-core mirror (2026-10-26)
 Context: user needs to test the same inspection/settings as position-x-y in this local UI before deploying.
 Decision: vendor the unchanged 885a79ed native core; use a thin unit/UI adapter, identical native seam and no edge verdict.

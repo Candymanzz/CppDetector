@@ -5,6 +5,7 @@
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -17,13 +18,18 @@ void require(bool ok, const char* what) { ++checks; if (!ok) throw std::runtime_
 cas::Settings nativeSettings(const cd::InspectParams& p, const cd::SeamParams* seam, cv::Size size) {
     cas::Settings s;
     s.sensitivity = p.sensitivity; s.threshold = p.rejectThreshold / 100;
-    s.shiftToleranceX = p.shiftToleranceX; s.shiftToleranceY = p.shiftToleranceY;
+    const auto tolerance = p.tolerancePixels(size);
+    s.shiftToleranceX = tolerance.x; s.shiftToleranceY = tolerance.y;
+    if (p.horizontalShiftMm) s.alignmentLimitX = tolerance.x;
+    if (p.verticalShiftMm) s.alignmentLimitY = tolerance.y;
     s.minBlobArea = p.minBlobArea; s.inspectScale = p.downscale;
+    s.seam.enabled = seam && seam->enabled;
     if (seam && seam->pts.size() >= 2) {
         s.seam.enabled = seam->enabled;
         s.seam.p0x = seam->pts.front().x / size.width; s.seam.p0y = seam->pts.front().y / size.height;
         s.seam.p1x = seam->pts.back().x / size.width; s.seam.p1y = seam->pts.back().y / size.height;
         s.seam.band = seam->bandHalf; s.seam.tolMid = seam->tolMid; s.seam.tolEdge = seam->tolEdge; s.seam.edgeFrac = seam->edgeFrac;
+        s.seam.minContrast = seam->minContrast;
     }
     return s;
 }
@@ -33,12 +39,12 @@ cas::NormPolygon nativeRoi(const std::vector<cv::Point>& roi, cv::Size size) {
     return out;
 }
 void applyNativeSeam(const cv::Mat& frame, const cas::SeamSettings& s, cas::InspectOutcome& out) {
-    if (!s.enabled || !s.hasLine() || out.reason == "size_mismatch") return;
+    if (!s.enabled || out.reason == "size_mismatch") return;
     auto sr = cas::measureSeam(frame, s);
     out.seamEnabled = true; out.seamFound = sr.found; out.seamReject = sr.reject;
     out.seamRatio = sr.ratio; out.seamMaxDev = sr.maxDev; out.seamWorstT = sr.worstT; out.seamCoverage = sr.coverage;
     if (!sr.reject) return;
-    out.reject = true; if (out.reason.empty()) out.reason = "seam_deviation";
+    out.reject = true; if (out.reason.empty()) out.reason = sr.found ? "seam_deviation" : "seam_not_found";
     if (!sr.badPts.empty()) {
         auto bb = cv::boundingRect(sr.badPts);
         bb.x -= 12; bb.y -= 12; bb.width += 24; bb.height += 24;
@@ -113,6 +119,43 @@ void syntheticTests() {
             "repeated inspections must not change the cached reference thumbnail");
 }
 
+void scoreAmplificationTests() {
+    cv::Mat ref(320,384,CV_8UC3);
+    cv::RNG rng(20261027); rng.fill(ref,cv::RNG::UNIFORM,30,225);
+    cd::InspectParams p; p.rejectThreshold = 100;
+    p.shiftToleranceX = p.shiftToleranceY = 0; p.minBlobArea = 1;
+    cd::Inspector inspector; inspector.setReference(ref,{},p);
+    const auto clean = inspector.inspect(ref,p);
+    require(clean.score == 0 && !clean.reject, "score amplification must keep an identical frame clean");
+
+    double previous = 0;
+    for (int side : {20,30,60}) {
+        auto frame = ref.clone();
+        cv::rectangle(frame,{120,180,side,side},{0,0,0},-1);
+        p.rejectThreshold = 100;
+        const auto result = inspector.inspect(frame,p);
+        const double baseScore = result.native.areaPercent / 5.0 * 100.0;
+        require(baseScore > 0 && baseScore < 100, "score fixture must detect a defect below the old saturation point");
+        const double expected = std::min(100.0,baseScore * 3.0);
+        require(std::abs(result.score - expected) < 1e-9, "score must be tripled and capped at 100 percent");
+        require(result.score == result.native.anomalyScore * 100, "API percentage and normalized core score must agree");
+        require(result.score > previous, "larger detected defects must have a larger score until saturation");
+        previous = result.score;
+        if (side == 60) {
+            require(result.score == 100 && result.reject && result.reason == "score_over_threshold",
+                    "amplified score must saturate and reject at a threshold of 100 percent");
+        } else {
+            require(result.score < 100, "small defects must exercise the proportional score range");
+            p.rejectThreshold = (baseScore + result.score) / 2;
+            const auto rejected = inspector.inspect(frame,p);
+            require(rejected.reject && rejected.reason == "score_over_threshold",
+                    "rejection must use the amplified score");
+            p.rejectThreshold = result.score + 1;
+            require(!inspector.inspect(frame,p).reject, "a threshold above the amplified score must accept the frame");
+        }
+    }
+}
+
 void profileTests(const std::filesystem::path& dir) {
     const auto oldFile = dir / "legacy.json", newFile = dir / "native.json";
     cd::json old = {{"defect",true},{"cameras", {{{"reference","upload"},{"roi",{{50,40},{300,40},{300,270},{50,270}}},
@@ -137,6 +180,7 @@ void profileTests(const std::filesystem::path& dir) {
         require(result["inspection_engine"] == "position-x-y" && result["native_settings"]["threshold"] == 0.125,
                 "inspection must expose native settings and use percent/100");
         require(result["score"] == 0 && result["reject"] == false, "same image must pass");
+        require(result["score_multiplier"] == 3, "API and decision log must identify the score amplification");
     }
     std::ifstream in(oldFile); const std::string after((std::istreambuf_iterator<char>(in)), {});
     require(after == bytes, "legacy user config must not be overwritten");
@@ -170,7 +214,7 @@ int main(int argc,char**argv) {
     const auto dir=fs::temp_directory_path()/("native-parity-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     try {
         cv::setNumThreads(1); fs::create_directories(dir);
-        syntheticTests(); profileTests(dir);
+        syntheticTests(); scoreAmplificationTests(); profileTests(dir);
         if(argc>1)realFrames(argv[1]);
         const auto resolved=fs::weakly_canonical(dir), parent=fs::weakly_canonical(fs::temp_directory_path());
         if(resolved.parent_path()!=parent || resolved.filename().string().rfind("native-parity-",0)!=0)

@@ -24,27 +24,32 @@ InspectResult Inspector::inspect(const cv::Mat& bgr, const InspectParams& p, con
     auto& s = r.settings;
     s.sensitivity = p.sensitivity;
     s.threshold = p.rejectThreshold / 100.0;
-    s.shiftToleranceX = p.shiftToleranceX; s.shiftToleranceY = p.shiftToleranceY;
+    const auto tolerance = p.tolerancePixels(bgr.size());
+    s.shiftToleranceX = tolerance.x; s.shiftToleranceY = tolerance.y;
+    if (p.horizontalShiftMm) s.alignmentLimitX = tolerance.x;
+    if (p.verticalShiftMm) s.alignmentLimitY = tolerance.y;
     s.inspectScale = p.downscale; s.minBlobArea = p.minBlobArea;
+    s.seam.enabled = seam && seam->enabled;
     if (seam && seam->pts.size() >= 2) {
         s.seam.enabled = seam->enabled;
         s.seam.p0x = seam->pts.front().x / bgr.cols; s.seam.p0y = seam->pts.front().y / bgr.rows;
         s.seam.p1x = seam->pts.back().x / bgr.cols; s.seam.p1y = seam->pts.back().y / bgr.rows;
         s.seam.band = seam->bandHalf; s.seam.tolMid = seam->tolMid;
         s.seam.tolEdge = seam->tolEdge; s.seam.edgeFrac = seam->edgeFrac;
+        s.seam.minContrast = seam->minContrast;
     }
     auto& out = r.native;
     out = cas::inspectFrame(*reference_, bgr, s, true);
 
-    // Same seam calculation and decision merge as cppAnalisSurface Service::applySeam (885a79ed).
-    if (s.seam.enabled && s.seam.hasLine() && out.reason != "size_mismatch") {
+    // Preserve a previous surface rejection; otherwise explain the seam failure explicitly.
+    if (s.seam.enabled) {
         const auto sr = cas::measureSeam(bgr, s.seam);
         out.seamEnabled = true; out.seamFound = sr.found; out.seamReject = sr.reject;
         out.seamRatio = sr.ratio; out.seamMaxDev = sr.maxDev; out.seamWorstT = sr.worstT;
         out.seamCoverage = sr.coverage; out.seamMs = sr.ms; out.totalMs += sr.ms;
         if (sr.reject) {
             out.reject = true;
-            if (out.reason.empty()) out.reason = "seam_deviation";
+            if (out.reason.empty()) out.reason = sr.found ? "seam_deviation" : "seam_not_found";
             if (!sr.badPts.empty()) {
                 cv::Rect bb = cv::boundingRect(sr.badPts);
                 bb.x -= 12; bb.y -= 12; bb.width += 24; bb.height += 24;
@@ -56,11 +61,13 @@ InspectResult Inspector::inspect(const cv::Mat& bgr, const InspectParams& p, con
         ui.enabled = true; ui.found = sr.found; ui.reject = sr.reject;
         ui.coverage = sr.coverage; ui.ratio = sr.ratio; ui.maxDev = sr.maxDev;
         ui.worstT = sr.worstT; ui.centerPts = sr.centerPts; ui.badPts = sr.badPts; ui.ms = sr.ms;
-        ui.path = {cv::Point2f(seam->pts.front()), cv::Point2f(seam->pts.back())};
-        cv::Point2f direction = ui.path.back() - ui.path.front();
-        const float length = std::max(1e-6f, float(cv::norm(direction)));
-        const cv::Point2f normal(-direction.y / length, direction.x / length);
-        ui.pathNormal = {normal, normal};
+        if (seam->pts.size() >= 2) {
+            ui.path = {cv::Point2f(seam->pts.front()), cv::Point2f(seam->pts.back())};
+            cv::Point2f direction = ui.path.back() - ui.path.front();
+            const float length = std::max(1e-6f, float(cv::norm(direction)));
+            const cv::Point2f normal(-direction.y / length, direction.x / length);
+            ui.pathNormal = {normal, normal};
+        }
     }
 
     r.score = out.anomalyScore * 100.0; r.reject = out.reject; r.reason = out.reason;

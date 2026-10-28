@@ -1,5 +1,12 @@
 # Dataset
 
+## Reported physical product dimensions (2026-10-27)
+
+The user supplied bottom diameter 190 mm, top diameter 193 mm and axial length 213 mm (interpreted as height).
+The bucket is photographed obliquely. No measured camera intrinsics or lens-distortion coefficients were found.
+The related Java geometry service has a scalar pixels-to-mm conversion and an example value 0.02; that example
+is not evidence of a measured calibration for these frames. See metric-calibration.md before using physical units.
+
 - Location: <repo>/frame/frame (git-ignored). Layout: camera_N/f_XXXXXXX/frame.jpg, N = 0..9, 20 frames per camera.
 - Frame ids differ between cameras -> order frames by folder name within each camera, never match across cameras.
 - Resolution 960x803 (already downscaled). Reference = earliest frame of the camera; frames after it are inspected.

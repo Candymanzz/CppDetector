@@ -1,6 +1,7 @@
 #pragma once
 #include "../production/core/inspector.h"
 #include "seam.h"
+#include "calibration.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -15,8 +16,23 @@ struct InspectParams {
     double rejectThreshold = 25.0; // native Settings::threshold * 100, (0..100]
     int shiftToleranceX = 3;        // original-frame px
     int shiftToleranceY = 3;        // original-frame px
+    MetricCalibration calibration;
+    cv::Point2d estimatedMmPerPixel{0.25,0.33}; // provisional scale at 1224x1024; empirical tuning later
+    std::optional<double> horizontalShiftMm, verticalShiftMm;
     double downscale = 1.0;         // native inspect_scale
     int minBlobArea = 20;           // original-frame area; native core applies scale squared
+    cv::Point2d mmPerPixel(cv::Size size) const {
+        if (size.empty()) size={1224,1024};
+        if (calibration.ready()) return calibration.mmPerPixel(size);
+        return {estimatedMmPerPixel.x*1224.0/size.width,estimatedMmPerPixel.y*1024.0/size.height};
+    }
+    cv::Point2d tolerancePixels(cv::Size size) const {
+        cv::Point2d pixels(shiftToleranceX,shiftToleranceY);
+        const auto units = mmPerPixel(size);
+        if (horizontalShiftMm) pixels.x = *horizontalShiftMm / units.x;
+        if (verticalShiftMm) pixels.y = *verticalShiftMm / units.y;
+        return pixels;
+    }
 };
 
 struct InspectResult {
@@ -29,7 +45,7 @@ struct InspectResult {
     cv::Mat heatmap;                // native buildHeatmap energy (0..255), <= 512 px wide
     int diffThreshold = 0;
     double ms = 0.0, heatmapMs = 0.0;
-    cas::InspectOutcome native;     // unchanged native calculations, also used by parity tests
+    cas::InspectOutcome native;     // core diagnostics including local score calibration, used by parity tests
     cas::Settings settings;
     SeamResult seam;               // native two-endpoint seam result adapted only for the local UI
 };
