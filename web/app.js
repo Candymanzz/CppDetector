@@ -536,7 +536,8 @@ function buildLineCards() {
     const k = ln.key;
     const card = el("div", "card");
     card.innerHTML = `
-      <h2>${ln.title} <span class="muted small">— ${ln.hint}</span></h2>
+      <details class="fold" id="${k}_fold">
+      <summary><h2>${ln.title} <span class="muted small">— ${ln.hint}</span></h2></summary>
       <div class="row"><label class="check"><input type="checkbox" id="${k}_enabled"> проверять геометрию</label></div>
       ${ln.step ? `<div class="row"><label>Яркая сторона&nbsp;
         <select id="${k}_polarity">
@@ -555,8 +556,17 @@ function buildLineCards() {
         const [mn, mx, st, , label] = LINE_PARAM_DEFS[p];
         return `<div class="param"><label>${label} <b id="v_${k}_${p}"></b></label>
           <input type="range" id="${k}_${p}" min="${mn}" max="${mx}" step="${st}"></div>`;
-      }).join("")}`;
+      }).join("")}
+      </details>`;
     host.append(card);
+    // folded by default; the state is remembered per browser
+    const fold = card.querySelector("details");
+    let open = false;
+    try { open = localStorage.getItem("cd_fold_" + k) === "1"; } catch (e) { /* storage unavailable */ }
+    fold.open = open;
+    fold.addEventListener("toggle", () => {
+      try { localStorage.setItem("cd_fold_" + k, fold.open ? "1" : "0"); } catch (e) { /* ignore */ }
+    });
   });
 }
 buildLineCards();

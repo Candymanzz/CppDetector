@@ -104,10 +104,18 @@ main { padding: 16px; max-width: 1500px; margin: 0 auto; }
 .view-modes { display: flex; gap: 4px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
 .view-modes button.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .view-modes .muted { margin-left: 8px; }
+.view-modes .run-one { margin-left: auto; }
 .canvas-wrap { background: var(--canvas-bg); border-radius: 8px; overflow: hidden; line-height: 0; }
 canvas { width: 100%; height: auto; display: block; cursor: crosshair; touch-action: none; }
 .roi-tools { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
 .side { display: grid; gap: 12px; }
+.fold > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary::before { content: "▸"; color: var(--muted); }
+.fold[open] > summary::before { content: "▾"; }
+.fold > summary h2 { margin: 0; }
+.fold[open] > summary { margin-bottom: 8px; }
+.check-card { margin-top: 12px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
 .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
 .row select { flex: 1; min-width: 0; }

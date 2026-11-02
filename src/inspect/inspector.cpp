@@ -75,8 +75,9 @@ InspectResult Inspector::inspect(const cv::Mat& bgr, const InspectParams& p) con
     diff.setTo(0, ~roiMask_);
     r.heatmap = diff;
 
-    // sensitivity -> diff threshold: 0 -> 80, 1 -> 5
-    int thr = cvRound(80.0 - 75.0 * std::clamp(p.sensitivity, 0.0, 1.0));
+    // sensitivity -> diff threshold: 0 -> 80, 1 -> 5, 2 -> 1
+    const double sens = std::clamp(p.sensitivity, 0.0, 2.0);
+    int thr = cvRound(sens <= 1.0 ? 80.0 - 75.0 * sens : 5.0 - 4.0 * (sens - 1.0));
     r.diffThreshold = thr;
     cv::Mat bin;
     cv::threshold(diff, bin, thr, 255, cv::THRESH_BINARY);

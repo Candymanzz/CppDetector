@@ -1,0 +1,719 @@
+{
+  "cameras": [
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "upload",
+      "reject_threshold": 25.0,
+      "roi": [
+        [
+          198,
+          665
+        ],
+        [
+          202,
+          202
+        ],
+        [
+          263,
+          139
+        ],
+        [
+          360,
+          98
+        ],
+        [
+          465,
+          71
+        ],
+        [
+          546,
+          67
+        ],
+        [
+          618,
+          66
+        ],
+        [
+          686,
+          75
+        ],
+        [
+          810,
+          112
+        ],
+        [
+          851,
+          164
+        ],
+        [
+          867,
+          229
+        ],
+        [
+          886,
+          374
+        ],
+        [
+          908,
+          494
+        ],
+        [
+          911,
+          592
+        ],
+        [
+          869,
+          648
+        ],
+        [
+          756,
+          683
+        ],
+        [
+          599,
+          697
+        ],
+        [
+          394,
+          694
+        ],
+        [
+          346,
+          710
+        ],
+        [
+          282,
+          716
+        ],
+        [
+          264,
+          693
+        ]
+      ],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [
+          [
+            304,
+            703
+          ],
+          [
+            288,
+            153
+          ]
+        ],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
+    },
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 25.0,
+      "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
+    },
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 25.0,
+      "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
+    },
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 2,
+      "reference": "f_0000001",
+      "reject_threshold": 25.0,
+      "roi": [
+        [
+          170,
+          270
+        ],
+        [
+          221,
+          200
+        ],
+        [
+          331,
+          141
+        ],
+        [
+          475,
+          103
+        ],
+        [
+          606,
+          97
+        ],
+        [
+          716,
+          119
+        ],
+        [
+          796,
+          158
+        ],
+        [
+          817,
+          171
+        ],
+        [
+          954,
+          627
+        ],
+        [
+          911,
+          640
+        ],
+        [
+          876,
+          706
+        ],
+        [
+          552,
+          769
+        ],
+        [
+          370,
+          794
+        ],
+        [
+          166,
+          802
+        ]
+      ],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.95,
+      "shift_tolerance_x": 1,
+      "shift_tolerance_y": 2
+    },
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 25.0,
+      "roi": [
+        [
+          164,
+          647
+        ],
+        [
+          310,
+          250
+        ],
+        [
+          325,
+          232
+        ],
+        [
+          344,
+          216
+        ],
+        [
+          363,
+          205
+        ],
+        [
+          387,
+          192
+        ],
+        [
+          401,
+          185
+        ],
+        [
+          436,
+          173
+        ],
+        [
+          469,
+          165
+        ],
+        [
+          514,
+          160
+        ],
+        [
+          543,
+          157
+        ],
+        [
+          603,
+          159
+        ],
+        [
+          655,
+          167
+        ],
+        [
+          729,
+          184
+        ],
+        [
+          768,
+          200
+        ],
+        [
+          796,
+          214
+        ],
+        [
+          841,
+          243
+        ],
+        [
+          866,
+          262
+        ],
+        [
+          892,
+          293
+        ],
+        [
+          910,
+          324
+        ],
+        [
+          954,
+          788
+        ],
+        [
+          706,
+          733
+        ],
+        [
+          370,
+          700
+        ],
+        [
+          341,
+          643
+        ],
+        [
+          241,
+          645
+        ]
+      ],
+      "seam": {
+        "band": 10.0,
+        "edge_frac": 0.12,
+        "enabled": true,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [
+          [
+            244,
+            650
+          ],
+          [
+            387,
+            193
+          ]
+        ],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
+    },
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 25.0,
+      "roi": [
+        [
+          247,
+          692
+        ],
+        [
+          230,
+          281
+        ],
+        [
+          274,
+          223
+        ],
+        [
+          376,
+          160
+        ],
+        [
+          498,
+          123
+        ],
+        [
+          626,
+          113
+        ],
+        [
+          743,
+          129
+        ],
+        [
+          818,
+          169
+        ],
+        [
+          828,
+          184
+        ],
+        [
+          957,
+          620
+        ],
+        [
+          449,
+          713
+        ],
+        [
+          405,
+          660
+        ]
+      ],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
+    },
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 25.0,
+      "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
+    },
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 25.0,
+      "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
+    },
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 25.0,
+      "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
+    },
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 25.0,
+      "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
+    }
+  ],
+  "defect": false,
+  "engine_source_commit": "885a79ed66460440c7b22b6b5430425cd9d1849e",
+  "inspection_engine": "position-x-y",
+  "period_ms": 200,
+  "source_dir": "D:\\Pj\\CppDetector\\frames36"
+}
