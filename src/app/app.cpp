@@ -21,7 +21,10 @@ static int64_t nowMs() {
 
 static json paramsToJson(const InspectParams& p) {
     return {{"sensitivity", p.sensitivity}, {"reject_threshold", p.rejectThreshold},
-            {"shift_tolerance", p.shiftTolerance}, {"downscale", p.downscale}, {"min_blob_area", p.minBlobArea}};
+            {"shift_tolerance_x", p.shiftToleranceX}, {"shift_tolerance_y", p.shiftToleranceY},
+            {"max_alignment_shift_x", p.maxAlignmentShiftX}, {"max_alignment_shift_y", p.maxAlignmentShiftY},
+            {"learning_robust_enabled", p.learning.robust}, {"learning_shadow_enabled", p.learning.shadows},
+            {"learning_search_radius", p.learning.searchRadius}, {"downscale", p.downscale}, {"min_blob_area", p.minBlobArea}};
 }
 
 static json roiToJson(const std::vector<cv::Point>& roi) {
@@ -32,15 +35,32 @@ static json roiToJson(const std::vector<cv::Point>& roi) {
 
 // Validates and applies the fields present in `b`.
 static bool applyParams(const json& b, InspectParams& p, std::string& err) {
+    if (b.contains("reject_threshold") && b["reject_threshold"].is_number() && b["reject_threshold"] <= 0) {
+        err = "reject_threshold must be greater than zero (native threshold = percent / 100)";
+        return false;
+    }
     auto num = [&](const char* k, double lo, double hi, auto& dst) {
         if (!b.contains(k)) return true;
         if (!b[k].is_number() || b[k] < lo || b[k] > hi) { err = std::string("bad value for ") + k; return false; }
         dst = static_cast<std::remove_reference_t<decltype(dst)>>(b[k].get<double>());
         return true;
     };
-    return num("sensitivity", 0, 2, p.sensitivity) && num("reject_threshold", 0, 100, p.rejectThreshold) &&
-           num("shift_tolerance", 0, 30, p.shiftTolerance) && num("downscale", 0.1, 1, p.downscale) &&
-           num("min_blob_area", 1, 100000, p.minBlobArea);
+    for (const auto& key : {"learning_robust_enabled", "learning_shadow_enabled"}) {
+        if (b.contains(key) && !b[key].is_boolean()) { err = std::string("bad value for ") + key; return false; }
+    }
+    if(b.contains("learning_robust_enabled")) p.learning.robust=b["learning_robust_enabled"].get<bool>();
+    if(b.contains("learning_shadow_enabled")) p.learning.shadows=b["learning_shadow_enabled"].get<bool>();
+    // Old configs/clients set both axes; explicit X/Y fields override the shared value.
+    if (b.contains("shift_tolerance")) {
+        int legacy = p.shiftToleranceX;
+        if (!num("shift_tolerance", 0, 30, legacy)) return false;
+        p.shiftToleranceX = p.shiftToleranceY = legacy;
+    }
+    return num("sensitivity", 0, 1, p.sensitivity) && num("reject_threshold", 0, 100, p.rejectThreshold) &&
+           num("shift_tolerance_x", 0, 30, p.shiftToleranceX) && num("shift_tolerance_y", 0, 30, p.shiftToleranceY) &&
+           num("max_alignment_shift_x", 0, 160, p.maxAlignmentShiftX) &&
+           num("max_alignment_shift_y", 0, 160, p.maxAlignmentShiftY) && num("downscale", 0.1, 1, p.downscale) &&
+           num("learning_search_radius", 0, 64, p.learning.searchRadius) && num("min_blob_area", 1, 100000, p.minBlobArea);
 }
 
 static bool parseRoi(const json& a, std::vector<cv::Point>& out, std::string& err) {
@@ -89,7 +109,7 @@ static bool applySeam(const json& b, const cv::Size& imgSize, SeamParams& s, std
     }
     if (b.contains("pts")) {
         const json& a = b["pts"];
-        if (!a.is_array() || a.size() > 64) { err = "seam pts must be an array of up to 64 points"; return false; }
+        if (!a.is_array() || a.size() > 2) { err = "position-x-y seam uses two endpoints"; return false; }
         std::vector<cv::Point2d> pts(a.size());
         for (size_t i = 0; i < a.size(); ++i)
             if (!parsePt(a[i], pts[i])) return false;
@@ -119,10 +139,13 @@ static bool applySeam(const json& b, const cv::Size& imgSize, SeamParams& s, std
            num("edge_frac", 0, 0.5, s.edgeFrac) && num("smooth_win", 15, 400, s.smoothWin) && num("min_contrast", 1, 100, s.minContrast) && num("max_gap", 0, 1, s.maxGap);
 }
 
-App::App(fs::path sourceDir, fs::path configPath, fs::path logDir)
-    : source_(std::move(sourceDir)), cfgPath_(std::move(configPath)), log_(std::move(logDir)) {
+App::App(fs::path sourceDir, fs::path configPath, fs::path logDir, fs::path legacyConfigPath)
+    : source_(std::move(sourceDir)), cfgPath_(std::move(configPath)), legacyCfgPath_(std::move(legacyConfigPath)),
+      learning_(cfgPath_.parent_path() / (cfgPath_.stem().string() + "_learning"), 10),
+      log_(std::move(logDir)) {
     for (int i = 0; i < kCameras; ++i) {
         auto c = std::make_unique<Cam>();
+        c->product = "camera-" + std::to_string(i);
         c->dir = source_ / ("camera_" + std::to_string(i));
         std::error_code ec;
         for (auto& d : fs::directory_iterator(c->dir, ec))
@@ -136,6 +159,7 @@ App::App(fs::path sourceDir, fs::path configPath, fs::path logDir)
     }
     load();
     for (auto& c : cams_) rebuild(*c);
+    if (importedLegacy_) save(); // new profile only; the old config and uploaded references stay intact
     worker_ = std::thread(&App::loop, this);
 }
 
@@ -145,33 +169,58 @@ App::~App() {
 }
 
 void App::rebuild(Cam& c) {
-    if (!c.ref.empty()) c.insp.setReference(c.ref, c.roi, c.p);
+    c.inspected.release();
+    if (!c.ref.empty()) {
+        c.insp.setReference(c.ref, c.roi, c.p);
+        learning_.setReference(c.product, c.ref);
+        c.insp.setLearned(learning_.reference(c.product)->learned());
+    }
 }
 
 void App::load() {
-    std::ifstream in(cfgPath_);
+    fs::path readPath = cfgPath_;
+    if (!fs::exists(cfgPath_) && !legacyCfgPath_.empty() && fs::exists(legacyCfgPath_)) {
+        readPath = legacyCfgPath_;
+        importedLegacy_ = true;
+    }
+    std::ifstream in(readPath);
     if (!in) return;
     json j = json::parse(in, nullptr, false);
     if (j.is_discarded()) return;
     std::string err;
     if (j.contains("period_ms") && j["period_ms"].is_number()) periodMs_ = std::clamp(j["period_ms"].get<int>(), 100, 60000);
-    if (j.contains("defect") && j["defect"].is_boolean()) defect_ = j["defect"].get<bool>();
+    if (!importedLegacy_ && j.contains("defect") && j["defect"].is_boolean()) defect_ = j["defect"].get<bool>();
     if (!j.contains("cameras") || !j["cameras"].is_array()) return;
     for (int i = 0; i < kCameras && i < (int)j["cameras"].size(); ++i) {
         const json& cj = j["cameras"][i];
         Cam& c = *cams_[i];
-        applyParams(cj, c.p, err);
-        if (cj.contains("roi")) parseRoi(cj["roi"], c.roi, err);
-        if (cj.contains("seam")) applySeam(cj["seam"], cv::Size(), c.seam, err);
-        if (cj.contains("edge")) applySeam(cj["edge"], cv::Size(), c.edge, err);
-        else if (c.seam.mode == SeamParams::Step) {      // older config: the single zone was used for the edge
-            c.edge = c.seam;
-            c.seam = SeamParams();
+        // A clean native baseline, not a reinterpretation of the old amplified score / working-px settings.
+        if (!importedLegacy_) {
+            InspectParams parsed = c.p;
+            if (applyParams(cj, parsed, err)) c.p = parsed;
         }
+        if (cj.contains("roi")) parseRoi(cj["roi"], c.roi, err);
+        if (cj.contains("seam")) {
+            json seam = cj["seam"];
+            if (seam.contains("pts") && seam["pts"].is_array() && seam["pts"].size() > 2)
+                seam["pts"] = {seam["pts"].front(), seam["pts"].back()};
+            applySeam(seam, cv::Size(), c.seam, err);
+        }
+        if (c.seam.mode == SeamParams::Step) c.seam = SeamParams();
+        c.seam.skip.clear();
         c.seam.mode = SeamParams::Ridge;
+        c.edge.enabled = false; // there is no edge check in the source production detector
         c.edge.mode = SeamParams::Step;
         std::string ref = cj.value("reference", "");
         if (ref == "upload") {
+            if (!fs::exists(refImagePath(i)) && !legacyCfgPath_.empty()) {
+                const auto oldImage = legacyCfgPath_.parent_path() /
+                    ("ref_" + legacyCfgPath_.stem().string() + "_cam" + std::to_string(i) + ".png");
+                if (fs::exists(oldImage)) {
+                    fs::create_directories(cfgPath_.parent_path());
+                    fs::copy_file(oldImage, refImagePath(i), fs::copy_options::skip_existing);
+                }
+            }
             cv::Mat m = cv::imread(refImagePath(i).string());
             if (!m.empty()) { c.ref = m; c.refName = "upload"; }
         } else if (!ref.empty() && std::find(c.frames.begin(), c.frames.end(), ref) != c.frames.end()) {
@@ -185,6 +234,8 @@ void App::save() {
     std::lock_guard<std::mutex> lk(saveM_);
     json j;
     j["source_dir"] = source_.string();
+    j["inspection_engine"] = kInspectionEngine;
+    j["engine_source_commit"] = kEngineSourceCommit;
     j["period_ms"] = periodMs_.load();
     j["defect"] = defect_.load();
     j["cameras"] = json::array();
@@ -203,6 +254,7 @@ void App::save() {
 
 json App::state() {
     json j = status();
+    j["config_path"] = cfgPath_.string();
     j["source_dir"] = source_.string();
     j["cameras_info"] = json::array();
     for (int i = 0; i < kCameras; ++i) {
@@ -224,6 +276,8 @@ json App::state() {
 
 json App::status() {
     json j;
+    j["inspection_engine"] = kInspectionEngine;
+    j["engine_source_commit"] = kEngineSourceCommit;
     j["running"] = running_.load();
     j["period_ms"] = periodMs_.load();
     j["defect"] = defect_.load();
@@ -241,6 +295,7 @@ json App::status() {
 
 bool App::setCamera(int cam, const json& b, std::string& err) {
     if (!validCam(cam)) { err = "bad camera"; return false; }
+    if (b.contains("edge")) { err = "edge check is not part of position-x-y"; return false; }
     Cam& c = *cams_[cam];
     {
         std::lock_guard<std::mutex> lk(c.m);
@@ -253,15 +308,12 @@ bool App::setCamera(int cam, const json& b, std::string& err) {
                 err = "roi point outside image";
                 return false;
             }
-        SeamParams seam = c.seam, edge = c.edge;
+        SeamParams seam = c.seam;
         if (b.contains("seam") && !applySeam(b["seam"], c.ref.size(), seam, err)) return false;
-        if (b.contains("edge") && !applySeam(b["edge"], c.ref.size(), edge, err)) return false;
         seam.mode = SeamParams::Ridge;
-        edge.mode = SeamParams::Step;
         c.p = p;
         c.roi = roi;
         c.seam = seam;
-        c.edge = edge;
         rebuild(c);
     }
     save();
@@ -405,12 +457,9 @@ static std::vector<uchar> renderOverlay(const cv::Mat& img, const InspectResult&
     if (!r.heatmap.empty()) {
         cv::Mat hm, heat;
         cv::resize(r.heatmap, hm, img.size());
-        // normalise to the detection threshold: thr -> mid colour, 2*thr -> red; below thr/2 not shown
-        const double thr = std::max(1, r.diffThreshold);
-        cv::Mat boosted;
-        hm.convertTo(boosted, CV_8U, 128.0 / thr);
-        cv::applyColorMap(boosted, heat, cv::COLORMAP_JET);
-        cv::Mat mask = hm > thr * 0.5;
+        // Native buildHeatmap already normalises energy and adds the same halo as position-x-y.
+        cv::applyColorMap(hm, heat, cv::COLORMAP_JET);
+        cv::Mat mask = hm > 0;
         cv::Mat blended;
         cv::addWeighted(vis, 0.45, heat, 0.55, 0, blended);
         blended.copyTo(vis, mask);
@@ -433,6 +482,10 @@ static std::vector<uchar> renderOverlay(const cv::Mat& img, const InspectResult&
         cv::polylines(vis, sideB, false, col, 1);
         cv::line(vis, sideA.front(), sideB.front(), col, 1);
         cv::line(vis, sideA.back(), sideB.back(), col, 1);
+        std::vector<cv::Point> centres;
+        for (const auto& p : zr.centerPts) centres.emplace_back(cvRound(p.x), cvRound(p.y));
+        if (centres.size() > 1) cv::polylines(vis, centres, false, cv::Scalar(0, 230, 0), 1);
+        for (const auto& p : zr.badPts) cv::circle(vis, p, 2, cv::Scalar(0, 0, 255), -1);
         drawSeamDetail(vis, zp, zr, slot++, name);
     };
     zone(sp, sr, "seam", cv::Scalar(255, 255, 0));
@@ -489,20 +542,30 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
                         const std::string& source, bool defect, bool keepOverlay) {
     cv::Mat img = imgIn;
     if (defect) { img = imgIn.clone(); drawDefect(img, c.roi); }
-    InspectResult r = c.insp.inspect(img, c.p);
-    SeamResult sr = measureSeam(img, c.seam);
-    SeamResult er = measureSeam(img, c.edge);
-    // each geometry zone adds its own reject reason; an existing reason of the main inspection stays the primary one
-    const bool refOk = r.reason != "no_reference" && r.reason != "size_mismatch";
-    const bool seamReject = sr.reject && refOk, edgeReject = er.reject && refOk;
-    const bool reject = r.reject || seamReject || edgeReject;
-    const std::string reason = !r.reason.empty() ? r.reason : seamReject ? "seam_deviation" : edgeReject ? "edge_deviation" : "";
+    InspectResult r = c.insp.inspect(img, c.p, &c.seam);
+    const SeamResult& sr = r.seam;
+    const SeamResult er; // retained only for the overlay signature; never measured or used for verdicts
+    const bool reject = r.reject;
+    const std::string& reason = r.reason;
 
     json j;
     j["cam"] = id;
     j["frame"] = name;
     j["source"] = source;
     j["defect_injected"] = defect;
+    j["inspection_engine"] = kInspectionEngine;
+    j["engine_source_commit"] = kEngineSourceCommit;
+    j["native_settings"] = r.settings.toJson();
+    j["anomaly_score"] = r.native.anomalyScore;
+    j["learning_engine"] = c.p.learning.robust ? "local-robust-v2" : "native-52aa31ea";
+    j["learning_diagnostics"] = r.learningDiagnostics;
+    j["learning_ms"] = r.learningMs;
+    j["learning_robust_enabled"] = c.p.learning.robust;
+    j["raw_anomaly_score"] = r.native.rawAnomalyScore;
+    j["learned_normal_matches_count"] = r.native.matchedCaseIds.size();
+    j["learned_normal_adjustment"] = std::max(0.0, r.native.rawAnomalyScore - r.native.anomalyScore);
+    j["matched_accepted_case_ids"] = r.native.matchedCaseIds;
+    j["area_percent"] = r.native.areaPercent;
     j["score"] = std::round(r.score * 1000) / 1000;
     j["reject"] = reject;
     j["verdict"] = reject ? "REJECT" : (r.reason == "no_reference" || r.reason == "size_mismatch" ? "NO_REFERENCE" : "OK");
@@ -510,26 +573,34 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
     auto zoneJson = [](const SeamResult& z) {
         return json{{"found", z.found}, {"reject", z.reject}, {"ratio", std::round(z.ratio * 100) / 100},
                     {"max_dev", std::round(z.maxDev * 100) / 100}, {"worst_t", std::round(z.worstT * 1000) / 1000},
-                    {"coverage", std::round(z.coverage * 100) / 100}, {"gap", std::round(z.longestGap * 1000) / 1000},
-                    {"noise", std::round(z.noise * 100) / 100}, {"gap_reject", z.gapReject},
+                    {"coverage", std::round(z.coverage * 100) / 100},
                     {"ms", std::round(z.ms * 100) / 100}};
     };
-    if (c.seam.enabled) j["seam"] = zoneJson(sr);
-    if (c.edge.enabled) j["edge"] = zoneJson(er);
+    if (r.native.seamEnabled) j["seam"] = zoneJson(sr);
     j["threshold"] = c.p.rejectThreshold;
     j["sensitivity"] = c.p.sensitivity;
     j["shift"] = {std::round(r.shift.x * 100) / 100, std::round(r.shift.y * 100) / 100};
+    j["shift_raw"] = {r.native.rawShift.x, r.native.rawShift.y};
+    j["shift_response"] = r.native.shiftResponse;
+    j["shift_units"] = "original_px";
+    j["shift_tolerance_x"] = c.p.shiftToleranceX;
+    j["shift_tolerance_y"] = c.p.shiftToleranceY;
+    j["shift_limit"] = {r.shiftLimit.x, r.shiftLimit.y};
+    j["envelope_kernel"] = {r.envelopeKernel.width, r.envelopeKernel.height};
+    j["downscale"] = c.p.downscale;
     j["zones"] = json::array();
     for (auto& z : r.zones) j["zones"].push_back({z.x, z.y, z.width, z.height});
-    j["ms"] = std::round((r.ms + sr.ms + er.ms) * 100) / 100;
+    j["ms"] = std::round(r.ms * 100) / 100;
+    j["align_ms"] = r.native.alignMs;
+    j["diff_ms"] = r.native.diffMs;
+    j["heatmap_ms"] = r.heatmapMs;
     j["ts"] = nowMs();
 
     if (keepOverlay) {
+        c.inspected = img.clone();
         c.overlay = renderOverlay(img, r, c.roi, c.seam, sr, c.edge, er);
         j["ver"] = ++c.ver;
-        const fs::path dbg = log_.rejectsDir().parent_path() / "seam";
-        if (c.seam.enabled) writeSeamDebug(dbg, id, name, "seam", source, img, c.seam, sr, c.overlay, j);
-        if (c.edge.enabled) writeSeamDebug(dbg, id, name, "edge", source, img, c.edge, er, c.overlay, j);
+        // Legacy polyline/edge debug files do not describe the native seam calculation; keep JSON diagnostics.
     }
     c.last = j;
 

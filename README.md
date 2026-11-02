@@ -1,3 +1,16 @@
+# CppDetector: detector 52aa31ea
+
+Updated 2026-11-02: includes additional normal regions, persistent cases, independent X/Y alignment limits,
+and the complete C++ detector from main-app commit 52aa31ea.
+
+Build: powershell -ExecutionPolicy Bypass -File .\rebuild-and-run.ps1 -NoRun
+Run: .\run.cmd (opens the local UI with frames36).
+
+Inspect a frame, then use «Выбрать участок» → drag a rectangle → «Сохранить как норму».
+Repeat inspection to see the adjusted score. View/delete saved normal crops in the camera tab.
+New settings are isolated in config/config_<dataset>_52aa31ea.json; existing profiles stay intact.
+Details, test results and limitations: [learning-port.md](docs/kb/learning-port.md).
+
 ===================================+==++==========                 :.      .:.:      ====================+++=======================**+==
 ===================================+==+++========       ::.. .     ...     ..        -===================+**++=====================+**+=
 ===================================+===+++=======.        ..         .         .:-   :====================+**++++===================***+

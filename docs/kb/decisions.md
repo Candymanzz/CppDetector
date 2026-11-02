@@ -1,4 +1,36 @@
+## D22 - Moving normal shadows in the test environment (2026-11-02)
+
+Problem: a learned shadow can move independently of print and outside the original saved rectangle.
+Decision: add a local optional comparison hook; preserve native matching behind a switch. Search context is
+separate from the changed-pixel application mask. Match a bounded smooth illumination residual independently
+of printed texture; expose per-case diagnostics and camera-level search/shadow settings.
+Why: merely increasing camera X/Y tolerance weakens all surface comparisons and does not explain failures.
+Tradeoffs: bounded illumination adaptation can also accept a visually identical real defect; initial limits need
+actual-frame tuning. Large/many cases cost CPU. Full-frame smoothing was replaced with local context smoothing.
+Validation: six CTest targets, HTTP persistence/mode/diagnostic tests, mock-DOM drag/save/diagnostic test pass.
+Synthetic 10-camera batch mean 82.34ms robust vs 78.83ms native; shadow false rejects 0/200 vs 200/200.
+Real failing examples, physical timing and browser interaction unverified. See [local-learning-v2.md](local-learning-v2.md).
+
+## D21 - Port complete detector 52aa31ea with region learning (2026-11-02)
+
+Context: owner requested newer main-app functionality in the standalone harness.
+Decision: vendor the complete pinned core and Service; adapt the existing UI/App and isolate new profiles.
+Why: cherry-picking only learning against the old core would diverge from its sensitivity/filter/alignment prerequisites.
+Reuse native persistence/comparison instead of reimplementing learning; Windows metadata replacement uses MoveFileExW.
+Tradeoff: new profiles reset surface tuning, preserve reference/ROI/seam and leave old profiles available.
+Validation: Release build, five CTest targets and isolated HTTP save/retry/restart/delete tests pass;
+JavaScript syntax checked. Browser interaction, full-cycle timing and production hardware remain unverified.
+Details and real-frame parity: [learning-port.md](learning-port.md).
+
 # Decisions
+
+## D20 - Local production-core mirror (2026-10-26)
+Context: user needs to test the same inspection/settings as position-x-y in this local UI before deploying.
+Decision: vendor the unchanged 885a79ed native core; use a thin unit/UI adapter, identical native seam and no edge verdict.
+Native defaults/units/score replace the old local amplified score and working-pixel semantics. Preserve the existing UI.
+Keep old configs/references intact; import scene geometry into a separate _position-x-y profile, with fresh native defaults.
+Why: local outcomes must predict the source detector given the same images, ROI, settings and OpenCV build.
+Consequences: no production repo/deployment change; native parity tests and provenance are required for updates.
 
 ## D1 - Build stack (2026-10-20)
 Context: no C++ OpenCV on machine; Python OpenCV unusable; MSVC Build Tools 2022 present.

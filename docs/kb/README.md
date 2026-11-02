@@ -1,4 +1,14 @@
+Current experiment (2026-11-02): [local-learning-v2.md](local-learning-v2.md) adds independent search,
+masked application, moving-shadow comparison and per-case diagnostics. Native matching remains selectable.
+
+Current update (2026-11-02): core/service pinned to 52aa31ea, with region learning and independent alignment controls.
+Read [learning-port.md](learning-port.md) and [native provenance](../../src/production/SOURCE.md).
+The earlier snapshot descriptions below are historical.
+
 # Knowledge Base (for Claude)
+
+Current backend (2026-10-26): branch 123 mirrors position-x-y native core 885a79ed; see algorithms.md and
+src/production/SOURCE.md first. Old score/working-pixel/edge notes below are historical. Use the separate native profile.
 
 Purpose: before changing or adding anything, read the relevant file here to learn what may be changed,
 what must not, and why a decision was made. Written in English, split by topic. Update immediately

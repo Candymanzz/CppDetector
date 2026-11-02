@@ -1,3 +1,15 @@
+## Local learning hook (2026-11-02)
+
+Local Inspector optionally supplies LearnedComparison to native inspectFrame. It updates the difference map
+before native component filtering/scoring; Service and no-hook callers keep the original matcher.
+Storage and locking stay unchanged. See [local-learning-v2.md](local-learning-v2.md).
+
+## Update 2026-11-02
+
+Native core/service now use snapshot 52aa31ea. App owns native Service for learning persistence and attaches
+its camera/reference-scoped cases to the local Inspector. Per-camera locks protect the untouched latest source
+image and version used by learning API requests. New routes/UI and data paths: [learning-port.md](learning-port.md).
+
 # Architecture
 
 FrameSource (frame/camera_N/*) -> BatchScheduler (every period_ms: next frame of each of 10 cameras)

@@ -11,9 +11,11 @@
 #endif
 
 int main(int argc, char** argv) {
+    cv::setNumThreads(1); // identical to the production service: parallelism comes from cameras
     namespace fs = std::filesystem;
     fs::path frames = fs::path(CD_SOURCE_DIR) / "frame" / "frames36";
     fs::path webDir = fs::path(CD_SOURCE_DIR) / "web";
+    fs::path data = fs::path(CD_SOURCE_DIR);
     int port = 8080;
     bool bench = false;
     for (int i = 1; i < argc; ++i) {
@@ -21,13 +23,17 @@ int main(int argc, char** argv) {
         if (k == "--bench") bench = true;
         else if (i + 1 < argc && k == "--frames") frames = argv[++i];
         else if (i + 1 < argc && k == "--port") port = std::stoi(argv[++i]);
+        else if (i + 1 < argc && k == "--data") data = argv[++i];
         else if (i + 1 < argc && k == "--web") webDir = argv[++i];
     }
     if (bench) return cd::runBench(frames, std::vector<std::string>(argv + 1, argv + argc));
 
-    fs::path data = fs::path(CD_SOURCE_DIR);
     // settings are kept per dataset (folder name), so different frame sets do not overwrite each other
-    cd::App app(frames, data / "config" / ("config_" + frames.filename().string() + ".json"), data / "logs");
+    const auto stem = "config_" + frames.filename().string();
+    auto legacy = data / "config" / (stem + "_position-x-y.json");
+    if (!fs::exists(legacy)) legacy = data / "config" / (stem + ".json");
+    cd::App app(frames, data / "config" / (stem + "_52aa31ea.json"), data / "logs" / "52aa31ea",
+                legacy);
 
     httplib::Server svr;
     svr.new_task_queue = [] { return new httplib::ThreadPool(8); };

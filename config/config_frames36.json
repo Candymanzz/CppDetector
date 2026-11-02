@@ -561,11 +561,132 @@
         "tol_edge": 5.0,
         "tol_mid": 1.0
       },
-      "sensitivity": 1.22,
-      "shift_tolerance": 2
+      "sensitivity": 1.0,
+      "shift_tolerance_x": 6,
+      "shift_tolerance_y": 6
     },
     {
       "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
+    },
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
+    },
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
+    },
+    {
+      "downscale": 0.45,
       "edge": {
         "band": 10.0,
         "edge_frac": 0.0,
@@ -722,8 +843,98 @@
         "tol_edge": 5.0,
         "tol_mid": 1.0
       },
-      "sensitivity": 1.0,
-      "shift_tolerance": 3
+      "sensitivity": 0.56,
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
+    },
+    {
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "min_blob_area": 20,
+      "reference": "f_0000001",
+      "reject_threshold": 2.0,
+      "roi": [
+        [
+          247,
+          692
+        ],
+        [
+          230,
+          281
+        ],
+        [
+          274,
+          223
+        ],
+        [
+          376,
+          160
+        ],
+        [
+          498,
+          123
+        ],
+        [
+          626,
+          113
+        ],
+        [
+          743,
+          129
+        ],
+        [
+          818,
+          169
+        ],
+        [
+          828,
+          184
+        ],
+        [
+          957,
+          620
+        ],
+        [
+          449,
+          713
+        ],
+        [
+          405,
+          660
+        ]
+      ],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.5,
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
     },
     {
       "downscale": 1.0,
@@ -1039,7 +1250,8 @@
         "tol_mid": 1.0
       },
       "sensitivity": 0.5,
-      "shift_tolerance": 3
+      "shift_tolerance_x": 7,
+      "shift_tolerance_y": 7
     },
     {
       "downscale": 1.0,
@@ -1139,7 +1351,8 @@
         "tol_mid": 1.0
       },
       "sensitivity": 0.5,
-      "shift_tolerance": 3
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
     },
     {
       "downscale": 1.0,
@@ -1248,7 +1461,8 @@
         "tol_mid": 1.0
       },
       "sensitivity": 0.5,
-      "shift_tolerance": 3
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
     },
     {
       "downscale": 1.0,
@@ -1385,10 +1599,11 @@
         "tol_mid": 1.0
       },
       "sensitivity": 0.5,
-      "shift_tolerance": 3
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3
     }
   ],
   "defect": false,
   "period_ms": 200,
-  "source_dir": "D:\\Pj\\CppDetector\\frames36"
+  "source_dir": "C:\\Users\\ShablinskiyM\\Desktop\\huinya pashi\\CppDetector\\frames36"
 }

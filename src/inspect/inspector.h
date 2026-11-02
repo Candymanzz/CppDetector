@@ -1,49 +1,51 @@
 #pragma once
-#include <opencv2/core.hpp>
+#include "../production/core/inspector.h"
+#include "seam.h"
+#include "learning_matcher.h"
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace cd {
+inline constexpr const char* kInspectionEngine = "cpp-detector-52aa31ea";
+inline constexpr const char* kEngineSourceCommit = "52aa31eacb16785ff33dc16b6937ab31c8ec7ee9";
 
-// Real defects are small, so their share of the ROI is tiny. The score is stretched so that such defects land
-// in a readable 0..100 range: score = min(100, flagged-area-% * kScoreScale).
-// With kScoreScale = 500, 0..0.2% of the ROI is spread over 0..100 and 0.2% and more saturate at 100.
-constexpr double kScoreScale = 500.0;
-
+// The local UI uses percentages for threshold/score. Everything else is native production units.
 struct InspectParams {
-    double sensitivity = 0.5;       // 0..2, higher = stricter (lower diff threshold)
-    double rejectThreshold = 10.0;  // 0..100, same scale as score; score > threshold -> reject
-    int shiftTolerance = 3;         // px, micro-shift tolerance
-    double downscale = 1.0;         // 1.0 = original
-    int minBlobArea = 20;           // px at working resolution
+    double sensitivity = 0.5;
+    double rejectThreshold = 60.0; // native Settings::threshold * 100, (0..100]
+    int shiftToleranceX = 3;        // original-frame px
+    int shiftToleranceY = 3;        // original-frame px
+    double maxAlignmentShiftX = 12.0, maxAlignmentShiftY = 12.0;
+    double downscale = 1.0;         // native inspect_scale
+    LearningOptions learning;
+    int minBlobArea = 20;           // original-frame area; native core applies scale squared
 };
 
 struct InspectResult {
-    double score = 0.0;             // 0..100: flagged ROI area % scaled by kScoreScale
+    double score = 0.0;             // native anomaly_score * 100, NOT anomalous area percent
     bool reject = false;
-    std::string reason;             // "", "score_over_threshold", "shift_exceeded", "no_reference"
-    cv::Point2d shift;              // detected translation (working px)
-    std::vector<cv::Rect> zones;    // bboxes of anomaly zones (original coords)
-    cv::Mat heatmap;                // CV_8U diff map (working resolution)
-    int diffThreshold = 0;          // diff level treated as anomalous (sensitivity mapped)
-    double ms = 0.0;
+    std::string reason;
+    cv::Point2d shift, shiftLimit;   // original-frame px
+    cv::Size envelopeKernel{1, 1};
+    std::vector<cv::Rect> zones;    // original-frame coordinates
+    cv::Mat heatmap;                // native buildHeatmap energy (0..255), <= 512 px wide
+    int diffThreshold = 0;
+    double ms = 0.0, heatmapMs = 0.0;
+    nlohmann::json learningDiagnostics = nlohmann::json::array();
+    double learningMs = 0;
+    cas::InspectOutcome native;     // unchanged native calculations, also used by parity tests
+    cas::Settings settings;
+    SeamResult seam;               // native two-endpoint seam result adapted only for the local UI
 };
 
 class Inspector {
 public:
-    // roi: polygon in original-image coordinates; empty = whole frame
     void setReference(const cv::Mat& bgr, const std::vector<cv::Point>& roi, const InspectParams& p);
-    InspectResult inspect(const cv::Mat& bgr, const InspectParams& p) const;
-    bool hasReference() const { return !refGray_.empty(); }
-
+    InspectResult inspect(const cv::Mat& bgr, const InspectParams& p, const SeamParams* seam = nullptr) const;
+    void setLearned(std::vector<cas::LearnedRegion> regions) { if (reference_) reference_->setLearned(std::move(regions)); }
+    bool hasReference() const { return reference_ && !reference_->bgr().empty(); }
 private:
-    cv::Mat prepare(const cv::Mat& bgr, double downscale) const;
-    cv::Mat refGray_;               // blurred gray at working resolution
-    cv::Mat roiMask_;               // CV_8U at working resolution
-    std::vector<cv::Point> roi_;
-    double refDownscale_ = 1.0;
-    cv::Size refSize_;              // original reference size
-    int roiArea_ = 0;
+    std::shared_ptr<cas::Reference> reference_;
 };
-
-} // namespace cd
+}

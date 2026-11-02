@@ -2,17 +2,16 @@
 
 const $ = (id) => document.getElementById(id);
 
-/* Two independent geometry zones per camera: the label seam (a thin bright line) and the label edge (a boundary). */
+/* Production-compatible seam only; the local edge algorithm must not affect test verdicts. */
 const LINES = [
   { key: "seam", title: "Стык этикетки", hint: "тонкая яркая линия", color: "#00e5ff", step: false },
-  { key: "edge", title: "Кромка этикетки", hint: "граница светлое/тёмное", color: "#b388ff", step: true },
 ];
 // name: [min, max, step, decimals, label]
 const LINE_PARAM_DEFS = {
-  band: [10, 80, 1, 0, "Полоса поиска (±), px"],
-  tol_mid: [0.2, 5, 0.1, 1, "Допуск в середине, px"],
-  tol_edge: [0.5, 15, 0.5, 1, "Допуск на краях линии, px"],
-  edge_frac: [0, 0.4, 0.01, 2, "Длина краевой части (доля)"],
+  band: [5, 200, 1, 0, "Полоса поиска (±), px"],
+  tol_mid: [0.1, 50, 0.1, 1, "Допуск в середине, px"],
+  tol_edge: [0.1, 50, 0.1, 1, "Допуск на краях линии, px"],
+  edge_frac: [0, 0.5, 0.01, 2, "Длина краевой части (доля)"],
   smooth_win: [20, 200, 5, 0, "Окно сравнения, px"],
   min_contrast: [2, 40, 1, 0, "Мин. контраст, ур. серого"],
   max_gap: [0.05, 1, 0.05, 2, "Макс. разрыв линии (доля)"],
@@ -84,9 +83,9 @@ function lineText(name, s) {
 function reasonText(r) {
   switch (r.reason) {
     case "score_over_threshold":
-      return `Score ${fmt(r.score, 3)}% выше порога ${fmt(r.threshold, 2)}% — найдено зон: ${(r.zones || []).length}.`;
+      return `Оценка ${fmt(r.score, 3)}% достигла порога ${fmt(r.threshold, 2)}% — найдено зон: ${(r.zones || []).length}.`;
     case "shift_exceeded":
-      return `Кадр сдвинут относительно эталона на (${fmt(r.shift && r.shift[0])}, ${fmt(r.shift && r.shift[1])}) px — больше допустимого. Увеличь допуск на сдвиг или проверь камеру.`;
+      return `Оценённый сдвиг (${fmt(r.shift_raw?.[0])}, ${fmt(r.shift_raw?.[1])}) px исходного кадра; пределы (${fmt(r.shift_limit?.[0])}, ${fmt(r.shift_limit?.[1])}) px. Достоверность ${fmt(r.shift_response, 3)}.`;
     case "seam_deviation":
       return lineText("Стык", r.seam);
     case "edge_deviation":
@@ -94,7 +93,7 @@ function reasonText(r) {
     case "size_mismatch":
       return "Размер кадра не совпадает с размером эталона этой камеры — сравнение невозможно.";
     case "no_reference":
-      return "Для камеры нет эталона (или downscale изменился после выбора эталона).";
+      return "Для камеры нет эталона.";
     default:
       return r.reject ? r.reason : "";
   }
@@ -215,10 +214,11 @@ function fillSelect(sel, frames, selected) {
 }
 
 const PARAMS = [
-  ["sensitivity", 2], ["reject_threshold", 2], ["shift_tolerance", 0], ["downscale", 2], ["min_blob_area", 0],
+  ["sensitivity", 2], ["reject_threshold", 2], ["shift_tolerance_x", 0], ["shift_tolerance_y", 0], ["max_alignment_shift_x", 0], ["max_alignment_shift_y", 0], ["learning_search_radius", 0], ["downscale", 2], ["min_blob_area", 0],
 ];
 
 function selectCam(i) {
+  cancelLearning();
   S.cam = i;
   S.lastResultVer = null;
   document.querySelectorAll("#camPicker button").forEach((b, k) => b.classList.toggle("active", k === i));
@@ -227,6 +227,8 @@ function selectCam(i) {
   fillSelect($("testSelect"), c.frames, c.frames[1] || c.frames[0]);
   $("refName").textContent = c.reference === "upload" ? "загруженный файл" : c.reference || "—";
   PARAMS.forEach(([k, d]) => { $(k).value = c[k]; $("v_" + k).textContent = fmt(c[k], d); });
+  $("learningRobust").checked = c.learning_robust_enabled;
+  $("learningShadows").checked = c.learning_shadow_enabled;
   S.roi = c.roi.map((p) => p.slice());
   LINES.forEach(({ key }) => {
     S.ln[key] = { d: JSON.parse(JSON.stringify(c[key])), pick: false, skipMode: false, roiSel: null, drag: -1 };
@@ -236,6 +238,7 @@ function selectCam(i) {
   $("allResults").replaceChildren();
   setMode("ref");
   reloadRefImage();
+  refreshLearned();
 }
 
 function reloadRefImage() {
@@ -273,7 +276,7 @@ const canvas = $("canvas");
 const ctx = canvas.getContext("2d");
 
 function draw() {
-  const img = S.mode === "frame" ? S.img.frame : S.mode === "result" ? S.img.result : S.img.ref;
+  const img = S.learning ? S.learningImage : S.mode === "frame" ? S.img.frame : S.mode === "result" ? S.img.result : S.img.ref;
   const base = S.img.ref;
   if (!base) return;
   if (canvas.width !== base.naturalWidth || canvas.height !== base.naturalHeight) {
@@ -307,6 +310,10 @@ function draw() {
     });
   }
   LINES.forEach((ln) => drawLine(ln, k));
+  if (S.learning && S.learnBox) {
+    const b = S.learnBox; ctx.strokeStyle = "#00ff88"; ctx.lineWidth = 3*k;
+    ctx.strokeRect(b.x,b.y,b.width,b.height);
+  }
   $("roiInfo").textContent = S.roi.length
     ? `точек: ${S.roi.length}` + (S.roi.length < 3 ? " (нужно минимум 3)" : "")
     : "ROI не задан — проверяется весь кадр";
@@ -396,25 +403,7 @@ function segDist(p, a, b) {
 canvas.addEventListener("pointerdown", (ev) => {
   if (ev.button !== 0) return;
   const pt = canvasPoint(ev);
-  if (ev.shiftKey && !LINES.some(({ key }) => S.ln[key].pick || S.ln[key].roiSel || S.ln[key].skipMode)) {                                  // Shift+click on a line: add a control point there
-    for (const { key } of LINES) {
-      const d = S.ln[key].d;
-      let best = -1, bp = null, bd = hitRadius() * 2.5;
-      for (let sg = 0; sg + 1 < d.pts.length; sg++) {
-        const c = seamSegment(d.pts, sg);
-        for (let n = 0; n < c.length; n++) {
-          const dist = Math.hypot(pt[0] - c[n][0], pt[1] - c[n][1]);
-          if (dist < bd) { bd = dist; best = sg; bp = [Math.round(c[n][0]), Math.round(c[n][1])]; }
-        }
-      }
-      if (best < 0) continue;
-      d.pts.splice(best + 1, 0, bp);
-      // segment numbers after the split: an excluded segment stays excluded as both halves
-      d.skip = (d.skip || []).flatMap((x) => (x < best ? [x] : x === best ? [best, best + 1] : [x + 1]));
-      fillLineUi(key); draw(); saveLine(key);
-      return;
-    }
-  }
+  if (ev.shiftKey) { toast("В детекторе линия задаётся двумя точками"); return; }
   for (const { key } of LINES) {
     const l = S.ln[key], d = l.d;
     if (l.skipMode && d.pts.length >= 2) {            // toggle the nearest line segment
@@ -443,7 +432,8 @@ canvas.addEventListener("pointerdown", (ev) => {
       }
       return;
     }
-    if (l.pick) {                                     // placing the control points of the line
+    if (l.pick) {                                     // the source detector uses exactly two endpoints
+      if (d.pts.length >= 2) { toast("Две точки уже заданы — нажми «Готово»"); return; }
       d.pts.push(pt);
       fillLineUi(key);
       draw();
@@ -582,21 +572,21 @@ function fillLineUi(key) {
   $(key + "_pick").hidden = busy;
   $(key + "_fromRoi").hidden = busy;
   $(key + "_done").hidden = !busy;
-  $(key + "_skip").hidden = busy || d.pts.length < 2;
+  $(key + "_skip").hidden = true; // production seam has no excluded polyline segments
   $(key + "_skip").textContent = l.skipMode ? "Закончить исключение" : "Исключить участки";
   lineParams(ln).forEach((p) => { $(`${key}_${p}`).value = d[p]; $(`v_${key}_${p}`).textContent = fmt(d[p], LINE_PARAM_DEFS[p][3]); });
   const n = d.pts.length;
   $(key + "_info").textContent = l.skipMode ? `кликай по участкам линии, которые не проверять (оранжевые, исключено: ${(d.skip || []).length}); повторный клик возвращает участок` :
     l.roiSel ? `кликай по точкам ROI вдоль линии (выбрано: ${l.roiSel.length}), затем «Готово»` :
     l.pick ? `кликай по линии (точек: ${n}), затем «Готово»` :
-    n < 2 ? "линия не задана (нужно минимум 2 точки)" :
-    `точек: ${n}. Тяни точку мышью, ПКМ — удалить, Shift+клик по линии — добавить точку` + (ln.step ? "; для кромки ставь больше точек вдоль изгиба" : "");
+    n < 2 ? "Нужно задать две крайние точки линии, двумя концами." :
+    "Две точки линии шва. Тяни точку мышью, ПКМ — удалить.";
 }
 
 async function saveLine(key) {
   const ln = LINES.find((x) => x.key === key), l = S.ln[key], d = l.d;
   if (d.pts.length === 1 || l.pick || l.roiSel) return;      // an unfinished line is only a draft
-  const body = { enabled: d.enabled && d.pts.length >= 2, pts: d.pts, skip: d.skip || [] };
+  const body = { enabled: d.enabled && d.pts.length === 2, pts: d.pts };
   if (ln.step) body.polarity = d.polarity || 0;
   lineParams(ln).forEach((p) => (body[p] = d[p]));
   try {
@@ -673,7 +663,7 @@ LINES.forEach((ln) => {
   $(k + "_done").addEventListener("click", () => {
     const l = L();
     if (l.roiSel) {
-      if (l.roiSel.length < 2) { toast("Выбери минимум 2 точки ROI", true); return; }
+      if (l.roiSel.length !== 2) { toast("Выбери ровно две крайние точки ROI", true); return; }
       l.d.pts = orderedRoiPick(l.roiSel, S.roi.length).map((i) => S.roi[i].slice());
       l.d.skip = [];
       l.roiSel = null;
@@ -701,6 +691,15 @@ LINES.forEach((ln) => {
 });
 
 /* ----- parameters (auto-saved) ----- */
+
+$("resetDetector").addEventListener("click", async () => {
+  try {
+    await post("/api/camera?cam=" + S.cam, { learning_robust_enabled: true, learning_shadow_enabled: true, learning_search_radius: 24, sensitivity: 0.5, reject_threshold: 60,
+      shift_tolerance_x: 3, shift_tolerance_y: 3, max_alignment_shift_x: 12, max_alignment_shift_y: 12, downscale: 1, min_blob_area: 20, seam: { enabled: false } });
+    await reloadState();
+    toast("Настройки 52aa31e восстановлены; эталон и ROI сохранены");
+  } catch (e) { /* toast shown */ }
+});
 
 let paramTimer;
 PARAMS.forEach(([k, d]) => {
@@ -760,6 +759,7 @@ async function reloadState() {
 /* ----- testing ----- */
 
 function renderResult(r) {
+  S.learningResult = r;
   const box = $("result");
   box.replaceChildren();
   const top = el("div");
@@ -770,6 +770,8 @@ function renderResult(r) {
   add("Кадр", r.frame + (r.defect_injected ? " + тестовый дефект" : ""));
   add("Порог брака", fmt(r.threshold, 2) + "%");
   add("Чувствительность", fmt(r.sensitivity, 2));
+  add("До образцов нормы", fmt(r.raw_anomaly_score * 100, 3) + "%");
+  add("Совпавших образцов", String(r.learned_normal_matches_count || 0));
   add("Сдвиг, px", r.shift ? `${fmt(r.shift[0])}, ${fmt(r.shift[1])}` : "—");
   [["seam", "Стык"], ["edge", "Кромка"]].forEach(([key, name]) => {
     const z = r[key];
@@ -778,6 +780,7 @@ function renderResult(r) {
   });
   add("Время", fmt(r.ms, 1) + " мс");
   box.append(kv);
+  renderLearningDiagnostics(box, r);
   const zones = r.zones || [];
   if (zones.length) {
     const z = el("div", "muted small", "Зоны (x, y, w, h): " + zones.slice(0, 8).map((q) => q.join(",")).join(" · ") + (zones.length > 8 ? " …" : ""));
@@ -893,6 +896,11 @@ setInterval(() => { if ($("logAuto").checked) refreshLogIfVisible(); }, 1500);
 
 (async function init() {
   const st = await api("/api/state");
+  if (st.inspection_engine !== "cpp-detector-52aa31ea") {
+    $("engineInfo").textContent = "Запущен старый executable. Нужна пересборка и перезапуск приложения.";
+    throw new Error("Native 52aa31ea engine is not running");
+  }
+  $("engineInfo").textContent = "Ядро 52aa31ea + локальное дообучение v2 · " + st.engine_source_commit.slice(0, 8) + " · отдельный профиль · кромка не влияет на вердикт";
   S.cams = st.cameras_info;
   buildGrid();
   buildPicker();

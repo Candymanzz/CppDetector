@@ -1,26 +1,52 @@
 cmake_minimum_required(VERSION 3.25)
 project(CppDetector LANGUAGES CXX)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs)
 find_package(httplib CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(Threads REQUIRED)
 
-add_executable(cppdetector
-  src/main.cpp
-  src/inspect/inspector.cpp
-  src/inspect/auto_roi.cpp
-  src/inspect/seam.cpp
-  src/app/app.cpp
-  src/app/decision_log.cpp
-  src/app/bench.cpp
-  src/web/routes.cpp)
+# Native core/service snapshot 52aa31ea; see src/production/SOURCE.md.
+add_library(production_core STATIC
+  src/production/core/reference.cpp src/production/core/settings.cpp
+  src/production/core/inspector.cpp src/production/core/seam.cpp src/production/core/performance_log.cpp
+  src/production/core/shm_io.cpp src/production/service/service.cpp)
+target_include_directories(production_core PUBLIC src/production)
+target_link_libraries(production_core PUBLIC opencv_core opencv_imgproc opencv_imgcodecs
+  nlohmann_json::nlohmann_json Threads::Threads)
+
+add_library(local_inspection STATIC src/inspect/inspector.cpp src/inspect/auto_roi.cpp src/inspect/learning_matcher.cpp
+  src/app/app.cpp src/app/learning.cpp src/app/decision_log.cpp)
+target_include_directories(local_inspection PUBLIC src)
+target_link_libraries(local_inspection PUBLIC production_core)
+
+add_executable(cppdetector src/main.cpp src/app/bench.cpp src/web/routes.cpp)
 target_compile_definitions(cppdetector PRIVATE CD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_link_libraries(cppdetector PRIVATE local_inspection httplib::httplib)
 if(MSVC)
-  target_compile_options(cppdetector PRIVATE /utf-8 /W3)
+  foreach(target production_core local_inspection cppdetector)
+    target_compile_options(${target} PRIVATE /utf-8 /W3)
+  endforeach()
 endif()
-target_link_libraries(cppdetector PRIVATE
-  opencv_core opencv_imgproc opencv_imgcodecs
-  httplib::httplib nlohmann_json::nlohmann_json)
+include(CTest)
+if(BUILD_TESTING)
+  add_executable(moving_shadow_test tests/moving_shadow_test.cpp)
+  target_link_libraries(moving_shadow_test PRIVATE local_inspection)
+  add_test(NAME moving_shadow_test COMMAND moving_shadow_test)
+  add_executable(local_learning_test tests/local_learning_test.cpp)
+  target_link_libraries(local_learning_test PRIVATE local_inspection)
+  add_test(NAME local_learning_test COMMAND local_learning_test)
+  add_executable(learned_region_test tests/learned_region_test.cpp)
+  target_link_libraries(learned_region_test PRIVATE production_core)
+  add_test(NAME learned_region_test COMMAND learned_region_test)
+  add_executable(native_shift_test tests/native_shift_test.cpp)
+  target_link_libraries(native_shift_test PRIVATE production_core)
+  add_test(NAME native_shift_test COMMAND native_shift_test)
+  add_executable(shift_tolerance_test tests/shift_tolerance_test.cpp)
+  target_link_libraries(shift_tolerance_test PRIVATE local_inspection)
+  add_test(NAME shift_tolerance_test COMMAND shift_tolerance_test)
+  add_executable(production_parity_test tests/production_parity_test.cpp)
+  target_link_libraries(production_parity_test PRIVATE local_inspection)
+  add_test(NAME production_parity_test COMMAND production_parity_test)
+endif()

@@ -1,3 +1,9 @@
+## Amendment 2026-11-02
+
+Owner explicitly requested learned normal regions. C2 still excludes neural-network training; the new feature
+stores alternate image crops and compares them with classic CV. C3 means one primary reference per camera,
+plus explicit camera/reference-scoped alternate normal regions. See [learning-port.md](learning-port.md).
+
 # Constraints (do not change without recording a new decision)
 
 - C1. Whole batch of 10 frames (one per camera) must be processed in < 500 ms. User-set hard goal; measure every batch.

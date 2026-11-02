@@ -1,0 +1,18 @@
+[
+  {
+    "bbox": {
+      "height": 36,
+      "width": 37,
+      "x": 592,
+      "y": 97
+    },
+    "coordinate_space": {
+      "height": 1024,
+      "width": 1224
+    },
+    "id": "normal-394104721-1682743045-4288448465",
+    "product_type": "camera-3",
+    "reference_fingerprint": "1224x1024-7403581834279869696",
+    "source_inspection_id": "1224x1024-302184772675348805:{\"height\":36,\"width\":37,\"x\":592,\"y\":97}"
+  }
+]
