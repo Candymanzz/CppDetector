@@ -1,6 +1,30 @@
 {
   "cameras": [
     {
+      "calibration": {
+        "horizontal": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        },
+        "vertical": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        }
+      },
       "downscale": 1.0,
       "edge": {
         "band": 10.0,
@@ -17,11 +41,22 @@
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
+      "estimated_mm_per_pixel": [
+        0.25,
+        0.33
+      ],
+      "exclusions": [],
+      "horizontal_shift_tolerance_mm": 3.0,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
       "max_alignment_shift_x": 12.0,
       "max_alignment_shift_y": 12.0,
+      "metric_reference_size": [
+        1224,
+        1024
+      ],
+      "metric_scale_source": "estimated",
       "min_blob_area": 20,
       "reference": "upload",
       "reject_threshold": 60.0,
@@ -137,9 +172,34 @@
       },
       "sensitivity": 0.5,
       "shift_tolerance_x": 3,
-      "shift_tolerance_y": 3
+      "shift_tolerance_y": 3,
+      "vertical_shift_tolerance_mm": 3.96
     },
     {
+      "calibration": {
+        "horizontal": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        },
+        "vertical": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        }
+      },
       "downscale": 1.0,
       "edge": {
         "band": 10.0,
@@ -156,13 +216,185 @@
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
+      "estimated_mm_per_pixel": [
+        0.28,
+        0.32
+      ],
+      "exclusions": [
+        [
+          [
+            239,
+            329
+          ],
+          [
+            517,
+            327
+          ],
+          [
+            505,
+            116
+          ],
+          [
+            187,
+            121
+          ]
+        ]
+      ],
+      "horizontal_shift_tolerance_mm": 3.35,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
       "max_alignment_shift_x": 12.0,
       "max_alignment_shift_y": 12.0,
+      "metric_reference_size": [
+        1224,
+        1024
+      ],
+      "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
+      "reference": "f_0000632",
+      "reject_threshold": 60.0,
+      "roi": [
+        [
+          46,
+          152
+        ],
+        [
+          72,
+          111
+        ],
+        [
+          130,
+          67
+        ],
+        [
+          217,
+          32
+        ],
+        [
+          304,
+          15
+        ],
+        [
+          403,
+          9
+        ],
+        [
+          509,
+          21
+        ],
+        [
+          588,
+          45
+        ],
+        [
+          638,
+          80
+        ],
+        [
+          647,
+          93
+        ],
+        [
+          729,
+          511
+        ],
+        [
+          464,
+          507
+        ],
+        [
+          136,
+          514
+        ],
+        [
+          17,
+          518
+        ],
+        [
+          34,
+          321
+        ]
+      ],
+      "seam": {
+        "band": 30.0,
+        "edge_frac": 0.12,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 1.0,
+        "min_contrast": 8.0,
+        "mode": "ridge",
+        "polarity": 0,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 5.0,
+        "tol_mid": 1.0
+      },
+      "sensitivity": 0.7,
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3,
+      "vertical_shift_tolerance_mm": 3.85
+    },
+    {
+      "calibration": {
+        "horizontal": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        },
+        "vertical": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "downscale": 1.0,
+      "edge": {
+        "band": 10.0,
+        "edge_frac": 0.0,
+        "enabled": false,
+        "fit_deg": 0,
+        "max_gap": 0.25,
+        "min_contrast": 10.0,
+        "mode": "step",
+        "polarity": -1,
+        "pts": [],
+        "skip": [],
+        "smooth_win": 60.0,
+        "tol_edge": 1.5,
+        "tol_mid": 1.5
+      },
+      "estimated_mm_per_pixel": [
+        0.31,
+        0.31
+      ],
+      "exclusions": [],
+      "horizontal_shift_tolerance_mm": 3.7199999999999998,
+      "learning_robust_enabled": true,
+      "learning_search_radius": 24,
+      "learning_shadow_enabled": true,
+      "max_alignment_shift_x": 12.0,
+      "max_alignment_shift_y": 12.0,
+      "metric_reference_size": [
+        1224,
+        1024
+      ],
+      "metric_scale_source": "estimated",
+      "min_blob_area": 20,
+      "reference": "f_0000525",
       "reject_threshold": 60.0,
       "roi": [],
       "seam": {
@@ -182,9 +414,34 @@
       },
       "sensitivity": 0.5,
       "shift_tolerance_x": 3,
-      "shift_tolerance_y": 3
+      "shift_tolerance_y": 3,
+      "vertical_shift_tolerance_mm": 3.7199999999999998
     },
     {
+      "calibration": {
+        "horizontal": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        },
+        "vertical": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        }
+      },
       "downscale": 1.0,
       "edge": {
         "band": 10.0,
@@ -201,107 +458,85 @@
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
+      "estimated_mm_per_pixel": [
+        0.25,
+        0.32
+      ],
+      "exclusions": [],
+      "horizontal_shift_tolerance_mm": 3.0,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
       "max_alignment_shift_x": 12.0,
       "max_alignment_shift_y": 12.0,
+      "metric_reference_size": [
+        1224,
+        1024
+      ],
+      "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 60.0,
-      "roi": [],
-      "seam": {
-        "band": 30.0,
-        "edge_frac": 0.12,
-        "enabled": false,
-        "fit_deg": 0,
-        "max_gap": 1.0,
-        "min_contrast": 8.0,
-        "mode": "ridge",
-        "polarity": 0,
-        "pts": [],
-        "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 5.0,
-        "tol_mid": 1.0
-      },
-      "sensitivity": 0.5,
-      "shift_tolerance_x": 3,
-      "shift_tolerance_y": 3
-    },
-    {
-      "downscale": 1.0,
-      "edge": {
-        "band": 10.0,
-        "edge_frac": 0.0,
-        "enabled": false,
-        "fit_deg": 0,
-        "max_gap": 0.25,
-        "min_contrast": 10.0,
-        "mode": "step",
-        "polarity": -1,
-        "pts": [],
-        "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 1.5,
-        "tol_mid": 1.5
-      },
-      "learning_robust_enabled": true,
-      "learning_search_radius": 24,
-      "learning_shadow_enabled": true,
-      "max_alignment_shift_x": 12.0,
-      "max_alignment_shift_y": 12.0,
-      "min_blob_area": 20,
-      "reference": "f_0000001",
+      "reference": "f_0000552",
       "reject_threshold": 8.0,
       "roi": [
         [
-          773,
-          138
+          619,
+          51
         ],
         [
-          822,
-          203
+          688,
+          91
         ],
         [
-          949,
-          620
+          731,
+          218
         ],
         [
-          899,
-          711
+          763,
+          369
         ],
         [
-          543,
-          788
+          799,
+          553
         ],
         [
-          172,
-          815
+          23,
+          559
         ],
         [
-          164,
-          581
+          30,
+          449
         ],
         [
-          176,
-          262
+          33,
+          414
         ],
         [
-          263,
-          173
+          61,
+          167
         ],
         [
-          415,
-          114
+          76,
+          124
         ],
         [
-          627,
-          96
+          132,
+          76
         ],
         [
-          703,
-          117
+          213,
+          41
+        ],
+        [
+          327,
+          20
+        ],
+        [
+          507,
+          18
+        ],
+        [
+          575,
+          32
         ]
       ],
       "seam": {
@@ -321,9 +556,34 @@
       },
       "sensitivity": 0.9,
       "shift_tolerance_x": 3,
-      "shift_tolerance_y": 3
+      "shift_tolerance_y": 3,
+      "vertical_shift_tolerance_mm": 3.84
     },
     {
+      "calibration": {
+        "horizontal": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        },
+        "vertical": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        }
+      },
       "downscale": 1.0,
       "edge": {
         "band": 10.0,
@@ -340,13 +600,24 @@
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
+      "estimated_mm_per_pixel": [
+        0.27,
+        0.34
+      ],
+      "exclusions": [],
+      "horizontal_shift_tolerance_mm": 3.24,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
       "max_alignment_shift_x": 12.0,
       "max_alignment_shift_y": 12.0,
+      "metric_reference_size": [
+        1224,
+        1024
+      ],
+      "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
+      "reference": "f_0000525",
       "reject_threshold": 60.0,
       "roi": [
         [
@@ -476,9 +747,34 @@
       },
       "sensitivity": 0.5,
       "shift_tolerance_x": 3,
-      "shift_tolerance_y": 3
+      "shift_tolerance_y": 3,
+      "vertical_shift_tolerance_mm": 4.08
     },
     {
+      "calibration": {
+        "horizontal": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        },
+        "vertical": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        }
+      },
       "downscale": 1.0,
       "edge": {
         "band": 10.0,
@@ -495,13 +791,24 @@
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
+      "estimated_mm_per_pixel": [
+        0.27,
+        0.34
+      ],
+      "exclusions": [],
+      "horizontal_shift_tolerance_mm": 3.24,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
       "max_alignment_shift_x": 12.0,
       "max_alignment_shift_y": 12.0,
+      "metric_reference_size": [
+        1224,
+        1024
+      ],
+      "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
+      "reference": "f_0000525",
       "reject_threshold": 60.0,
       "roi": [
         [
@@ -570,9 +877,34 @@
       },
       "sensitivity": 0.5,
       "shift_tolerance_x": 3,
-      "shift_tolerance_y": 3
+      "shift_tolerance_y": 3,
+      "vertical_shift_tolerance_mm": 4.08
     },
     {
+      "calibration": {
+        "horizontal": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        },
+        "vertical": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        }
+      },
       "downscale": 1.0,
       "edge": {
         "band": 10.0,
@@ -589,13 +921,24 @@
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
+      "estimated_mm_per_pixel": [
+        0.25,
+        0.33
+      ],
+      "exclusions": [],
+      "horizontal_shift_tolerance_mm": 3.0,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
       "max_alignment_shift_x": 12.0,
       "max_alignment_shift_y": 12.0,
+      "metric_reference_size": [
+        1224,
+        1024
+      ],
+      "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
+      "reference": "f_0000525",
       "reject_threshold": 22.0,
       "roi": [
         [
@@ -664,9 +1007,34 @@
       },
       "sensitivity": 0.99,
       "shift_tolerance_x": 3,
-      "shift_tolerance_y": 3
+      "shift_tolerance_y": 3,
+      "vertical_shift_tolerance_mm": 3.96
     },
     {
+      "calibration": {
+        "horizontal": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        },
+        "vertical": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        }
+      },
       "downscale": 1.0,
       "edge": {
         "band": 10.0,
@@ -683,13 +1051,24 @@
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
+      "estimated_mm_per_pixel": [
+        0.22,
+        0.23
+      ],
+      "exclusions": [],
+      "horizontal_shift_tolerance_mm": 2.6400000000000006,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
-      "max_alignment_shift_x": 12.0,
+      "max_alignment_shift_x": 12.000000000000002,
       "max_alignment_shift_y": 12.0,
+      "metric_reference_size": [
+        1224,
+        1024
+      ],
+      "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
+      "reference": "f_0000525",
       "reject_threshold": 60.0,
       "roi": [],
       "seam": {
@@ -709,9 +1088,34 @@
       },
       "sensitivity": 0.5,
       "shift_tolerance_x": 3,
-      "shift_tolerance_y": 3
+      "shift_tolerance_y": 3,
+      "vertical_shift_tolerance_mm": 2.7600000000000002
     },
     {
+      "calibration": {
+        "horizontal": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        },
+        "vertical": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        }
+      },
       "downscale": 1.0,
       "edge": {
         "band": 10.0,
@@ -728,13 +1132,24 @@
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
+      "estimated_mm_per_pixel": [
+        0.22,
+        0.32
+      ],
+      "exclusions": [],
+      "horizontal_shift_tolerance_mm": 2.6400000000000006,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
-      "max_alignment_shift_x": 12.0,
+      "max_alignment_shift_x": 12.000000000000002,
       "max_alignment_shift_y": 12.0,
+      "metric_reference_size": [
+        1224,
+        1024
+      ],
+      "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
+      "reference": "f_0000525",
       "reject_threshold": 60.0,
       "roi": [],
       "seam": {
@@ -754,9 +1169,34 @@
       },
       "sensitivity": 0.5,
       "shift_tolerance_x": 3,
-      "shift_tolerance_y": 3
+      "shift_tolerance_y": 3,
+      "vertical_shift_tolerance_mm": 3.84
     },
     {
+      "calibration": {
+        "horizontal": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        },
+        "vertical": {
+          "length_mm": 0.0,
+          "p0": [
+            0.0,
+            0.0
+          ],
+          "p1": [
+            0.0,
+            0.0
+          ]
+        }
+      },
       "downscale": 1.0,
       "edge": {
         "band": 10.0,
@@ -773,13 +1213,24 @@
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
+      "estimated_mm_per_pixel": [
+        0.28,
+        0.33
+      ],
+      "exclusions": [],
+      "horizontal_shift_tolerance_mm": 3.3600000000000003,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
       "max_alignment_shift_x": 12.0,
       "max_alignment_shift_y": 12.0,
+      "metric_reference_size": [
+        1224,
+        1024
+      ],
+      "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
+      "reference": "f_0000525",
       "reject_threshold": 60.0,
       "roi": [],
       "seam": {
@@ -799,12 +1250,13 @@
       },
       "sensitivity": 0.5,
       "shift_tolerance_x": 3,
-      "shift_tolerance_y": 3
+      "shift_tolerance_y": 3,
+      "vertical_shift_tolerance_mm": 3.96
     }
   ],
   "defect": false,
-  "engine_source_commit": "52aa31eacb16785ff33dc16b6937ab31c8ec7ee9",
-  "inspection_engine": "cpp-detector-52aa31ea",
+  "engine_source_commit": "2090914128af2822c5a94720a89555c02238642b",
+  "inspection_engine": "cpp-detector-20909141",
   "period_ms": 200,
   "source_dir": "D:\\Pj\\CppDetector\\frames36"
 }

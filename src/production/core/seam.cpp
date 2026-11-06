@@ -18,12 +18,12 @@ double polyval(const std::vector<double>& c, double t) {
 
 // Least-squares polynomial (ascending coefficients) with iterative outlier rejection.
 // NaN entries of `o` are ignored. Empty result = not enough valid points.
-std::vector<double> robustFit(const std::vector<double>& t, const std::vector<double>& o, int deg, double tol) {
+std::vector<double> robustFit(const std::vector<double>& t, const std::vector<double>& o, int deg, double tol, int eligible = -1) {
     const size_t n = t.size();
     std::vector<char> valid(n), w(n);
     size_t nv = 0;
     for (size_t i = 0; i < n; ++i) { valid[i] = !std::isnan(o[i]); nv += valid[i]; }
-    if (nv < n * 0.3) return {};
+    if (nv < (eligible < 0 ? n : size_t(eligible)) * 0.3) return {};
     w = valid;
     std::vector<double> c;
     for (int it = 0; it < 5; ++it) {
@@ -88,7 +88,7 @@ std::vector<double> peakOffsets(const cv::Mat& v, int hw, double minVal) {
 
 } // namespace
 
-SeamResult measureSeam(const cv::Mat& bgr, const SeamParams& p) {
+SeamResult measureSeam(const cv::Mat& bgr, const SeamParams& p, const cv::Mat& excluded) {
     auto t0 = std::chrono::steady_clock::now();
     SeamResult res;
     res.enabled = p.enabled;
@@ -126,8 +126,16 @@ SeamResult measureSeam(const cv::Mat& bgr, const SeamParams& p) {
 
     // pass 1: coarse straight line inside the wide band
     cv::Mat v = sampleBand(ridge, org, p.p0, u, nrm, N, nullptr, hw1);
+    std::vector<bool> ignored(N, false);
+    if (!excluded.empty()) {
+        // Ignore a complete cross-section if its search band intersects an excluded pixel.
+        cv::Mat samples = sampleBand(excluded(box), org, p.p0, u, nrm, N, nullptr, hw1 + hwEdge);
+        for (int i = 0; i < N; ++i) ignored[i] = cv::countNonZero(samples.row(i)) > 0;
+    }
     std::vector<double> o1 = peakOffsets(v, hw1, 6.0);
-    std::vector<double> c1 = robustFit(t, o1, 1, 3.0);
+    for (int i = 0; i < N; ++i) if (ignored[i]) o1[i] = kNaN;
+    const int eligible = N - int(std::count(ignored.begin(), ignored.end(), true));
+    std::vector<double> c1 = robustFit(t, o1, 1, 3.0, eligible);
     if (c1.empty()) return done();
     std::vector<double> cen(N);
     for (int i = 0; i < N; ++i) cen[i] = polyval(c1, t[i]);
@@ -137,6 +145,7 @@ SeamResult measureSeam(const cv::Mat& bgr, const SeamParams& p) {
     const int W = g.cols;
     std::vector<double> eL(N, kNaN), eR(N, kNaN);
     for (int i = 0; i < N; ++i) {
+        if (ignored[i]) continue;
         const float* row = g.ptr<float>(i);
         float border[6] = {row[0], row[1], row[2], row[W - 3], row[W - 2], row[W - 1]};
         std::sort(border, border + 6);
@@ -154,11 +163,12 @@ SeamResult measureSeam(const cv::Mat& bgr, const SeamParams& p) {
     }
 
     // deviation of each edge from its own smooth curve (line + curvature: the label is on a cylinder)
-    std::vector<double> fL = robustFit(t, eL, 2, 1.5), fR = robustFit(t, eR, 2, 1.5);
+    std::vector<double> fL = robustFit(t, eL, 2, 1.5, eligible), fR = robustFit(t, eR, 2, 1.5, eligible);
     if (fL.empty() || fR.empty()) return done();
 
     int evalRows = 0, validRows = 0;
     for (int i = 0; i < N; ++i) {
+        if (ignored[i]) continue;
         if (t[i] < p.endIgnore || t[i] > 1.0 - p.endIgnore) continue;
         ++evalRows;
         if (std::isnan(eL[i]) || std::isnan(eR[i])) continue;
@@ -194,7 +204,7 @@ SeamResult measureSeam(const cv::Mat& bgr, const SeamParams& p) {
     return done();
 }
 
-SeamResult measureSeam(const cv::Mat& bgr, const SeamSettings& s) {
+SeamResult measureSeam(const cv::Mat& bgr, const SeamSettings& s, const cv::Mat& excluded) {
     SeamParams p;
     p.enabled = s.enabled && s.hasLine() && !bgr.empty();
     p.p0 = {s.p0x * bgr.cols, s.p0y * bgr.rows};
@@ -203,7 +213,7 @@ SeamResult measureSeam(const cv::Mat& bgr, const SeamSettings& s) {
     p.tolMid = s.tolMid;
     p.tolEdge = s.tolEdge;
     p.edgeFrac = s.edgeFrac;
-    return measureSeam(bgr, p);
+    return measureSeam(bgr, p, excluded);
 }
 
 } // namespace cas

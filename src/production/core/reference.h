@@ -10,6 +10,9 @@ namespace cas {
 
 using NormPolygon = std::vector<cv::Point2d>;   // ROI points in 0..1 of the frame
 
+constexpr double kUpperCornerWidthFraction = 0.15;
+constexpr double kUpperCornerHeightFraction = 1.0 / 7.0;
+
 struct LearnedRegion {
     std::string id;
     cv::Rect bbox;
@@ -24,6 +27,8 @@ struct Prepared {
     cv::Mat roiMask;          // CV_8U 0/255 at work size (full frame when no ROI)
     int roiArea = 0;          // pixels in roiMask
     cv::Rect region;          // ROI bounding box + padding (analysis is limited to it)
+    cv::Mat upperCornerMask;  // CV_8U, region-sized; top 1/7, outer 15% on each side of explicit ROI
+    int upperCornerArea = 0;
     cv::Size smallSize;       // size used for the cheap shift estimation
     cv::Mat refSmall;         // CV_32F reference region resized to smallSize
     cv::Mat hann;             // CV_32F Hanning window of smallSize
@@ -43,15 +48,17 @@ public:
     // Empty polygon = whole frame. Returns true when the ROI actually changed (cache is dropped then).
     bool setRoi(NormPolygon pts);
     NormPolygon roi() const;
+    void setExclusions(std::vector<NormPolygon> polygons);
 
     std::shared_ptr<const Prepared> prepared(double scale) const;
 
 private:
-    std::shared_ptr<const Prepared> build(double scale, const NormPolygon& roi) const;
+    std::shared_ptr<const Prepared> build(double scale, const NormPolygon& roi, const std::vector<NormPolygon>& exclusions) const;
 
     cv::Mat bgr_;
     mutable std::mutex m_;
     NormPolygon roi_;
+    std::vector<NormPolygon> exclusions_;
     std::vector<LearnedRegion> learned_;
     mutable std::map<int, std::shared_ptr<const Prepared>> cache_;
 };

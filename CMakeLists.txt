@@ -7,10 +7,10 @@ find_package(httplib CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(Threads REQUIRED)
 
-# Native core/service snapshot 52aa31ea; see src/production/SOURCE.md.
+# Native core/service snapshot 20909141; see src/production/SOURCE.md.
 add_library(production_core STATIC
   src/production/core/reference.cpp src/production/core/settings.cpp
-  src/production/core/inspector.cpp src/production/core/seam.cpp src/production/core/performance_log.cpp
+  src/production/core/inspector.cpp src/production/core/learning_matcher.cpp src/production/core/seam.cpp src/production/core/performance_log.cpp
   src/production/core/shm_io.cpp src/production/service/service.cpp)
 target_include_directories(production_core PUBLIC src/production)
 target_link_libraries(production_core PUBLIC opencv_core opencv_imgproc opencv_imgcodecs
@@ -31,6 +31,12 @@ if(MSVC)
 endif()
 include(CTest)
 if(BUILD_TESTING)
+  add_executable(exclusion_test tests/exclusion_test.cpp)
+  target_link_libraries(exclusion_test PRIVATE local_inspection)
+  add_test(NAME exclusion_test COMMAND exclusion_test)
+  add_executable(auto_learning_test tests/auto_learning_test.cpp)
+  target_link_libraries(auto_learning_test PRIVATE local_inspection)
+  add_test(NAME auto_learning_test COMMAND auto_learning_test)
   add_executable(moving_shadow_test tests/moving_shadow_test.cpp)
   target_link_libraries(moving_shadow_test PRIVATE local_inspection)
   add_test(NAME moving_shadow_test COMMAND moving_shadow_test)
@@ -49,4 +55,21 @@ if(BUILD_TESTING)
   add_executable(production_parity_test tests/production_parity_test.cpp)
   target_link_libraries(production_parity_test PRIVATE local_inspection)
   add_test(NAME production_parity_test COMMAND production_parity_test)
+endif()
+
+if(BUILD_TESTING)
+  add_executable(adapter_settings_test tests/adapter_settings_test.cpp)
+  target_link_libraries(adapter_settings_test PRIVATE local_inspection)
+  add_test(NAME adapter_settings_test COMMAND adapter_settings_test)
+  foreach(test metric_tolerance upper_corner moving_shadow)
+    add_executable(production_${test}_test tests/production_${test}_test.cpp)
+    target_link_libraries(production_${test}_test PRIVATE production_core)
+    add_test(NAME production_${test}_test COMMAND production_${test}_test)
+  endforeach()
+endif()
+
+if(BUILD_TESTING)
+  add_executable(learned_placement_test tests/learned_placement_test.cpp)
+  target_link_libraries(learned_placement_test PRIVATE production_core)
+  add_test(NAME learned_placement_test COMMAND learned_placement_test)
 endif()

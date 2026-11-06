@@ -20,13 +20,17 @@ cas::Settings nativeSettings(const cd::InspectParams& p, const cd::SeamParams* s
     s.shiftToleranceX = p.shiftToleranceX; s.shiftToleranceY = p.shiftToleranceY;
     s.maxAlignmentShiftX=p.maxAlignmentShiftX; s.maxAlignmentShiftY=p.maxAlignmentShiftY;
     s.minBlobArea = p.minBlobArea; s.inspectScale = p.downscale;
+    s.horizontalShiftMm = p.horizontalShiftMm; s.verticalShiftMm = p.verticalShiftMm;
+    s.estimatedMmPerPixel = p.estimatedMmPerPixel; s.calibration = p.calibration;
+    s.learningRobustEnabled = p.learning.robust; s.learningShadowEnabled = p.learning.shadows;
+    s.learningSearchRadius = p.learning.searchRadius;
     if (seam && seam->pts.size() >= 2) {
         s.seam.enabled = seam->enabled;
         s.seam.p0x = seam->pts.front().x / size.width; s.seam.p0y = seam->pts.front().y / size.height;
         s.seam.p1x = seam->pts.back().x / size.width; s.seam.p1y = seam->pts.back().y / size.height;
         s.seam.band = seam->bandHalf; s.seam.tolMid = seam->tolMid; s.seam.tolEdge = seam->tolEdge; s.seam.edgeFrac = seam->edgeFrac;
     }
-    return s;
+    return s.forFrame(size);
 }
 cas::NormPolygon nativeRoi(const std::vector<cv::Point>& roi, cv::Size size) {
     cas::NormPolygon out;
@@ -65,7 +69,7 @@ void one(const cv::Mat& ref, const cv::Mat& frame, const cd::InspectParams& p,
     cas::Reference production(ref.clone()); production.setRoi(nativeRoi(roi, ref.size()));
     auto s = nativeSettings(p, seam, ref.size());
     auto expected = cas::inspectFrame(production, frame, s, true);
-    applyNativeSeam(frame, s.seam, expected);
+    if (s.sensitivity > 0) applyNativeSeam(frame, s.seam, expected);
     const auto result = local.inspect(frame, p, seam);
     compare(result, expected, production);
 }
@@ -97,6 +101,16 @@ void syntheticTests() {
     one(line, line, p, {}, &seam);
     auto bent = line.clone(); cv::line(bent, {180,120}, {190,160}, {250,250,250}, 4);
     one(line, bent, p, {}, &seam);
+    p.sensitivity = 0;
+    one(line, bent, p, {}, &seam);
+    p = cd::InspectParams{};
+    p.applyNativeSettings(cas::Settings{}.withMetricDefaults(4));
+    p.horizontalShiftMm = .5; p.verticalShiftMm = 1.25;
+    for (double scale : {1.0, .73, .5}) {
+        p.downscale = scale;
+        one(ref, changed, p, {{40,20},{320,20},{320,300},{40,300}}, nullptr);
+    }
+    p = cd::InspectParams{};
     // Repeated square-ROI inspections must preserve parity, results and the shared cache.
     const std::vector<cv::Point> square{{40,20},{320,20},{320,300},{40,300}};
     cd::Inspector local; local.setReference(ref, square, p);
@@ -135,7 +149,7 @@ void profileTests(const std::filesystem::path& dir) {
         require(!app.setCamera(0,{{"edge",{{"enabled",true}}}},err), "edge API must not silently enable a different detector");
         require(app.setCamera(0,{{"shift_tolerance_x",8},{"reject_threshold",12.5}},err), "new profile must save native settings");
         const auto result=app.inspectUpload(0,photo,"same-frame",false,err);
-        require(result["inspection_engine"] == "cpp-detector-52aa31ea" && result["native_settings"]["threshold"] == 0.125,
+        require(result["inspection_engine"] == "cpp-detector-20909141" && result["native_settings"]["threshold"] == 0.125,
                 "inspection must expose native settings and use percent/100");
         require(result["score"] == 0 && result["reject"] == false, "same image must pass");
     }

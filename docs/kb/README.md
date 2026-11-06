@@ -1,3 +1,30 @@
+# Inspection exclusions — 2026-11-06
+
+Draw polygon zones in the camera setup to skip inspection inside them. Exclusions
+are persistent per-camera holes in ROI and also apply to the seam.
+[Behavior, reasons, checks and limits](exclusion-zones-2026-11-06.md).
+
+# Learned pattern support — 2026-11-04
+
+Pattern support is now computed against the primary reference at the matched placement,
+rather than translated from its original bbox. This fixes normal edge regions that
+continued to reject after learning. [Details and validation](learned-placement-fix-2026-11-04.md).
+
+# Automatic learning — 2026-11-04
+
+The current UI uses one «Дообучить» button and automatically encloses all nonzero
+raw heatmap pixels with 10 source pixels of padding, matching the main application.
+The inspected version pins the source crop. Manual selection notes below are historical.
+[Implementation, compatibility and checks](automatic-learning-2026-11-04.md).
+
+# Current update — 2026-11-04
+
+Native core/service are now pinned to main-app 20909141. The production robust matcher
+replaces the local callback hook; metrics, upper corners and sensitivity-zero seam
+behavior follow production. Existing data paths remain compatible. Read
+[the authoritative sync report](production-sync-2026-11-04.md) for current behavior,
+validation and the pre-existing missing reference names. Older sections below are history.
+
 Current experiment (2026-11-02): [local-learning-v2.md](local-learning-v2.md) adds independent search,
 masked application, moving-shadow comparison and per-case diagnostics. Native matching remains selectable.
 

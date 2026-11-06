@@ -1,18 +1,82 @@
 [
   {
     "bbox": {
-      "height": 36,
-      "width": 37,
-      "x": 592,
-      "y": 97
+      "height": 379,
+      "width": 60,
+      "x": 7,
+      "y": 141
     },
     "coordinate_space": {
-      "height": 1024,
-      "width": 1224
+      "height": 520,
+      "width": 740
     },
-    "id": "normal-394104721-1682743045-4288448465",
-    "product_type": "camera-3",
-    "reference_fingerprint": "1224x1024-7403581834279869696",
-    "source_inspection_id": "1224x1024-302184772675348805:{\"height\":36,\"width\":37,\"x\":592,\"y\":97}"
+    "id": "normal-2403935081-3263741366-2206788344",
+    "product_type": "camera-1",
+    "reference_fingerprint": "740x520-12743011919735738925",
+    "source_inspection_id": "740x520-17394709681736170411:{\"height\":379,\"width\":60,\"x\":7,\"y\":141}"
+  },
+  {
+    "bbox": {
+      "height": 52,
+      "width": 34,
+      "x": 706,
+      "y": 468
+    },
+    "coordinate_space": {
+      "height": 520,
+      "width": 740
+    },
+    "id": "normal-2533593586-3593566027-3741540373",
+    "product_type": "camera-1",
+    "reference_fingerprint": "740x520-12743011919735738925",
+    "source_inspection_id": "740x520-17828609517801981169:{\"height\":52,\"width\":34,\"x\":706,\"y\":468}"
+  },
+  {
+    "bbox": {
+      "height": 520,
+      "width": 639,
+      "x": 36,
+      "y": 0
+    },
+    "coordinate_space": {
+      "height": 520,
+      "width": 740
+    },
+    "id": "normal-2745382561-25054991-3032588114",
+    "product_type": "camera-1",
+    "reference_fingerprint": "740x520-12743011919735738925",
+    "source_inspection_id": "740x520-2616960770297735251:{\"height\":520,\"width\":639,\"x\":36,\"y\":0}"
+  },
+  {
+    "bbox": {
+      "height": 129,
+      "width": 120,
+      "x": 195,
+      "y": 391
+    },
+    "coordinate_space": {
+      "height": 520,
+      "width": 740
+    },
+    "id": "normal-30665815-1943383857-658699119",
+    "product_type": "camera-1",
+    "reference_fingerprint": "740x520-12743011919735738925",
+    "source_inspection_id": "740x520-2616960770297735251:{\"height\":129,\"width\":120,\"x\":195,\"y\":391}"
+  },
+  {
+    "bbox": {
+      "height": 34,
+      "width": 57,
+      "x": 261,
+      "y": 4
+    },
+    "coordinate_space": {
+      "height": 520,
+      "width": 740
+    },
+    "id": "normal-2794726442-3239325882-432417493",
+    "product_type": "camera-1",
+    "reference_fingerprint": "740x520-1663632367091669501",
+    "source_inspection_id": "740x520-15289049402049145125:{\"height\":34,\"width\":57,\"x\":261,\"y\":4}"
   }
 ]

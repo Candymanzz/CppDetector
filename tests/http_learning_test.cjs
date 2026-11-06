@@ -33,7 +33,7 @@ const fs=require('fs'), os=require('os'), path=require('path'), cp=require('chil
   assert.equal((await fetch(base+'/api/learning?cam=0',{method:'POST',headers:{'Content-Type':'application/json'},body:'{bad'})).status,400);
   const next=await api('/api/inspect?cam=0&frame='+encodeURIComponent(name),{method:'POST'});
   assert.equal(typeof next.raw_anomaly_score,'number');assert.ok(Array.isArray(next.matched_accepted_case_ids));
-  assert.equal(next.learning_engine,'local-robust-v2');assert.ok(Array.isArray(next.learning_diagnostics));
+  assert.equal(next.learning_engine,'robust-v2');assert.ok(Array.isArray(next.learning_diagnostics));
   assert.equal(next.learning_diagnostics[0].id,id);assert.ok(typeof next.learning_diagnostics[0].status==='string');
   await post('/api/camera?cam=0',{learning_robust_enabled:false});
   const oldMode=await api('/api/inspect?cam=0&frame='+encodeURIComponent(name),{method:'POST'});

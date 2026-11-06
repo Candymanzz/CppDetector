@@ -13,7 +13,8 @@ json App::learnRegion(int cam, const json& body, std::string& err) {
             throw std::invalid_argument("Inspection changed; inspect the frame again");
         if (c.last.value("defect_injected", false)) throw std::invalid_argument("Cannot learn an injected defect");
         if (c.last.value("verdict", "") == "NO_REFERENCE") throw std::invalid_argument("No matching reference");
-        const auto& b = body.at("bbox");
+        const auto b = body.contains("bbox") ? body.at("bbox") : c.last.value("learning_bbox", json(nullptr));
+        if (b.is_null()) throw std::invalid_argument("No anomalies on the heatmap to learn");
         for (auto k : {"x", "y", "width", "height"})
             if (!b.at(k).is_number_integer()) throw std::invalid_argument("Region coordinates must be integers");
         const int x=b.at("x"), y=b.at("y"), w=b.at("width"), h=b.at("height");

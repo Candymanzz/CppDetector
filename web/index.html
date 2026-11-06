@@ -26,7 +26,7 @@
 </header>
 
 <main>
-  <p class="muted hint" id="engineInfo">Локальный стенд · 52aa31ea. Подключение к детектору…</p>
+  <p class="muted hint" id="engineInfo">Локальный стенд · 20909141. Подключение к детектору…</p>
   <!-- ===== Camera grid ===== -->
   <section id="tab-grid" class="tab active">
     <div class="grid" id="grid"></div>
@@ -92,16 +92,16 @@
             <input type="range" id="shift_tolerance_x" min="0" max="15" step="1"></div>
           <div class="param" title="Вертикальный допуск сравнения, независимо от предела выравнивания."><label>Допуск на сдвиг Y, px <b id="v_shift_tolerance_y"></b></label>
             <input type="range" id="shift_tolerance_y" min="0" max="15" step="1"></div>
-          <div class="param"><label>Предел выравнивания X, px <b id="v_max_alignment_shift_x"></b></label>
-            <input type="range" id="max_alignment_shift_x" min="0" max="160" step="1"></div>
-          <div class="param"><label>Предел выравнивания Y, px <b id="v_max_alignment_shift_y"></b></label>
-            <input type="range" id="max_alignment_shift_y" min="0" max="160" step="1"></div>
+          <div class="param"><label>Допуск проворота, мм <b id="v_horizontal_shift_tolerance_mm"></b></label>
+            <input type="range" id="horizontal_shift_tolerance_mm" min="0" max="10" step="0.05"></div>
+          <div class="param"><label>Допуск вертикального смещения, мм <b id="v_vertical_shift_tolerance_mm"></b></label>
+            <input type="range" id="vertical_shift_tolerance_mm" min="0" max="10" step="0.05"></div>
           <div class="param"><label>Downscale <b id="v_downscale"></b></label>
-            <input type="range" id="downscale" min="0.2" max="1" step="0.05"></div>
+            <input type="range" id="downscale" min="0.1" max="1" step="0.01"></div>
           <div class="param"><label>Мин. площадь пятна, px² исходного кадра <b id="v_min_blob_area"></b></label>
             <input type="range" id="min_blob_area" min="1" max="500" step="1"></div>
-          <p class="muted small">При чувствительности 0.5: 100% оценки = 0.2% аномальной площади ROI. Чувствительность 0 отключает поверхностную отбраковку, 1 всегда бракует; шов проверяется отдельно. Пиксели допусков и площадь относятся к исходному кадру, независимо от Downscale. Нулевой допуск не отключает позиционирование.</p>
-          <button id="resetDetector">По умолчанию 52aa31e</button>
+          <p class="muted small">При чувствительности 0.5: 100% оценки = 0.2% аномальной площади ROI. Чувствительность 0 отключает отбраковку, включая шов; 1 всегда бракует. В верхних углах ROI чувствительность усилена в 1.1 раза. Миллиметры приблизительные до калибровки; проворот оценивается по горизонтальному смещению. Пиксели допусков и площадь относятся к исходному кадру, независимо от Downscale. Нулевой допуск не отключает позиционирование.</p>
+          <button id="resetDetector">По умолчанию 20909141</button>
           <div class="muted small" id="saveState">&nbsp;</div>
         </div>
 
@@ -112,13 +112,20 @@
           <div class="param"><label>Поиск образца вокруг места сохранения, px <b id="v_learning_search_radius"></b></label>
             <input type="range" id="learning_search_radius" min="0" max="64" step="1"></div>
           <p class="muted small">Поиск не зависит от выравнивания камеры. Выделяйте тень целиком с небольшим запасом. Для сравнения с прежним алгоритмом отключите устойчивое сопоставление.</p>
-          <p class="muted small">Проверьте кадр, нажмите «Выбрать участок» и выделите прямоугольник на изображении. Сохраняйте только допустимое отличие. Новые дефекты в этой области продолжат проверяться.</p>
-          <button id="learnSelect">Выбрать участок</button>
-          <button id="learnSave" disabled>Сохранить как норму</button>
-          <button id="learnCancel">Отмена</button>
+          <p class="muted small">Проверьте кадр и нажмите «Дообучить». Участок со всеми аномалиями будет выделен и сохранён автоматически, с запасом 10 px. Сохраняйте только допустимые отличия. Новые дефекты в этой области продолжат проверяться.</p>
+          <button id="learnFrame" disabled>Дообучить</button>
           <p id="learnInfo" class="muted small"></p>
           <button id="learnRefresh">Обновить список</button>
           <div id="learnedCases"></div>
+        </div>
+        <div class="card">
+          <h2>Зоны исключения инспекции</h2>
+          <p class="muted small">Обведите участок точками на эталоне с небольшим запасом. Внутри зоны не проверяются поверхность и шов. Зоны отмечены розовым и сохраняются отдельно для каждой камеры.</p>
+          <div class="row"><button id="addExclusion">Нарисовать зону</button><button id="saveExclusion" disabled>Сохранить зону</button></div>
+          <div class="row"><button id="undoExclusion" disabled>Убрать точку</button><button id="cancelExclusion" disabled>Отмена</button></div>
+          <p class="muted small" id="exclusionInfo"></p>
+          <div id="exclusionList"></div>
+          <button id="clearExclusions" disabled>Удалить все зоны</button>
         </div>
         <div id="lineCards"></div>
 
@@ -148,7 +155,8 @@
   </section>
 </main>
 <div id="toast" class="toast" role="status"></div>
-<script src="app.js?engine=52aa31ea-learning-v2"></script>
-<script src="learning.js?engine=52aa31ea"></script>
+<script src="app.js?engine=20909141-exclusions-v1"></script>
+<script src="learning.js?engine=20909141-auto-learning-v1"></script>
+<script src="exclusions.js?engine=20909141-exclusions-v1"></script>
 </body>
 </html>

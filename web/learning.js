@@ -1,8 +1,20 @@
 "use strict";
 function cancelLearning() {
-  S.learning = false; S.learnBox = null; S.learnStart = null;
-  $("learnSave").disabled = true;
+  S.learning = false; S.learnBox = null;
   if (typeof draw === "function") draw();
+}
+function canLearnFrame(r) {
+  return r && r.cam === S.cam && r.ver && !r.defect_injected && r.verdict !== "NO_REFERENCE" && r.learning_bbox;
+}
+function updateLearningAction(resetInfo = false) {
+  const r = S.learningResult, saved = r && S.learnedResult === r;
+  $("learnFrame").disabled = !!S.learningSaving || !canLearnFrame(r) || saved;
+  $("learnFrame").textContent = S.learningSaving ? "Добавление…" : saved ? "Добавлено в анализ" : "Дообучить";
+  if (!S.learningSaving && !saved && (resetInfo || !canLearnFrame(r))) $("learnInfo").textContent = !r
+    ? "Сначала проверьте кадр."
+    : r.defect_injected ? "Тестовый дефект нельзя сохранять как норму."
+    : !r.learning_bbox ? "На карте нет аномалий для дообучения."
+    : "Участок будет выбран автоматически по карте аномалий с запасом 10 px.";
 }
 async function refreshLearned() {
   const cam = S.cam;
@@ -26,48 +38,43 @@ async function refreshLearned() {
     if(!data.cases.length) box.append(el("p","muted small","Образцов пока нет"));
   } catch(e) { /* api displays error */ }
 }
-$("learnRefresh").onclick=refreshLearned;
-$("learnCancel").onclick=()=>{cancelLearning();draw();};
-$("learnSelect").onclick=async()=>{
-  const r=S.learningResult, cam=S.cam;
-  if(!r || r.cam!==cam || !r.ver || r.defect_injected || r.verdict==="NO_REFERENCE") {
-    toast("Сначала проверьте кадр без тестового дефекта",true); return;
-  }
-  // Freeze the emulated stream so its next frame cannot replace the selected source.
-  await api("/api/run?on=0",{method:"POST"});
-  const img=new Image();
-  img.onload=()=>{
-    if(S.cam!==cam) return;
-    cancelLearning(); S.learningImage=img; S.learning=true; S.learningVersion=r.ver;
-    $("learnInfo").textContent="Выделите участок мышью. Кадр: " + r.frame;
-    draw();
-  };
-  img.onerror=()=>toast("Кадр изменился. Проверьте его повторно",true);
-  img.src="/api/inspected?cam="+cam+"&version="+r.ver;
-};
-canvas.addEventListener("pointerdown",ev=>{
-  if(!S.learning || ev.button!==0) return;
-  ev.stopImmediatePropagation(); S.learnStart=canvasPoint(ev); canvas.setPointerCapture(ev.pointerId);
-},true);
-canvas.addEventListener("pointermove",ev=>{
-  if(!S.learning) return;
-  ev.stopImmediatePropagation(); if(!S.learnStart) return;
-  const p=canvasPoint(ev),a=S.learnStart;
-  S.learnBox={x:Math.min(a[0],p[0]),y:Math.min(a[1],p[1]),width:Math.abs(a[0]-p[0])+1,height:Math.abs(a[1]-p[1])+1};
-  draw();
-},true);
-canvas.addEventListener("pointerup",ev=>{
-  if(!S.learning) return;
-  ev.stopImmediatePropagation(); S.learnStart=null; $("learnSave").disabled=!S.learnBox;
-},true);
-canvas.addEventListener("contextmenu",ev=>{if(S.learning){ev.preventDefault();ev.stopImmediatePropagation();}},true);
-$("learnSave").onclick=async()=>{
-  if(!S.learning || !S.learnBox) return;
+
+$("learnRefresh").onclick = refreshLearned;
+$("learnFrame").onclick = async () => {
+  const r = S.learningResult, cam = S.cam;
+  if (S.learningSaving || !canLearnFrame(r) || S.learnedResult === r) return;
+  S.learningSaving = true;
+  updateLearningAction();
   try {
-    await post("/api/learning?cam="+S.cam,{version:S.learningVersion,bbox:S.learnBox});
-    cancelLearning(); draw(); await refreshLearned();
+    // Pin the inspected frame before preview/save; the server also checks its version.
+    await api("/api/run?on=0", {method:"POST"});
+    const image = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Кадр изменился. Проверьте его повторно."));
+      img.src = "/api/inspected?cam=" + cam + "&version=" + r.ver;
+    });
+    if (S.cam !== cam || S.learningResult !== r) throw new Error("Кадр изменился. Проверьте его повторно.");
+    setMode("result");
+    S.learning = true; S.learningImage = image; S.learnBox = r.learning_bbox;
+    draw();
+    await post("/api/learning?cam=" + cam, {version:r.ver});
+    if (S.cam === cam && S.learningResult === r) {
+      S.learnedResult = r;
+      $("learnInfo").textContent = "Выделенный участок сохранён как норма. Повторите проверку кадра.";
+      await refreshLearned();
+    }
     toast("Образец сохранён. Повторите проверку кадра для новой оценки");
-  } catch(e) { /* api displays stale frame or validation error */ }
+  } catch(e) {
+    if (S.cam === cam && S.learningResult === r) {
+      cancelLearning();
+      $("learnInfo").textContent = e.message;
+    }
+    toast(e.message, true);
+  } finally {
+    S.learningSaving = false;
+    updateLearningAction();
+  }
 };
 
 for (const [id,key] of [["learningRobust","learning_robust_enabled"],["learningShadows","learning_shadow_enabled"]]) {

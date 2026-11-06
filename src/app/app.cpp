@@ -1,9 +1,11 @@
 #include "app.h"
 #include "../inspect/auto_roi.h"
+#include "../inspect/learning_region.h"
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <fstream>
 #include <cstdio>
 #include <future>
@@ -20,11 +22,19 @@ static int64_t nowMs() {
 }
 
 static json paramsToJson(const InspectParams& p) {
-    return {{"sensitivity", p.sensitivity}, {"reject_threshold", p.rejectThreshold},
-            {"shift_tolerance_x", p.shiftToleranceX}, {"shift_tolerance_y", p.shiftToleranceY},
-            {"max_alignment_shift_x", p.maxAlignmentShiftX}, {"max_alignment_shift_y", p.maxAlignmentShiftY},
-            {"learning_robust_enabled", p.learning.robust}, {"learning_shadow_enabled", p.learning.shadows},
-            {"learning_search_radius", p.learning.searchRadius}, {"downscale", p.downscale}, {"min_blob_area", p.minBlobArea}};
+    auto j = p.nativeSettings().toJson();
+    j.erase("seam");
+    j.erase("threshold");
+    j.erase("inspect_scale");
+    j["reject_threshold"] = p.rejectThreshold;
+    j["downscale"] = p.downscale;
+    j["exclusions"] = json::array();
+    for (const auto& polygon : p.exclusions) {
+        json points = json::array();
+        for (const auto& q : polygon) points.push_back({q.x, q.y});
+        j["exclusions"].push_back(points);
+    }
+    return j;
 }
 
 static json roiToJson(const std::vector<cv::Point>& roi) {
@@ -34,33 +44,21 @@ static json roiToJson(const std::vector<cv::Point>& roi) {
 }
 
 // Validates and applies the fields present in `b`.
-static bool applyParams(const json& b, InspectParams& p, std::string& err) {
-    if (b.contains("reject_threshold") && b["reject_threshold"].is_number() && b["reject_threshold"] <= 0) {
-        err = "reject_threshold must be greater than zero (native threshold = percent / 100)";
-        return false;
+static bool applyParams(const json& b, InspectParams& p, std::string& err, int cameraId) {
+    if (!b.is_object()) { err = "settings must be a JSON object"; return false; }
+    auto patch = b;
+    patch.erase("exclusions");
+    patch.erase("seam"); // Local seam coordinates are original pixels, parsed separately below.
+    if (b.contains("reject_threshold")) {
+        if (!b["reject_threshold"].is_number()) { err = "bad value for reject_threshold"; return false; }
+        patch["threshold"] = b["reject_threshold"].get<double>() / 100.0;
     }
-    auto num = [&](const char* k, double lo, double hi, auto& dst) {
-        if (!b.contains(k)) return true;
-        if (!b[k].is_number() || b[k] < lo || b[k] > hi) { err = std::string("bad value for ") + k; return false; }
-        dst = static_cast<std::remove_reference_t<decltype(dst)>>(b[k].get<double>());
-        return true;
-    };
-    for (const auto& key : {"learning_robust_enabled", "learning_shadow_enabled"}) {
-        if (b.contains(key) && !b[key].is_boolean()) { err = std::string("bad value for ") + key; return false; }
-    }
-    if(b.contains("learning_robust_enabled")) p.learning.robust=b["learning_robust_enabled"].get<bool>();
-    if(b.contains("learning_shadow_enabled")) p.learning.shadows=b["learning_shadow_enabled"].get<bool>();
-    // Old configs/clients set both axes; explicit X/Y fields override the shared value.
-    if (b.contains("shift_tolerance")) {
-        int legacy = p.shiftToleranceX;
-        if (!num("shift_tolerance", 0, 30, legacy)) return false;
-        p.shiftToleranceX = p.shiftToleranceY = legacy;
-    }
-    return num("sensitivity", 0, 1, p.sensitivity) && num("reject_threshold", 0, 100, p.rejectThreshold) &&
-           num("shift_tolerance_x", 0, 30, p.shiftToleranceX) && num("shift_tolerance_y", 0, 30, p.shiftToleranceY) &&
-           num("max_alignment_shift_x", 0, 160, p.maxAlignmentShiftX) &&
-           num("max_alignment_shift_y", 0, 160, p.maxAlignmentShiftY) && num("downscale", 0.1, 1, p.downscale) &&
-           num("learning_search_radius", 0, 64, p.learning.searchRadius) && num("min_blob_area", 1, 100000, p.minBlobArea);
+    if (b.contains("downscale")) patch["inspect_scale"] = b["downscale"];
+    auto settings = p.nativeSettings();
+    err = settings.applyJson(patch);
+    if (!err.empty()) return false;
+    p.applyNativeSettings(settings.withMetricDefaults(cameraId));
+    return true;
 }
 
 static bool parseRoi(const json& a, std::vector<cv::Point>& out, std::string& err) {
@@ -72,6 +70,25 @@ static bool parseRoi(const json& a, std::vector<cv::Point>& out, std::string& er
     }
     if (!out.empty() && out.size() < 3) { err = "roi needs at least 3 points"; out.clear(); return false; }
     return true;
+}
+
+static bool parseExclusions(const json& a, const cv::Size& size, std::vector<std::vector<cv::Point>>& out, std::string& err) {
+    if (!a.is_array() || a.size() > 32) { err = "exclusions must be an array of up to 32 polygons"; return false; }
+    std::vector<std::vector<cv::Point>> parsed;
+    for (const auto& polygon : a) {
+        if (!polygon.is_array() || polygon.size() < 3 || polygon.size() > 128) { err = "exclusion needs 3..128 points"; return false; }
+        std::vector<cv::Point> points;
+        for (const auto& q : polygon) {
+            if (!q.is_array() || q.size() != 2 || !q[0].is_number() || !q[1].is_number()) { err = "bad exclusion point"; return false; }
+            const double x = q[0].get<double>(), y = q[1].get<double>();
+            if (!std::isfinite(x) || !std::isfinite(y) || x < 0 || y < 0 || x >= size.width || y >= size.height) { err = "exclusion point outside image"; return false; }
+            points.emplace_back(cvRound(x), cvRound(y));
+            if (points.back().x >= size.width || points.back().y >= size.height) { err = "exclusion point outside image"; return false; }
+        }
+        if (std::abs(cv::contourArea(points)) < 1) { err = "exclusion polygon has no area"; return false; }
+        parsed.push_back(std::move(points));
+    }
+    out = std::move(parsed); return true;
 }
 
 static json seamToJson(const SeamParams& s) {
@@ -146,6 +163,7 @@ App::App(fs::path sourceDir, fs::path configPath, fs::path logDir, fs::path lega
     for (int i = 0; i < kCameras; ++i) {
         auto c = std::make_unique<Cam>();
         c->product = "camera-" + std::to_string(i);
+        c->p.applyNativeSettings(cas::Settings{}.withMetricDefaults(i));
         c->dir = source_ / ("camera_" + std::to_string(i));
         std::error_code ec;
         for (auto& d : fs::directory_iterator(c->dir, ec))
@@ -197,7 +215,7 @@ void App::load() {
         // A clean native baseline, not a reinterpretation of the old amplified score / working-px settings.
         if (!importedLegacy_) {
             InspectParams parsed = c.p;
-            if (applyParams(cj, parsed, err)) c.p = parsed;
+            if (applyParams(cj, parsed, err, i)) c.p = parsed;
         }
         if (cj.contains("roi")) parseRoi(cj["roi"], c.roi, err);
         if (cj.contains("seam")) {
@@ -227,6 +245,7 @@ void App::load() {
             c.refName = ref;
             c.ref = cv::imread((c.dir / ref / "frame.jpg").string());
         }
+        if (cj.contains("exclusions")) parseExclusions(cj["exclusions"], c.ref.size(), c.p.exclusions, err);
     }
 }
 
@@ -301,7 +320,8 @@ bool App::setCamera(int cam, const json& b, std::string& err) {
         std::lock_guard<std::mutex> lk(c.m);
         InspectParams p = c.p;
         std::vector<cv::Point> roi = c.roi;
-        if (!applyParams(b, p, err)) return false;
+        if (!applyParams(b, p, err, cam)) return false;
+        if (b.contains("exclusions") && !parseExclusions(b["exclusions"], c.ref.size(), p.exclusions, err)) return false;
         if (b.contains("roi") && !parseRoi(b["roi"], roi, err)) return false;
         for (auto& pt : roi)
             if (c.ref.empty() || pt.x < 0 || pt.y < 0 || pt.x >= c.ref.cols || pt.y >= c.ref.rows) {
@@ -347,7 +367,7 @@ bool App::setReferenceFromFrame(int cam, const std::string& frame, std::string& 
         std::lock_guard<std::mutex> lk(c.m);
         cv::Mat m;
         if (!readFrame(c, frame, m)) { err = "unknown frame"; return false; }
-        if (!c.ref.empty() && m.size() != c.ref.size()) c.roi.clear();
+        if (!c.ref.empty() && m.size() != c.ref.size()) { c.roi.clear(); c.p.exclusions.clear(); }
         c.ref = m;
         c.refName = frame;
         rebuild(c);
@@ -362,7 +382,7 @@ bool App::setReferenceFromImage(int cam, const cv::Mat& img, std::string& err) {
     Cam& c = *cams_[cam];
     {
         std::lock_guard<std::mutex> lk(c.m);
-        if (!c.ref.empty() && img.size() != c.ref.size()) c.roi.clear();
+        if (!c.ref.empty() && img.size() != c.ref.size()) { c.roi.clear(); c.p.exclusions.clear(); }
         c.ref = img;
         c.refName = "upload";
         fs::create_directories(cfgPath_.parent_path());
@@ -465,6 +485,7 @@ static std::vector<uchar> renderOverlay(const cv::Mat& img, const InspectResult&
         blended.copyTo(vis, mask);
     }
     if (roi.size() >= 3) cv::polylines(vis, roi, true, cv::Scalar(0, 255, 255), 2);
+    for (const auto& polygon : r.exclusions) cv::polylines(vis, polygon, true, cv::Scalar(255, 80, 255), 2);
     for (auto& z : r.zones) cv::rectangle(vis, z, cv::Scalar(0, 0, 255), 2);
     int slot = 0;
     auto zone = [&](const SeamParams& zp, const SeamResult& zr, const char* name, const cv::Scalar& col) {
@@ -553,11 +574,14 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
     j["frame"] = name;
     j["source"] = source;
     j["defect_injected"] = defect;
+    const auto learningBox = img.empty() ? cv::Rect{} : learnedRegionBounds(r.heatmap, img.size());
+    j["learning_bbox"] = learningBox.empty() ? json(nullptr) : json{{"x",learningBox.x}, {"y",learningBox.y},
+        {"width",learningBox.width}, {"height",learningBox.height}};
     j["inspection_engine"] = kInspectionEngine;
     j["engine_source_commit"] = kEngineSourceCommit;
     j["native_settings"] = r.settings.toJson();
     j["anomaly_score"] = r.native.anomalyScore;
-    j["learning_engine"] = c.p.learning.robust ? "local-robust-v2" : "native-52aa31ea";
+    j["learning_engine"] = c.p.learning.robust ? "robust-v2" : "native-52aa31ea";
     j["learning_diagnostics"] = r.learningDiagnostics;
     j["learning_ms"] = r.learningMs;
     j["learning_robust_enabled"] = c.p.learning.robust;
@@ -566,6 +590,25 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
     j["learned_normal_adjustment"] = std::max(0.0, r.native.rawAnomalyScore - r.native.anomalyScore);
     j["matched_accepted_case_ids"] = r.native.matchedCaseIds;
     j["area_percent"] = r.native.areaPercent;
+    j["main_roi_score"] = r.native.mainRoiScore;
+    j["upper_corner_sensitivity"] = r.native.upperCornerSensitivity;
+    j["upper_corner_extra_score"] = r.native.upperCornerExtraScore;
+    j["upper_corner_pixel_threshold"] = r.native.upperCornerPixelThreshold;
+    j["upper_corner_area"] = r.native.upperCornerArea;
+    j["upper_corner_boost"] = {{"sensitivity_multiplier", cas::kUpperCornerSensitivityMultiplier},
+        {"score_normalizer", "global"}, {"sensitivity", r.native.upperCornerSensitivity},
+        {"extra_score", r.native.upperCornerExtraScore}, {"width_fraction", cas::kUpperCornerWidthFraction},
+        {"height_fraction", cas::kUpperCornerHeightFraction}, {"area_px", r.native.upperCornerArea},
+        {"pixel_threshold", r.native.upperCornerPixelThreshold}};
+    const auto units = r.settings.mmPerPixel(img.size());
+    j["shift_mm"] = {r.shift.x * units.x, r.shift.y * units.y};
+    j["shift_raw_mm"] = {r.native.rawShift.x * units.x, r.native.rawShift.y * units.y};
+    j["shift_limit_mm"] = {r.shiftLimit.x * units.x, r.shiftLimit.y * units.y};
+    j["mm_per_pixel"] = {units.x, units.y};
+    j["metric_scale_source"] = r.settings.calibration.ready() ? "calibrated" : "estimated";
+    j["horizontal_shift_tolerance_mm"] = r.settings.horizontalShiftMm ? json(*r.settings.horizontalShiftMm) : json(nullptr);
+    j["vertical_shift_tolerance_mm"] = r.settings.verticalShiftMm ? json(*r.settings.verticalShiftMm) : json(nullptr);
+    j["analysis_pixel_mm"] = {units.x / r.settings.inspectScale, units.y / r.settings.inspectScale};
     j["score"] = std::round(r.score * 1000) / 1000;
     j["reject"] = reject;
     j["verdict"] = reject ? "REJECT" : (r.reason == "no_reference" || r.reason == "size_mismatch" ? "NO_REFERENCE" : "OK");
@@ -577,6 +620,7 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
                     {"ms", std::round(z.ms * 100) / 100}};
     };
     if (r.native.seamEnabled) j["seam"] = zoneJson(sr);
+    j["exclusions"] = paramsToJson(c.p)["exclusions"];
     j["threshold"] = c.p.rejectThreshold;
     j["sensitivity"] = c.p.sensitivity;
     j["shift"] = {std::round(r.shift.x * 100) / 100, std::round(r.shift.y * 100) / 100};

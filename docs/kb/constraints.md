@@ -1,3 +1,18 @@
+# Explicit exclusion zones — 2026-11-06
+
+The owner requested unconditional user-drawn inspection exclusions. C4 still uses
+a polygon ROI; independent exclusion polygons subtract holes from it and skip
+intersecting seam cross-sections. This differs from learned normal samples.
+[Decision and verification](exclusion-zones-2026-11-06.md).
+
+# Current update — 2026-11-04
+
+Native core/service are now pinned to main-app 20909141. The production robust matcher
+replaces the local callback hook; metrics, upper corners and sensitivity-zero seam
+behavior follow production. Existing data paths remain compatible. Read
+[the authoritative sync report](production-sync-2026-11-04.md) for current behavior,
+validation and the pre-existing missing reference names. Older sections below are history.
+
 ## Amendment 2026-11-02
 
 Owner explicitly requested learned normal regions. C2 still excludes neural-network training; the new feature

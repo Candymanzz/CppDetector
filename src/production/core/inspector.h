@@ -3,16 +3,24 @@
 #include "settings.h"
 #include <opencv2/core.hpp>
 #include <string>
-#include <functional>
 #include <vector>
 
 namespace cas {
 
+constexpr double kUpperCornerSensitivityMultiplier = 1.1;
+
 struct InspectOutcome {
+    nlohmann::json learningDiagnostics = nlohmann::json::array();
+    double learningMs = 0;
     double rawAnomalyScore = 0.0;
     std::vector<std::string> matchedCaseIds;
     double areaPercent = 0.0;        // anomalous pixels / ROI pixels * 100
-    double anomalyScore = 0.0;       // min(1, areaPercent / sensitivity-dependent scale); endpoints force 0/1
+    double anomalyScore = 0.0;       // whole-ROI score; upper corners use a lower contrast threshold
+    double mainRoiScore = 0.0;       // unchanged base inspection, before the upper-corner sensitivity boost
+    double upperCornerSensitivity = 0.0;
+    double upperCornerExtraScore = 0.0; // final score minus mainRoiScore (after saturation)
+    int upperCornerPixelThreshold = 0;
+    int upperCornerArea = 0;         // selected ROI pixels at work resolution
     bool reject = false;
     std::string reason;              // "", "score_over_threshold", "shift_exceeded"
     cv::Point2d shift;               // detected translation, original-frame pixels
@@ -47,12 +55,11 @@ struct InspectOutcome {
     cv::Mat diff;                    // CV_8U, region-sized
     cv::Mat kept;                    // CV_8U 0/255, region-sized (accepted anomaly blobs)
     cv::Mat aligned;                 // CV_8U, region-sized
+    cv::Mat scoredEnergy;            // CV_8U, region-sized; includes the local visibility threshold
 };
 
-using LearnedComparison = std::function<void(const Reference&, const cv::Mat&, cv::Mat&, cv::Rect, double, const Settings&, InspectOutcome&)>;
-
 // Throws std::invalid_argument when the frame size differs from the reference size.
-InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Settings& s, bool keepVisuals, const LearnedComparison& learnedComparison = {});
+InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Settings& s, bool keepVisuals);
 
 // Gray-u8 heatmap: anomaly energy gated by the accepted blobs + a soft halo, ROI-masked,
 // at most `maxWidth` wide (0 = work resolution).

@@ -13,7 +13,7 @@
 int main(int argc, char** argv) {
     cv::setNumThreads(1); // identical to the production service: parallelism comes from cameras
     namespace fs = std::filesystem;
-    fs::path frames = fs::path(CD_SOURCE_DIR) / "frame" / "frames36";
+    fs::path frames = fs::path(CD_SOURCE_DIR) / "frames36";
     fs::path webDir = fs::path(CD_SOURCE_DIR) / "web";
     fs::path data = fs::path(CD_SOURCE_DIR);
     int port = 8080;

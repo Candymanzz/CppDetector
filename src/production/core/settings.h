@@ -1,4 +1,5 @@
 #pragma once
+#include "calibration.h"
 #include <nlohmann/json.hpp>
 #include <cmath>
 #include <filesystem>
@@ -40,10 +41,20 @@ struct Settings {
     int shiftToleranceY = 3;      // original-frame px, vertical comparison relaxation only
     double maxAlignmentShiftX = 12.0; // maximum global translation, original-frame pixels
     double maxAlignmentShiftY = 12.0;
+    std::optional<double> horizontalShiftMm, verticalShiftMm;
+    cv::Point2d estimatedMmPerPixel{0.25, 0.33}; // provisional at 1224x1024, as in ppc-reserv
+    bool estimatedScaleExplicit = false;
+    MetricCalibration calibration;
     int minBlobArea = 20;         // px of the original frame, smaller anomalies are noise
     double inspectScale = 1.0;    // (0..1], frame is downscaled by this factor before analysis
+    bool learningRobustEnabled = true;
+    bool learningShadowEnabled = true;
+    int learningSearchRadius = 24; // original pixels, independent from global alignment
     SeamSettings seam;            // seam straightness check
 
+    Settings withMetricDefaults(int cameraId = -1) const;
+    Settings forFrame(cv::Size size) const;
+    cv::Point2d mmPerPixel(cv::Size size) const;
     json toJson() const;
     // Applies the fields present in `j`; returns an error text or an empty string.
     std::string applyJson(const json& j);
@@ -54,6 +65,9 @@ struct SettingsPatch {
     std::optional<double> sensitivity, threshold, inspectScale;
     std::optional<int> shiftToleranceX, shiftToleranceY, minBlobArea;
     std::optional<double> maxAlignmentShiftX, maxAlignmentShiftY;
+    json metric;
+    std::optional<bool> learningRobustEnabled, learningShadowEnabled;
+    std::optional<int> learningSearchRadius;
     json seam;                                       // partial seam settings (null = none)
     static SettingsPatch fromJson(const json& j);   // ignores missing, wrong-typed or out-of-range fields
     void applyTo(Settings& s) const;
@@ -64,9 +78,9 @@ struct SettingsPatch {
 class SettingsStore {
 public:
     explicit SettingsStore(std::filesystem::path file);
-    Settings get(const std::string& profile);
+    Settings get(const std::string& profile, int cameraId = -1);
     bool has(const std::string& profile);
-    std::string set(const std::string& profile, const json& body, Settings& out);   // error text or ""
+    std::string set(const std::string& profile, const json& body, Settings& out, int cameraId = -1);
     void reset(const std::string& profile);
 
 private:

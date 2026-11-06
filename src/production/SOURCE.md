@@ -1,3 +1,31 @@
+# Standalone exclusion extension — 2026-11-06
+
+reference.h/.cpp, inspector.cpp and seam.h/.cpp now intentionally extend the
+20909141 import with optional exclusion polygons/masks. The standalone adapter
+owns their API/persistence. The remaining imported sources retain their previous
+lineage; empty exclusions preserve native behavior. Older byte-identity claims
+below do not include these five files. The API commit remains the base commit.
+[Details and verification](../../docs/kb/exclusion-zones-2026-11-06.md).
+
+# Working-tree correction — 2026-11-04
+
+The 20909141 snapshot now includes the common main-app working-tree correction to
+core/learning_matcher.cpp: pattern support follows primary(patternBox). All imported
+core/service files match the current D:/Pj/defect-detector-v3 working tree. The base
+commit reported by the API is unchanged; this correction has not been committed.
+[Reproduction and validation](../../docs/kb/learned-placement-fix-2026-11-04.md).
+
+# Current native snapshot — 20909141, imported 2026-11-04
+
+Source: D:/Pj/defect-detector-v3, boobs+pasha,
+2090914128af2822c5a94720a89555c02238642b, cppAnalisSurface/src/{core,service}.
+All imported C++ files are byte-identical to that checkout. No local callback patch.
+Local inspector and learning headers adapt/forward to the native code; logger.cpp is
+retained but not linked. Source identity is published by the local API and UI.
+Historical data paths with _52aa31ea are intentionally retained for compatibility.
+See [scope, checks and limitations](../../docs/kb/production-sync-2026-11-04.md).
+Everything below is historical provenance superseded by this section.
+
 # Local experiment amendment (2026-11-02)
 
 inspector.h/cpp now contain an optional LearnedComparison callback argument, default empty.

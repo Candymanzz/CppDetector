@@ -34,6 +34,7 @@ struct VisualOutputs {
 };
 
 struct InspectJob {
+    int cameraId = -1;
     std::string product;                 // camera-scoped product type
     std::string profile;                 // analysis profile (settings key); defaults to product
     SettingsPatch patch;                 // per-request overrides

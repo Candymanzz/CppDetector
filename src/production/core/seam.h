@@ -31,9 +31,9 @@ struct SeamResult {
     double ms = 0;
 };
 
-SeamResult measureSeam(const cv::Mat& bgr, const SeamParams& p);
+SeamResult measureSeam(const cv::Mat& bgr, const SeamParams& p, const cv::Mat& excluded = {});
 
 // Profile settings (normalised points) -> pixel parameters of the given frame.
-SeamResult measureSeam(const cv::Mat& bgr, const SeamSettings& s);
+SeamResult measureSeam(const cv::Mat& bgr, const SeamSettings& s, const cv::Mat& excluded = {});
 
 } // namespace cas

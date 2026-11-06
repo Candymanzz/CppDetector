@@ -7,19 +7,31 @@
 #include <vector>
 
 namespace cd {
-inline constexpr const char* kInspectionEngine = "cpp-detector-52aa31ea";
-inline constexpr const char* kEngineSourceCommit = "52aa31eacb16785ff33dc16b6937ab31c8ec7ee9";
+inline constexpr const char* kInspectionEngine = "cpp-detector-20909141";
+inline constexpr const char* kEngineSourceCommit = "2090914128af2822c5a94720a89555c02238642b";
 
 // The local UI uses percentages for threshold/score. Everything else is native production units.
-struct InspectParams {
-    double sensitivity = 0.5;
-    double rejectThreshold = 60.0; // native Settings::threshold * 100, (0..100]
-    int shiftToleranceX = 3;        // original-frame px
-    int shiftToleranceY = 3;        // original-frame px
-    double maxAlignmentShiftX = 12.0, maxAlignmentShiftY = 12.0;
-    double downscale = 1.0;         // native inspect_scale
+struct InspectParams : cas::Settings {
+    double rejectThreshold = 60.0; // native threshold * 100
+    double downscale = 1.0;        // native inspect_scale
     LearningOptions learning;
-    int minBlobArea = 20;           // original-frame area; native core applies scale squared
+    std::vector<std::vector<cv::Point>> exclusions; // camera/reference pixel coordinates
+
+    cas::Settings nativeSettings() const {
+        cas::Settings s = *this;
+        s.threshold = rejectThreshold / 100.0;
+        s.inspectScale = downscale;
+        s.learningRobustEnabled = learning.robust;
+        s.learningShadowEnabled = learning.shadows;
+        s.learningSearchRadius = learning.searchRadius;
+        return s;
+    }
+    void applyNativeSettings(const cas::Settings& s) {
+        static_cast<cas::Settings&>(*this) = s;
+        rejectThreshold = s.threshold * 100.0;
+        downscale = s.inspectScale;
+        learning = {s.learningRobustEnabled, s.learningShadowEnabled, s.learningSearchRadius};
+    }
 };
 
 struct InspectResult {
@@ -36,6 +48,7 @@ struct InspectResult {
     double learningMs = 0;
     cas::InspectOutcome native;     // unchanged native calculations, also used by parity tests
     cas::Settings settings;
+    std::vector<std::vector<cv::Point>> exclusions;
     SeamResult seam;               // native two-endpoint seam result adapted only for the local UI
 };
 

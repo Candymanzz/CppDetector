@@ -22,6 +22,7 @@ const S = {
   status: null,
   cam: 0,
   mode: "ref",         // ref | frame | result
+  exclusions: [], exclusionDraft: null, exclusionsSaving: false,
   roi: [],             // working copy of the ROI of the current camera
   img: { ref: null, frame: null },
   lastVer: [],         // last overlay version shown per camera
@@ -94,6 +95,8 @@ function reasonText(r) {
       return "Размер кадра не совпадает с размером эталона этой камеры — сравнение невозможно.";
     case "no_reference":
       return "Для камеры нет эталона.";
+    case "inspection_excluded":
+      return "Вся область проверки исключена из инспекции.";
     default:
       return r.reject ? r.reason : "";
   }
@@ -214,11 +217,14 @@ function fillSelect(sel, frames, selected) {
 }
 
 const PARAMS = [
-  ["sensitivity", 2], ["reject_threshold", 2], ["shift_tolerance_x", 0], ["shift_tolerance_y", 0], ["max_alignment_shift_x", 0], ["max_alignment_shift_y", 0], ["learning_search_radius", 0], ["downscale", 2], ["min_blob_area", 0],
+  ["sensitivity", 2], ["reject_threshold", 2], ["shift_tolerance_x", 0], ["shift_tolerance_y", 0], ["horizontal_shift_tolerance_mm", 2], ["vertical_shift_tolerance_mm", 2], ["learning_search_radius", 0], ["downscale", 2], ["min_blob_area", 0],
 ];
 
 function selectCam(i) {
+  S.exclusionDraft = null;
   cancelLearning();
+  S.learningResult = null; S.learnedResult = null;
+  updateLearningAction(true);
   S.cam = i;
   S.lastResultVer = null;
   document.querySelectorAll("#camPicker button").forEach((b, k) => b.classList.toggle("active", k === i));
@@ -230,6 +236,8 @@ function selectCam(i) {
   $("learningRobust").checked = c.learning_robust_enabled;
   $("learningShadows").checked = c.learning_shadow_enabled;
   S.roi = c.roi.map((p) => p.slice());
+  S.exclusions = (c.exclusions || []).map(points => points.map(p => p.slice()));
+  if (typeof updateExclusions === "function") updateExclusions();
   LINES.forEach(({ key }) => {
     S.ln[key] = { d: JSON.parse(JSON.stringify(c[key])), pick: false, skipMode: false, roiSel: null, drag: -1 };
     fillLineUi(key);
@@ -242,8 +250,16 @@ function selectCam(i) {
 }
 
 function reloadRefImage() {
+  const cam = S.cam;
+  S.img.ref = null;
+  if (typeof updateExclusions === "function") updateExclusions();
   const img = new Image();
-  img.onload = () => { S.img.ref = img; draw(); };
+  img.onload = () => {
+    if (S.cam !== cam) return;
+    S.img.ref = img;
+    if (typeof updateExclusions === "function") updateExclusions();
+    draw();
+  };
   img.src = `/api/frame?cam=${S.cam}&frame=&t=${Date.now()}`;
 }
 
@@ -262,6 +278,8 @@ function loadResultImage(ver) {
 }
 
 function setMode(m) {
+  if (S.exclusionDraft && m !== "ref") { S.exclusionDraft = null; if (typeof updateExclusions === "function") updateExclusions(); }
+  cancelLearning();
   S.mode = m;
   document.querySelectorAll("#viewModes button").forEach((b) => b.classList.toggle("active", b.dataset.mode === m));
   if (m === "frame") loadFrameImage();
@@ -286,6 +304,7 @@ function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img || base, 0, 0, canvas.width, canvas.height);
   $("viewInfo").textContent =
+    S.learning ? "участок дообучения · " + (S.learningResult?.frame || "") :
     S.mode === "ref" ? "эталон" : S.mode === "frame" ? $("testSelect").value : "тепловая карта и зоны аномалий";
   const k = canvas.width / 900;
   const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -309,6 +328,7 @@ function draw() {
       ctx.stroke();
     });
   }
+  if (typeof drawExclusions === "function") drawExclusions(k);
   LINES.forEach((ln) => drawLine(ln, k));
   if (S.learning && S.learnBox) {
     const b = S.learnBox; ctx.strokeStyle = "#00ff88"; ctx.lineWidth = 3*k;
@@ -401,6 +421,7 @@ function segDist(p, a, b) {
 }
 
 canvas.addEventListener("pointerdown", (ev) => {
+  if (S.learning || S.exclusionDraft || S.exclusionsSaving) return;
   if (ev.button !== 0) return;
   const pt = canvasPoint(ev);
   if (ev.shiftKey) { toast("В детекторе линия задаётся двумя точками"); return; }
@@ -463,6 +484,7 @@ canvas.addEventListener("pointerdown", (ev) => {
 });
 
 canvas.addEventListener("pointermove", (ev) => {
+  if (S.learning || S.exclusionDraft || S.exclusionsSaving) return;
   for (const { key } of LINES) {
     const l = S.ln[key];
     if (l.drag >= 0) { l.d.pts[l.drag] = canvasPoint(ev); draw(); return; }
@@ -473,6 +495,7 @@ canvas.addEventListener("pointermove", (ev) => {
 });
 
 canvas.addEventListener("pointerup", () => {
+  if (S.learning || S.exclusionDraft || S.exclusionsSaving) return;
   for (const { key } of LINES) {
     const l = S.ln[key];
     if (l.drag >= 0) { l.drag = -1; draw(); saveLine(key); return; }
@@ -484,6 +507,7 @@ canvas.addEventListener("pointerup", () => {
 });
 
 canvas.addEventListener("contextmenu", (ev) => {
+  if (S.learning || S.exclusionDraft || S.exclusionsSaving) return;
   ev.preventDefault();
   const pt = canvasPoint(ev);
   const hr = hitRadius();
@@ -697,7 +721,7 @@ $("resetDetector").addEventListener("click", async () => {
     await post("/api/camera?cam=" + S.cam, { learning_robust_enabled: true, learning_shadow_enabled: true, learning_search_radius: 24, sensitivity: 0.5, reject_threshold: 60,
       shift_tolerance_x: 3, shift_tolerance_y: 3, max_alignment_shift_x: 12, max_alignment_shift_y: 12, downscale: 1, min_blob_area: 20, seam: { enabled: false } });
     await reloadState();
-    toast("Настройки 52aa31e восстановлены; эталон и ROI сохранены");
+    toast("Настройки 20909141 восстановлены; эталон и ROI сохранены");
   } catch (e) { /* toast shown */ }
 });
 
@@ -759,7 +783,9 @@ async function reloadState() {
 /* ----- testing ----- */
 
 function renderResult(r) {
+  cancelLearning();
   S.learningResult = r;
+  updateLearningAction(true);
   const box = $("result");
   box.replaceChildren();
   const top = el("div");
@@ -772,6 +798,10 @@ function renderResult(r) {
   add("Чувствительность", fmt(r.sensitivity, 2));
   add("До образцов нормы", fmt(r.raw_anomaly_score * 100, 3) + "%");
   add("Совпавших образцов", String(r.learned_normal_matches_count || 0));
+  if (r.shift_mm) add("Сдвиг, мм", r.shift_mm.map(v => fmt(v, 2)).join(", "));
+  if (r.shift_limit_mm) add("Допуск, мм", r.shift_limit_mm.map(v => fmt(v, 2)).join(", "));
+  if (r.metric_scale_source) add("Масштаб мм", r.metric_scale_source === "calibrated" ? "калиброванный" : "приблизительный");
+  if (r.upper_corner_area > 0) add("Верхние углы ROI", "чувствительность " + fmt(r.upper_corner_sensitivity, 2) + ", вклад " + fmt(r.upper_corner_extra_score * 100, 3) + "%");
   add("Сдвиг, px", r.shift ? `${fmt(r.shift[0])}, ${fmt(r.shift[1])}` : "—");
   [["seam", "Стык"], ["edge", "Кромка"]].forEach(([key, name]) => {
     const z = r[key];
@@ -896,11 +926,11 @@ setInterval(() => { if ($("logAuto").checked) refreshLogIfVisible(); }, 1500);
 
 (async function init() {
   const st = await api("/api/state");
-  if (st.inspection_engine !== "cpp-detector-52aa31ea") {
+  if (st.inspection_engine !== "cpp-detector-20909141") {
     $("engineInfo").textContent = "Запущен старый executable. Нужна пересборка и перезапуск приложения.";
-    throw new Error("Native 52aa31ea engine is not running");
+    throw new Error("Native 20909141 engine is not running");
   }
-  $("engineInfo").textContent = "Ядро 52aa31ea + локальное дообучение v2 · " + st.engine_source_commit.slice(0, 8) + " · отдельный профиль · кромка не влияет на вердикт";
+  $("engineInfo").textContent = "Основной детектор 20909141 · мм, верхние углы, дообучение v2 · " + st.engine_source_commit.slice(0, 8) + " · отдельный профиль · кромка не влияет на вердикт";
   S.cams = st.cameras_info;
   buildGrid();
   buildPicker();
