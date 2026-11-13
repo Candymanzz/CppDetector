@@ -15,6 +15,8 @@ struct InspectParams : cas::Settings {
     double rejectThreshold = 60.0; // native threshold * 100
     double downscale = 1.0;        // native inspect_scale
     LearningOptions learning;
+    bool labelTrackingEnabled = true; // keeps the confirmed outline when temporarily disabled
+    std::vector<cv::Point> labelOutline; // confirmed label boundary in reference pixels
     std::vector<std::vector<cv::Point>> exclusions; // camera/reference pixel coordinates
 
     cas::Settings nativeSettings() const {

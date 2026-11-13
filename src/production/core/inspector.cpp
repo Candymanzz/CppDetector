@@ -1,4 +1,5 @@
 #include "inspector.h"
+#include "label_tracking.h"
 #include "exclusion_zones.h"
 #include "learning_matcher.h"
 #include "preprocessing.h"
@@ -112,6 +113,11 @@ InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Sett
 
     if (prep->roiArea == 0) {
         out.scale = scale; out.reason = "inspection_excluded"; out.surfaceSkipped = true;
+        if (prep->labelEnabled) {
+            out.labelEnabled=true; out.labelCoverage=0; out.reject=s.sensitivity>0;
+            out.reason=out.reject ? "label_coverage_insufficient" : "";
+            out.anomalyScore=out.reject ? 1. : 0.;
+        }
         out.diff = cv::Mat::zeros(region.size(), CV_8U);
         out.kept = out.diff.clone(); out.scoredEnergy = out.diff.clone();
         out.totalMs = msSince(tStart); return out;
@@ -141,6 +147,51 @@ InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Sett
         applied = cv::Point2d(0, 0);   // a shift this large cannot be compensated reliably
     }
     out.shift = applied;
+    if (prep->labelEnabled) {
+        out.labelEnabled = true;
+        auto failure = [&](const char* reason) {
+            out.reject=s.sensitivity>0;
+            if(out.reason.empty()) out.reason=out.reject ? reason : "";
+            if(!out.reject) out.reason.clear();
+            out.anomalyScore=out.rawAnomalyScore=out.reject ? 1. : 0.;
+            out.diff=cv::Mat::zeros(region.size(),CV_8U);out.kept=out.diff.clone();out.scoredEnergy=out.diff.clone();
+            out.totalMs=msSince(tStart);
+        };
+        if(out.reject || estimate.response<.8 || !estimate.refined) {
+            failure("label_position_unreliable"); return out;
+        }
+        out.labelBoundarySupport=labelBoundarySupport(ref.bgr(),bgr,ref.labelOutline(),applied);
+        // Boundary color support is diagnostic. Let the shared comparison tolerance
+        // and anomaly score decide surface defects, as in boobs+pasha.
+        auto effective=std::make_shared<Prepared>(*prep);
+        cv::Mat visible=cv::Mat::ones(prep->workSize,CV_8U)*255;
+        const auto roi=ref.roi();
+        if(roi.size()>=3) {
+            visible.setTo(0);std::vector<cv::Point> points;
+            for(const auto& q:roi) points.emplace_back(cvRound(q.x*(visible.cols-1)),cvRound(q.y*(visible.rows-1)));
+            cv::fillPoly(visible,std::vector<std::vector<cv::Point>>{points},255);
+        }
+        const cv::Mat transform=(cv::Mat_<double>(2,3)<<1,0,-applied.x*visible.cols/bgr.cols,0,1,-applied.y*visible.rows/bgr.rows);
+        cv::warpAffine(visible,visible,transform,visible.size(),cv::INTER_LINEAR,cv::BORDER_CONSTANT,0);
+        cv::threshold(visible,visible,254,255,cv::THRESH_BINARY);
+        effective->roiMask=prep->roiMask.clone();
+        effective->roiMask &= visible;
+        // Fixed 1 native-pixel inset, independent of comparison tolerance.
+        // Round each axis to the nearest analysis pixel at reduced scales.
+        const int guardX=cvRound(1.0*prep->workSize.width/bgr.cols);
+        const int guardY=cvRound(1.0*prep->workSize.height/bgr.rows);
+        cv::erode(effective->roiMask,effective->roiMask,
+            cv::getStructuringElement(cv::MORPH_RECT,{2*guardX+1,2*guardY+1}),
+            {-1,-1},1,cv::BORDER_CONSTANT,0);
+        effective->roiArea=cv::countNonZero(effective->roiMask);
+        out.labelCoverage=double(effective->roiArea)/prep->roiArea;
+        if(effective->roiArea<64 || out.labelCoverage<.5) { failure("label_coverage_insufficient");return out; }
+        effective->upperCornerMask=prep->upperCornerMask.clone();
+        effective->upperCornerMask &= effective->roiMask(region);
+        effective->upperCornerArea=cv::countNonZero(effective->upperCornerMask);
+        out.inspectionMask=effective->roiMask(region).clone();
+        prep=effective;
+    }
     // Rounded work dimensions may have slightly different X/Y ratios on odd-size frames.
     const cv::Point2d sh(applied.x * prep->workSize.width / bgr.cols,
                          applied.y * prep->workSize.height / bgr.rows);
@@ -447,6 +498,11 @@ cv::Mat buildHeatmap(const InspectOutcome& out, const NormPolygon& roi, int maxW
         heat = masked;
     }
     if (!out.exclusions.empty()) heat.setTo(0, exclusionMask(out.exclusions, heat.size()));
+    if (!out.inspectionMask.empty()) {
+        cv::Mat valid=placeInCanvas(out,out.inspectionMask);
+        cv::resize(valid,valid,heat.size(),0,0,cv::INTER_NEAREST);
+        heat.setTo(0,valid==0);
+    }
     return heat;
 }
 

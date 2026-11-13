@@ -47,6 +47,8 @@
       ],
       "exclusions": [],
       "horizontal_shift_tolerance_mm": 3.0,
+      "label_outline": [],
+      "label_tracking_enabled": true,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
@@ -220,27 +222,75 @@
         0.28,
         0.32
       ],
-      "exclusions": [
+      "exclusions": [],
+      "horizontal_shift_tolerance_mm": 3.35,
+      "label_outline": [
         [
-          [
-            239,
-            329
-          ],
-          [
-            517,
-            327
-          ],
-          [
-            505,
-            116
-          ],
-          [
-            187,
-            121
-          ]
+          274,
+          605
+        ],
+        [
+          479,
+          237
+        ],
+        [
+          525,
+          208
+        ],
+        [
+          598,
+          195
+        ],
+        [
+          653,
+          198
+        ],
+        [
+          694,
+          204
+        ],
+        [
+          771,
+          223
+        ],
+        [
+          854,
+          258
+        ],
+        [
+          916,
+          290
+        ],
+        [
+          973,
+          335
+        ],
+        [
+          1014,
+          385
+        ],
+        [
+          1033,
+          422
+        ],
+        [
+          944,
+          829
+        ],
+        [
+          813,
+          779
+        ],
+        [
+          778,
+          798
+        ],
+        [
+          490,
+          692
         ]
       ],
-      "horizontal_shift_tolerance_mm": 3.35,
+      "label_tracking_enabled": true,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
@@ -252,68 +302,72 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000632",
-      "reject_threshold": 60.0,
+      "reference": "f_0000001",
+      "reject_threshold": 22.5,
       "roi": [
         [
-          46,
-          152
+          274,
+          605
         ],
         [
-          72,
-          111
+          479,
+          237
         ],
         [
-          130,
-          67
+          525,
+          208
         ],
         [
-          217,
-          32
+          598,
+          195
         ],
         [
-          304,
-          15
+          653,
+          198
         ],
         [
-          403,
-          9
+          694,
+          204
         ],
         [
-          509,
-          21
+          771,
+          223
         ],
         [
-          588,
-          45
+          854,
+          258
         ],
         [
-          638,
-          80
+          916,
+          290
         ],
         [
-          647,
-          93
+          973,
+          335
         ],
         [
-          729,
-          511
+          1014,
+          385
         ],
         [
-          464,
-          507
+          1033,
+          422
         ],
         [
-          136,
-          514
+          944,
+          829
         ],
         [
-          17,
-          518
+          813,
+          779
         ],
         [
-          34,
-          321
+          778,
+          798
+        ],
+        [
+          490,
+          692
         ]
       ],
       "seam": {
@@ -331,7 +385,7 @@
         "tol_edge": 5.0,
         "tol_mid": 1.0
       },
-      "sensitivity": 0.7,
+      "sensitivity": 0.82,
       "shift_tolerance_x": 3,
       "shift_tolerance_y": 3,
       "vertical_shift_tolerance_mm": 3.85
@@ -383,6 +437,8 @@
       ],
       "exclusions": [],
       "horizontal_shift_tolerance_mm": 3.7199999999999998,
+      "label_outline": [],
+      "label_tracking_enabled": true,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
@@ -394,7 +450,7 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000525",
+      "reference": "f_0000001",
       "reject_threshold": 60.0,
       "roi": [],
       "seam": {
@@ -464,6 +520,8 @@
       ],
       "exclusions": [],
       "horizontal_shift_tolerance_mm": 3.0,
+      "label_outline": [],
+      "label_tracking_enabled": true,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
@@ -475,7 +533,7 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000552",
+      "reference": "f_0000001",
       "reject_threshold": 8.0,
       "roi": [
         [
@@ -537,6 +595,10 @@
         [
           575,
           32
+        ],
+        [
+          597,
+          46
         ]
       ],
       "seam": {
@@ -606,6 +668,8 @@
       ],
       "exclusions": [],
       "horizontal_shift_tolerance_mm": 3.24,
+      "label_outline": [],
+      "label_tracking_enabled": true,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
@@ -617,7 +681,7 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000525",
+      "reference": "f_0000001",
       "reject_threshold": 60.0,
       "roi": [
         [
@@ -797,6 +861,8 @@
       ],
       "exclusions": [],
       "horizontal_shift_tolerance_mm": 3.24,
+      "label_outline": [],
+      "label_tracking_enabled": true,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
@@ -808,7 +874,7 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000525",
+      "reference": "f_0000001",
       "reject_threshold": 60.0,
       "roi": [
         [
@@ -927,6 +993,77 @@
       ],
       "exclusions": [],
       "horizontal_shift_tolerance_mm": 3.0,
+      "label_outline": [
+        [
+          319,
+          805
+        ],
+        [
+          310,
+          286
+        ],
+        [
+          330,
+          250
+        ],
+        [
+          365,
+          216
+        ],
+        [
+          413,
+          186
+        ],
+        [
+          478,
+          154
+        ],
+        [
+          553,
+          131
+        ],
+        [
+          635,
+          115
+        ],
+        [
+          727,
+          106
+        ],
+        [
+          802,
+          109
+        ],
+        [
+          874,
+          121
+        ],
+        [
+          928,
+          139
+        ],
+        [
+          958,
+          166
+        ],
+        [
+          978,
+          185
+        ],
+        [
+          1098,
+          651
+        ],
+        [
+          928,
+          698
+        ],
+        [
+          898,
+          768
+        ]
+      ],
+      "label_tracking_enabled": true,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
@@ -938,56 +1075,80 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000525",
+      "reference": "f_0000001",
       "reject_threshold": 22.0,
       "roi": [
         [
-          975,
-          177
+          319,
+          805
         ],
         [
-          1105,
-          665
-        ],
-        [
-          1002,
-          692
-        ],
-        [
-          983,
-          761
-        ],
-        [
-          658,
-          819
-        ],
-        [
-          323,
-          804
-        ],
-        [
-          312,
+          311,
           272
         ],
         [
-          350,
-          221
+          342,
+          228
         ],
         [
-          436,
-          161
+          369,
+          205
         ],
         [
-          649,
-          107
+          430,
+          167
         ],
         [
-          810,
-          106
+          496,
+          141
         ],
         [
-          931,
+          571,
+          121
+        ],
+        [
+          643,
+          105
+        ],
+        [
+          735,
+          101
+        ],
+        [
+          819,
+          105
+        ],
+        [
+          876,
+          115
+        ],
+        [
+          933,
           137
+        ],
+        [
+          963,
+          162
+        ],
+        [
+          990,
+          184
+        ],
+        [
+          1098,
+          651
+        ],
+        [
+          928,
+          698
+        ],
+        [
+          898,
+          768
+        ],
+        [
+          615,
+          793
         ]
       ],
       "seam": {
@@ -1005,10 +1166,10 @@
         "tol_edge": 5.0,
         "tol_mid": 1.0
       },
-      "sensitivity": 0.99,
-      "shift_tolerance_x": 3,
-      "shift_tolerance_y": 3,
-      "vertical_shift_tolerance_mm": 3.96
+      "sensitivity": 0.9,
+      "shift_tolerance_x": 4,
+      "shift_tolerance_y": 4,
+      "vertical_shift_tolerance_mm": 3.95
     },
     {
       "calibration": {
@@ -1057,6 +1218,8 @@
       ],
       "exclusions": [],
       "horizontal_shift_tolerance_mm": 2.6400000000000006,
+      "label_outline": [],
+      "label_tracking_enabled": true,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
@@ -1068,7 +1231,7 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000525",
+      "reference": "f_0000001",
       "reject_threshold": 60.0,
       "roi": [],
       "seam": {
@@ -1138,6 +1301,8 @@
       ],
       "exclusions": [],
       "horizontal_shift_tolerance_mm": 2.6400000000000006,
+      "label_outline": [],
+      "label_tracking_enabled": true,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
@@ -1149,7 +1314,7 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000525",
+      "reference": "f_0000001",
       "reject_threshold": 60.0,
       "roi": [],
       "seam": {
@@ -1219,6 +1384,8 @@
       ],
       "exclusions": [],
       "horizontal_shift_tolerance_mm": 3.3600000000000003,
+      "label_outline": [],
+      "label_tracking_enabled": true,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
@@ -1230,7 +1397,7 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000525",
+      "reference": "f_0000001",
       "reject_threshold": 60.0,
       "roi": [],
       "seam": {
@@ -1255,8 +1422,8 @@
     }
   ],
   "defect": false,
-  "engine_source_commit": "2090914128af2822c5a94720a89555c02238642b",
-  "inspection_engine": "cpp-detector-20909141",
+  "engine_source_commit": "eefefce455ea93a2184c8d4e9178a0f1eb45847a",
+  "inspection_engine": "cpp-detector-eefefce4",
   "period_ms": 200,
-  "source_dir": "D:\\Pj\\CppDetector\\frames36"
+  "source_dir": "C:\\Users\\ShablinskiyM\\Desktop\\huinya pashi\\CppDetector\\frames36"
 }

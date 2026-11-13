@@ -50,7 +50,11 @@
           <button id="autoRoi">Авто-ROI</button>
           <button id="undoRoi">Убрать последнюю точку</button>
           <button id="clearRoi">Очистить ROI</button>
+          <button id="confirmLabel">Подтвердить ROI как контур этикетки</button>
+          <button id="clearLabel">Убрать контур этикетки</button>
+          <label class="check"><input type="checkbox" id="labelTrackingEnabled"> Компенсация по контуру этикетки</label>
           <span class="muted" id="roiInfo"></span>
+          <span class="muted" id="labelInfo">Обведите этикетку точками ROI и подтвердите контур. Затем ROI можно изменить независимо.</span>
         </div>
         <p class="muted small">ROI: клик — добавить точку (рядом с ребром — вставить в него), перетаскивание — двигать точку, правая кнопка по точке — удалить. Изменения сохраняются автоматически.</p>
         <div class="card check-card">
@@ -88,10 +92,8 @@
             <input type="range" id="sensitivity" min="0" max="1" step="0.01"></div>
           <div class="param"><label>Порог брака, % <b id="v_reject_threshold"></b></label>
             <input type="range" id="reject_threshold" min="1" max="100" step="0.5"></div>
-          <div class="param" title="Горизонтальный допуск сравнения, независимо от предела выравнивания."><label>Допуск на сдвиг X, px <b id="v_shift_tolerance_x"></b></label>
+          <div class="param" title="Общий допуск по X и Y для несовпадения контуров после выравнивания, в пикселях исходного кадра. 0 — строгое сравнение. Большие значения могут скрывать дефекты возле печати. Не меняет предел общего смещения."><label>Ослабление сравнения, px <b id="v_shift_tolerance_x"></b></label>
             <input type="range" id="shift_tolerance_x" min="0" max="15" step="1"></div>
-          <div class="param" title="Вертикальный допуск сравнения, независимо от предела выравнивания."><label>Допуск на сдвиг Y, px <b id="v_shift_tolerance_y"></b></label>
-            <input type="range" id="shift_tolerance_y" min="0" max="15" step="1"></div>
           <div class="param"><label>Допуск проворота, мм <b id="v_horizontal_shift_tolerance_mm"></b></label>
             <input type="range" id="horizontal_shift_tolerance_mm" min="0" max="30" step="0.05"></div>
           <div class="param"><label>Допуск вертикального смещения, мм <b id="v_vertical_shift_tolerance_mm"></b></label>

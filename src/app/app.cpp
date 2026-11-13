@@ -28,6 +28,9 @@ static json paramsToJson(const InspectParams& p) {
     j.erase("inspect_scale");
     j["reject_threshold"] = p.rejectThreshold;
     j["downscale"] = p.downscale;
+    j["label_tracking_enabled"] = p.labelTrackingEnabled;
+    j["label_outline"] = json::array();
+    for (const auto& q : p.labelOutline) j["label_outline"].push_back({q.x,q.y});
     j["exclusions"] = json::array();
     for (const auto& polygon : p.exclusions) {
         json points = json::array();
@@ -48,6 +51,12 @@ static bool applyParams(const json& b, InspectParams& p, std::string& err, int c
     if (!b.is_object()) { err = "settings must be a JSON object"; return false; }
     auto patch = b;
     patch.erase("exclusions");
+    patch.erase("label_outline");
+    patch.erase("label_tracking_enabled");
+    if (b.contains("label_tracking_enabled")) {
+        if (!b["label_tracking_enabled"].is_boolean()) { err = "label_tracking_enabled must be boolean"; return false; }
+        p.labelTrackingEnabled = b["label_tracking_enabled"].get<bool>();
+    }
     patch.erase("seam"); // Local seam coordinates are original pixels, parsed separately below.
     if (b.contains("reject_threshold")) {
         if (!b["reject_threshold"].is_number()) { err = "bad value for reject_threshold"; return false; }
@@ -89,6 +98,14 @@ static bool parseExclusions(const json& a, const cv::Size& size, std::vector<std
         parsed.push_back(std::move(points));
     }
     out = std::move(parsed); return true;
+}
+
+static bool parseLabel(const json& value, cv::Size size, std::vector<cv::Point>& out, std::string& err) {
+    if (!value.is_array()) { err="label_outline must be an array"; return false; }
+    if (value.empty()) { out.clear(); return true; }
+    std::vector<std::vector<cv::Point>> polygons;
+    if (!parseExclusions(json::array({value}),size,polygons,err)) return false;
+    out=std::move(polygons.front()); return true;
 }
 
 static json seamToJson(const SeamParams& s) {
@@ -247,6 +264,7 @@ void App::load() {
             c.refName = ref;
             c.ref = cv::imread((c.dir / ref / "frame.jpg").string());
         }
+        if (cj.contains("label_outline")) parseLabel(cj["label_outline"],c.ref.size(),c.p.labelOutline,err);
         if (cj.contains("exclusions")) parseExclusions(cj["exclusions"], c.ref.size(), c.p.exclusions, err);
     }
 }
@@ -324,6 +342,7 @@ bool App::setCamera(int cam, const json& b, std::string& err) {
         std::vector<cv::Point> roi = c.roi;
         if (!applyParams(b, p, err, cam)) return false;
         if (b.contains("exclusions") && !parseExclusions(b["exclusions"], c.ref.size(), p.exclusions, err)) return false;
+        if (b.contains("label_outline") && !parseLabel(b["label_outline"],c.ref.size(),p.labelOutline,err)) return false;
         if (b.contains("roi") && !parseRoi(b["roi"], roi, err)) return false;
         for (auto& pt : roi)
             if (c.ref.empty() || pt.x < 0 || pt.y < 0 || pt.x >= c.ref.cols || pt.y >= c.ref.rows) {
@@ -370,6 +389,7 @@ bool App::setReferenceFromFrame(int cam, const std::string& frame, std::string& 
         cv::Mat m;
         if (!readFrame(c, frame, m)) { err = "unknown frame"; return false; }
         if (!c.ref.empty() && m.size() != c.ref.size()) { c.roi.clear(); c.p.exclusions.clear(); }
+        c.p.labelOutline.clear();
         c.ref = m;
         c.refName = frame;
         rebuild(c);
@@ -385,6 +405,7 @@ bool App::setReferenceFromImage(int cam, const cv::Mat& img, std::string& err) {
     {
         std::lock_guard<std::mutex> lk(c.m);
         if (!c.ref.empty() && img.size() != c.ref.size()) { c.roi.clear(); c.p.exclusions.clear(); }
+        c.p.labelOutline.clear();
         c.ref = img;
         c.refName = "upload";
         fs::create_directories(cfgPath_.parent_path());
@@ -629,6 +650,7 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
     j["shift_raw"] = {r.native.rawShift.x, r.native.rawShift.y};
     j["shift_response"] = r.native.shiftResponse;
     j["shift_refined"] = r.native.shiftRefined;
+    j["label_tracking"] = {{"enabled",r.native.labelEnabled},{"coverage",r.native.labelCoverage},{"boundary_support",r.native.labelBoundarySupport}};
     j["applied_shift"] = {r.native.shift.x, r.native.shift.y};
     j["shift_units"] = "original_px";
     j["shift_tolerance_x"] = c.p.shiftToleranceX;

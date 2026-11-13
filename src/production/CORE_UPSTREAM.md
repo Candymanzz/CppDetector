@@ -1,3 +1,7 @@
+> Baseline manifest: reference.h/cpp and inspector.h/cpp have local label-tracking
+> changes dated 2026-11-13; label_tracking.h is a local addition. Hashes below retain
+> the imported baseline identity. See SOURCE.md for current provenance.
+
 # Unified core source
 
 Source: https://github.com/Candymanzz/defect-detector-v3/tree/eefefce455ea93a2184c8d4e9178a0f1eb45847a/cppAnalisSurface/src/core

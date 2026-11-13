@@ -83,6 +83,9 @@ function lineText(name, s) {
 
 function reasonText(r) {
   switch (r.reason) {
+    case "label_position_unreliable": return "Не удалось достоверно измерить положение этикетки — нужна проверка кадра.";
+    case "label_boundary_unreliable": return "Граница этикетки не подтверждается. Проверьте контур, освещение и наличие этикетки.";
+    case "label_coverage_insufficient": return "Недостаточно общей видимой области этикетки для проверки.";
     case "score_over_threshold":
       return `Оценка ${fmt(r.score, 3)}% достигла порога ${fmt(r.threshold, 2)}% — найдено зон: ${(r.zones || []).length}.`;
     case "shift_exceeded":
@@ -217,7 +220,7 @@ function fillSelect(sel, frames, selected) {
 }
 
 const PARAMS = [
-  ["sensitivity", 2], ["reject_threshold", 2], ["shift_tolerance_x", 0], ["shift_tolerance_y", 0], ["horizontal_shift_tolerance_mm", 2], ["vertical_shift_tolerance_mm", 2], ["learning_search_radius", 0], ["downscale", 2], ["min_blob_area", 0],
+  ["sensitivity", 2], ["reject_threshold", 2], ["shift_tolerance_x", 0], ["horizontal_shift_tolerance_mm", 2], ["vertical_shift_tolerance_mm", 2], ["learning_search_radius", 0], ["downscale", 2], ["min_blob_area", 0],
 ];
 
 function selectCam(i) {
@@ -232,7 +235,10 @@ function selectCam(i) {
   fillSelect($("refSelect"), c.frames, c.reference);
   fillSelect($("testSelect"), c.frames, c.frames[1] || c.frames[0]);
   $("refName").textContent = c.reference === "upload" ? "загруженный файл" : c.reference || "—";
-  PARAMS.forEach(([k, d]) => { $(k).value = c[k]; $("v_" + k).textContent = fmt(c[k], d); });
+  PARAMS.forEach(([k, d]) => {
+    const value = k === "shift_tolerance_x" ? Math.min(c.shift_tolerance_x, c.shift_tolerance_y) : c[k];
+    $(k).value = value; $("v_" + k).textContent = fmt(value, d);
+  });
   $("learningRobust").checked = c.learning_robust_enabled;
   $("learningShadows").checked = c.learning_shadow_enabled;
   S.roi = c.roi.map((p) => p.slice());
@@ -292,8 +298,18 @@ $("testSelect").addEventListener("change", () => { if (S.mode === "frame") loadF
 
 const canvas = $("canvas");
 const ctx = canvas.getContext("2d");
+const labelTrackingSaves = new Set();
 
 function draw() {
+  const label = cur()?.label_outline || [];
+  const labelEnabled = label.length >= 3 && cur()?.label_tracking_enabled !== false;
+  $("labelTrackingEnabled").checked = labelEnabled;
+  $("labelTrackingEnabled").disabled = labelTrackingSaves.has(S.cam);
+  $("labelInfo").textContent = label.length >= 3
+    ? (labelEnabled
+      ? "Компенсация включена. Контур этикетки зелёный; ROI редактируется отдельно."
+      : "Компенсация выключена. Контур сохранён (серый); сравнивается обычный ROI.")
+    : "Для включения обведите этикетку на эталоне и нажмите «Подтвердить ROI как контур этикетки».";
   const img = S.learning ? S.learningImage : S.mode === "frame" ? S.img.frame : S.mode === "result" ? S.img.result : S.img.ref;
   const base = S.img.ref;
   if (!base) return;
@@ -333,6 +349,11 @@ function draw() {
   if (S.learning && S.learnBox) {
     const b = S.learnBox; ctx.strokeStyle = "#00ff88"; ctx.lineWidth = 3*k;
     ctx.strokeRect(b.x,b.y,b.width,b.height);
+  }
+  if (label.length >= 3 && S.mode === "ref" && !S.learning) {
+    ctx.save(); ctx.strokeStyle = labelEnabled ? "#36e797" : "#999999"; ctx.lineWidth = 2;
+    ctx.beginPath(); label.forEach((p,i) => i ? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1]));
+    ctx.closePath(); ctx.stroke(); ctx.restore();
   }
   $("roiInfo").textContent = S.roi.length
     ? `точек: ${S.roi.length}` + (S.roi.length < 3 ? " (нужно минимум 3)" : "")
@@ -542,6 +563,44 @@ async function saveRoi() {
   } catch (e) { /* toast shown */ }
 }
 
+$("confirmLabel").addEventListener("click", async () => {
+  if (S.mode !== "ref" || S.learning) { toast("Переключитесь на эталон перед подтверждением контура", true); return; }
+  if (S.roi.length < 3) { toast("Обведите границу этикетки минимум тремя точками", true); return; }
+  const camera = S.cam, outline = S.roi.map(p => p.slice());
+  try {
+    await post("/api/camera?cam=" + camera, { label_outline: outline, label_tracking_enabled: true });
+    S.cams[camera].label_outline = outline;
+    S.cams[camera].label_tracking_enabled = true;
+    if (S.cam === camera) draw();
+    toast("Контур этикетки подтверждён");
+  } catch(e) { toast(e.message, true); }
+});
+$("clearLabel").addEventListener("click", async () => {
+  const camera = S.cam;
+  try {
+    await post("/api/camera?cam=" + camera, { label_outline: [] });
+    S.cams[camera].label_outline = [];
+    if (S.cam === camera) draw();
+  } catch(e) { toast(e.message, true); }
+});
+$("labelTrackingEnabled").addEventListener("change", async () => {
+  const camera = S.cam, enabled = $("labelTrackingEnabled").checked;
+  if (labelTrackingSaves.has(camera)) return;
+  if (enabled && (cur()?.label_outline || []).length < 3) {
+    draw();
+    toast("Сначала обведите этикетку на эталоне и нажмите «Подтвердить ROI как контур этикетки».", true);
+    return;
+  }
+  labelTrackingSaves.add(camera);
+  $("labelTrackingEnabled").disabled = true;
+  try {
+    await post("/api/camera?cam=" + camera, { label_tracking_enabled: enabled });
+    S.cams[camera].label_tracking_enabled = enabled;
+    flashSaved();
+  } catch(e) { toast(e.message, true); }
+  finally { labelTrackingSaves.delete(camera); if (S.cam === camera) draw(); }
+});
+
 /* ----- geometry zones (spline through control points; one card per zone) ----- */
 
 function buildLineCards() {
@@ -737,6 +796,7 @@ PARAMS.forEach(([k, d]) => {
 async function saveParams() {
   const body = {};
   PARAMS.forEach(([k]) => (body[k] = Number($(k).value)));
+  body.shift_tolerance_y = body.shift_tolerance_x;
   try {
     await post("/api/camera?cam=" + S.cam, body);
     Object.assign(cur(), body);

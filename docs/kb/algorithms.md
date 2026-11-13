@@ -1,3 +1,9 @@
+# Confirmed label tracking ? 2026-11-13
+
+Optional label_outline intersects ROI and follows measured translation. Boundary
+verification and coverage checks fail closed; per-frame masks protect the reference cache.
+[Operation, tests and limits](label-tracking-2026-11-13.md).
+
 # Unified active implementation ? 2026-11-13
 
 The only linked core is src/production/core at eefefce4. The standalone adapter

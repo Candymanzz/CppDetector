@@ -1,3 +1,10 @@
+# Local label-tracking extension ? 2026-11-13
+
+reference.h/cpp and inspector.h/cpp now extend the eefefce4 baseline with an optional
+confirmed label contour, immutable per-frame comparison masks and verification guards.
+label_tracking.h is new. Historical byte-identity claims below describe the baseline.
+[Behavior and tests](../../docs/kb/label-tracking-2026-11-13.md).
+
 # Unified core ? 2026-11-13
 
 The active core is now eefefce4, with the incoming standalone learning service.

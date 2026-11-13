@@ -6,7 +6,7 @@
 
 namespace cd {
 
-void Inspector::setReference(const cv::Mat& bgr, const std::vector<cv::Point>& roi, const InspectParams&) {
+void Inspector::setReference(const cv::Mat& bgr, const std::vector<cv::Point>& roi, const InspectParams& params) {
     if (bgr.empty()) { reference_.reset(); return; }
     reference_ = std::make_shared<cas::Reference>(bgr.clone());
     cas::NormPolygon normalised;
@@ -14,6 +14,10 @@ void Inspector::setReference(const cv::Mat& bgr, const std::vector<cv::Point>& r
         normalised.emplace_back(p.x / double(std::max(1, bgr.cols - 1)),
                                 p.y / double(std::max(1, bgr.rows - 1)));
     reference_->setRoi(std::move(normalised));
+    cas::NormPolygon label;
+    if (params.labelTrackingEnabled)
+        for (const auto& q : params.labelOutline) label.emplace_back(q.x/double(std::max(1,bgr.cols-1)),q.y/double(std::max(1,bgr.rows-1)));
+    reference_->setLabelOutline(std::move(label));
     // Exclusions are passed with Settings per inspection, preserving immutable cache variants.
 }
 

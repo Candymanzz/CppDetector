@@ -2,7 +2,7 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict');
 const web=path.resolve(process.argv[2]||path.join(__dirname,'../web'));
 const elements=new Map(),requests=[],rectangles=[],pendingImages=[];
-let delayImages=false,failLearning=false;
+let delayImages=false,failLearning=false,failToggle=false;
 function element(){return {value:'',textContent:'',style:{},dataset:{},width:384,height:320,children:[],listeners:{},classList:{toggle(){},contains(){return false;}},
  addEventListener(type,fn,capture){(this.listeners[type]??=[]).push({fn,capture});},append(...v){this.children.push(...v);},replaceChildren(...v){this.children=v;},replaceChild(){},
  querySelector(){return element();},getContext(){return new Proxy({},{get:(_,key)=>key==='strokeRect'?(...args)=>rectangles.push(args):()=>{}});},getBoundingClientRect(){return {left:0,top:0,width:384,height:320};},setPointerCapture(){}};}
@@ -11,7 +11,7 @@ const camera={frames:['first','next'],reference:'first',width:384,height:320,roi
 const state={inspection_engine:'cpp-detector-eefefce4',engine_source_commit:'eefefce455ea93a2184c8d4e9178a0f1eb45847a',cameras_info:Array.from({length:10},()=>structuredClone(camera))};
 const context=vm.createContext({document,console,window:{addEventListener(){}},location:{hash:''},setTimeout(){return 1;},clearTimeout(){},setInterval(){return 1;},getComputedStyle(){return {getPropertyValue(){return '';}};},
  Image:class{constructor(){this.naturalWidth=384;this.naturalHeight=320;}set src(s){if(delayImages)pendingImages.push(this);else this.onload?.();}},
- async fetch(route,opts){requests.push({route,opts});const failed=failLearning&&route==='/api/learning?cam=0'&&opts?.method==='POST';const data=failed?{error:'Inspection changed; inspect the frame again'}:route==='/api/state'?state:route.startsWith('/api/status')?{last:[],running:false,period_ms:1000,batch:0,budget_ms:500}:route==='/api/testfiles'?[]:{cases:[],saved:true};return {ok:!failed,status:failed?400:200,async json(){return data;}};}});
+ async fetch(route,opts){requests.push({route,opts});const failed=(failLearning&&route==='/api/learning?cam=0'&&opts?.method==='POST')||(failToggle&&route==='/api/camera?cam=0'&&opts?.body?.includes('label_tracking_enabled'));const data=failed?{error:'Inspection changed; inspect the frame again'}:route==='/api/state'?state:route.startsWith('/api/status')?{last:[],running:false,period_ms:1000,batch:0,budget_ms:500}:route==='/api/testfiles'?[]:{cases:[],saved:true};return {ok:!failed,status:failed?400:200,async json(){return data;}};}});
 (async()=>{
  vm.runInContext(fs.readFileSync(path.join(web,'app.js'),'utf8'),context);
  vm.runInContext(fs.readFileSync(path.join(web,'learning.js'),'utf8'),context);
@@ -19,6 +19,16 @@ const context=vm.createContext({document,console,window:{addEventListener(){}},l
  assert.ok(document.getElementById('engineInfo').textContent.startsWith('Основной детектор eefefce4'));
  assert.equal(document.getElementById('grid').children.length,10,'UI initialisation must complete');
  assert.equal(document.getElementById('learnFrame').disabled,true,'requires an inspection');
+ vm.runInContext('S.cams[0].shift_tolerance_x=7;S.cams[0].shift_tolerance_y=2;selectCam(0)',context);
+ assert.equal(document.getElementById('shift_tolerance_x').value,2,'legacy asymmetric profile uses stricter value like production');
+ document.getElementById('shift_tolerance_x').value='5';await vm.runInContext('saveParams()',context);
+ assert.equal(vm.runInContext('S.cams[0].shift_tolerance_x',context),5);
+ assert.equal(vm.runInContext('S.cams[0].shift_tolerance_y',context),5,'one relaxation value saves both axes');
+ const relaxationBody=JSON.parse(requests.at(-1).opts.body);
+ assert.equal(relaxationBody.shift_tolerance_x,5);assert.equal(relaxationBody.shift_tolerance_y,5);
+ const html=fs.readFileSync(path.join(web,'index.html'),'utf8');
+ assert.ok(html.includes('Ослабление сравнения, px'));
+ assert.ok(!html.includes('id="shift_tolerance_y"'),'one shared slider');
  const render=(version,extra={})=>{context.nextResult={cam:0,ver:version,frame:'next',score:10,threshold:60,sensitivity:.5,raw_anomaly_score:.2,learned_normal_matches_count:0,verdict:'OK',zones:[],ms:1,learning_bbox:{x:10,y:20,width:50,height:60},...extra};vm.runInContext('renderResult(nextResult)',context);};
  const posts=()=>requests.filter(x=>x.route.startsWith('/api/learning?')&&x.opts?.method==='POST');
  render(1);
@@ -43,5 +53,33 @@ const context=vm.createContext({document,console,window:{addEventListener(){}},l
  assert.equal(posts().length,count,'camera changes during image loading prevent a save');vm.runInContext('S.cam=0',context);
  vm.runInContext('renderResult({cam:0,ver:2,frame:"next",score:0,threshold:60,sensitivity:.5,raw_anomaly_score:.2,learned_normal_matches_count:1,verdict:"OK",zones:[],ms:1,learning_robust_enabled:true,learning_ms:1,learning_diagnostics:[{id:"test",status:"matched",method:"shadow",removed_pixels:10,shift:[20,8],shadow_correlation:.95}]})',context);
  assert.ok(document.getElementById('result').children.some(x=>x?.children?.some(y=>String(y.textContent).includes('test:'))),'per-case diagnostics rendered');
- console.log('UI automatic learning checks passed: one click, visible bounds, empty/injected/stale/camera guards (mock DOM)');
+ vm.runInContext('S.cam=0;S.learning=false;S.mode="ref";S.roi=[[30,30],[300,30],[300,250],[30,250]]',context);
+ await document.getElementById('confirmLabel').listeners.click[0].fn();
+ assert.equal(vm.runInContext('S.cams[0].label_outline.length',context),4,'label outline confirmed separately');
+ assert.ok(requests.some(r=>r.opts?.body?.includes('label_outline')),'label outline sent to server');
+ const toggle=document.getElementById('labelTrackingEnabled');
+ const outline=vm.runInContext('JSON.stringify(S.cams[0].label_outline)',context);
+ assert.equal(toggle.checked,true,'confirmation enables compensation');
+ toggle.checked=false;await toggle.listeners.change[0].fn();
+ assert.equal(vm.runInContext('S.cams[0].label_tracking_enabled',context),false);
+ assert.equal(vm.runInContext('JSON.stringify(S.cams[0].label_outline)',context),outline,'disable retains contour');
+ assert.deepEqual(JSON.parse(requests.at(-1).opts.body),{label_tracking_enabled:false});
+ assert.equal(vm.runInContext('S.cams[1].label_tracking_enabled',context),undefined,'toggle affects only selected camera');
+ failToggle=true;toggle.checked=true;await toggle.listeners.change[0].fn();failToggle=false;
+ assert.equal(toggle.checked,false,'failed save restores disabled state');
+ assert.equal(toggle.disabled,false,'failed save can be retried');
+ toggle.checked=true;await toggle.listeners.change[0].fn();
+ assert.equal(vm.runInContext('S.cams[0].label_tracking_enabled',context),true);
+ assert.equal(vm.runInContext('JSON.stringify(S.cams[0].label_outline)',context),outline,'enable reuses saved contour');
+ await document.getElementById('clearLabel').listeners.click[0].fn();
+ assert.equal(vm.runInContext('S.cams[0].label_outline.length',context),0,'label outline can be disabled');
+ assert.equal(toggle.checked,false);assert.equal(toggle.disabled,false,'missing contour must not silently block clicks');
+ const requestsBefore=requests.length;
+ toggle.checked=true;await toggle.listeners.change[0].fn();
+ assert.equal(toggle.checked,false,'missing contour does not pretend compensation is enabled');
+ assert.equal(requests.length,requestsBefore,'missing contour does not send an ineffective enable request');
+ assert.match(document.getElementById('labelInfo').textContent,/Подтвердить ROI/,'explains prerequisite next to the switch');
+ vm.runInContext('S.img.ref=null;draw()',context);
+ assert.match(document.getElementById('labelInfo').textContent,/Подтвердить ROI/,'guidance visible even before reference loads');
+ console.log('UI learning and confirmed label outline checks passed (mock DOM)');
 })().catch(e=>{console.error(e);process.exitCode=1;});

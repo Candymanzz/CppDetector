@@ -1,3 +1,7 @@
+# Label contour tracking ? 2026-11-13
+
+[Confirmed contour, exposed-bucket masking and verification](label-tracking-2026-11-13.md).
+
 # Inspection exclusions — 2026-11-06
 
 Draw polygon zones in the camera setup to skip inspection inside them. Exclusions

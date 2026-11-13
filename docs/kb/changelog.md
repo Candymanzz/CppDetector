@@ -60,3 +60,15 @@ are retained. [Scope, validation and limitations](production-sync-2026-11-04.md)
 - 2026-11-13: imported production inspection/positioning from defect-detector-v3/boobs+pasha eefefce4 via an adapter; added 0..30 mm controls, production sensitivity and original-pixel diagnostics. Release build, 5 tests and 288 parity cases passed. See [report](production-inspection-port.md).
 
 - 2026-11-13: resolved merge ed170af/bf74c6b with one eefefce4 core, incoming learning/exclusions, consistent UI identity and 30mm controls. Release, 18 CTest targets and HTTP/UI checks passed. [Report](merge-core-2026-11-13.md).
+
+- 2026-11-13: optional confirmed label contour, displacement/boundary verification, visible-overlap comparison mask and fail-closed diagnostics. Release + 19 CTest targets + mock UI passed. [Details](label-tracking-2026-11-13.md).
+- 2026-11-13: Added per-camera label tracking checkbox. Disabling preserves the
+  confirmed contour and restores ordinary ROI inspection; state persists on restart.
+- 2026-11-13: Removed the extra label perimeter guard at user request. Comparison
+  tolerance no longer reduces the inspection mask; shift-dependent overlap remains.
+- 2026-11-13: Matched boobs+pasha comparison UI with one shared 0..15 px relaxation
+  slider; made label boundary-color support diagnostic instead of early rejection.
+- 2026-11-13: Added fixed 2 original-pixel per-axis label guard, scaled for analysis
+  resolution, independent of comparison relaxation.
+- 2026-11-13: Reduced fixed label inset from 2 to 1 native pixel per axis; nearest
+  analysis-pixel rounding retained (zero inset at 50%). Label regression passed.

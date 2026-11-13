@@ -21,6 +21,9 @@ struct InspectOutcome {
     double upperCornerExtraScore = 0.0; // final score minus mainRoiScore (after saturation)
     int upperCornerPixelThreshold = 0;
     int upperCornerArea = 0;         // selected ROI pixels at work resolution
+    bool labelEnabled = false;
+    double labelCoverage = 1, labelBoundarySupport = 0;
+    cv::Mat inspectionMask;
     bool surfaceSkipped = false;
     NormPolygons exclusions; // exact mask configuration used by this inspection
     bool reject = false;

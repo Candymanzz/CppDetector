@@ -33,6 +33,12 @@ std::shared_ptr<const AlignmentPrepared> buildAlignment(const Prepared& native) 
         cv::resize(excluded(a->region), smallExcluded, a->smallSize, 0, 0, cv::INTER_AREA);
         a->hann.setTo(0, smallExcluded > 0);
     }
+    if (native.labelEnabled) {
+        cv::Mat interior, smallMask;
+        cv::erode(native.roiMask(a->region),interior,cv::getStructuringElement(cv::MORPH_RECT,{9,9}));
+        cv::resize(interior,smallMask,a->smallSize,0,0,cv::INTER_AREA);
+        a->hann.setTo(0,smallMask<255);
+    }
     const auto dftSize = shiftDftSize(a->smallSize);
     padShiftInput(a->refSmall, dftSize);
     padShiftInput(a->hann, dftSize);
@@ -110,6 +116,13 @@ bool Reference::setRoi(NormPolygon pts) {
     return true;
 }
 
+void Reference::setLabelOutline(NormPolygon pts) {
+    std::lock_guard<std::mutex> lk(m_);
+    if (label_ == pts) return;
+    label_ = std::move(pts); cache_.clear(); alignment_.reset();
+}
+NormPolygon Reference::labelOutline() const { std::lock_guard<std::mutex> lk(m_); return label_; }
+
 NormPolygon Reference::roi() const {
     std::lock_guard<std::mutex> lk(m_);
     return roi_;
@@ -117,27 +130,27 @@ NormPolygon Reference::roi() const {
 
 std::shared_ptr<const Prepared> Reference::prepared(double scale, const NormPolygons& exclusions) const {
     const int key = static_cast<int>(std::lround(scale * 1000.0));
-    NormPolygon roi;
+    NormPolygon roi, label;
     std::shared_ptr<const AlignmentPrepared> alignment;
     {
         std::lock_guard<std::mutex> lk(m_);
         auto it = cache_.find(key);
         if (it != cache_.end() && it->second->exclusions == exclusions) return it->second;
-        roi = roi_;
+        roi = roi_; label = label_;
         if (alignment_ && alignment_->exclusions == exclusions) alignment = alignment_;
     }
     // Build the positioning data once from native pixels, never from the inspection thumbnail.
     // Keep the same ROI snapshot for positioning and comparison, even if it changes during a build.
     std::shared_ptr<Prepared> native;
     if (!alignment) {
-        native = build(1.0, roi, exclusions);
+        native = build(1.0, roi, exclusions, label);
         alignment = buildAlignment(*native);
     }
-    auto built = key == 1000 && native ? native : build(key / 1000.0, roi, exclusions);
+    auto built = key == 1000 && native ? native : build(key / 1000.0, roi, exclusions, label);
     built->alignment = alignment;
     std::lock_guard<std::mutex> lk(m_);
     // the ROI may have changed while building: only cache when it is still the same
-    if (roi == roi_) {
+    if (roi == roi_ && label == label_) {
         if (!alignment_ || alignment_->exclusions != exclusions) alignment_ = alignment;
         built->alignment = alignment_;
         cache_[key] = built;
@@ -145,7 +158,7 @@ std::shared_ptr<const Prepared> Reference::prepared(double scale, const NormPoly
     return built;
 }
 
-std::shared_ptr<Prepared> Reference::build(double scale, const NormPolygon& roi, const NormPolygons& exclusions) const {
+std::shared_ptr<Prepared> Reference::build(double scale, const NormPolygon& roi, const NormPolygons& exclusions, const NormPolygon& label) const {
     auto p = std::make_shared<Prepared>();
     p->scale = scale;
     p->exclusions = exclusions;
@@ -167,6 +180,14 @@ std::shared_ptr<Prepared> Reference::build(double scale, const NormPolygon& roi,
         if (padded.width >= 32 && padded.height >= 32) box = padded;
     } else {
         p->roiMask.setTo(255);
+    }
+    p->labelEnabled = label.size() >= 3;
+    if (p->labelEnabled) {
+        std::vector<cv::Point> points;
+        for (const auto& q : label) points.emplace_back(cvRound(q.x*(p->workSize.width-1)),cvRound(q.y*(p->workSize.height-1)));
+        cv::Mat mask = cv::Mat::zeros(p->workSize, CV_8U);
+        cv::fillPoly(mask,std::vector<std::vector<cv::Point>>{points},255);
+        p->roiMask &= mask;
     }
     p->region = box;
     p->upperCornerMask = roi.size() >= 3 ? upperCornerMask(p->roiMask(box))

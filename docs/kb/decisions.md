@@ -208,3 +208,63 @@ keeps recent positioning/30mm fixes. Exclusions use the new Settings API; tests
 retain their intent while adopting the native cache API and current limits.
 Release build, 18 CTest targets, HTTP learning/exclusions and mock UI checks passed.
 Both sides of the knowledge history are retained. [Report](merge-core-2026-11-13.md).
+
+## D22 ? Confirmed label contour instead of adaptive shape trimming (2026-11-13)
+
+User requested implementing the proposed reference contour + tracking approach.
+Store a separately confirmed per-camera label_outline, verify its translated boundary,
+compare only visible overlap, and reject unreliable position/boundary/coverage.
+Do not reshape the mask from current defects. Clone per-frame masks to preserve cache.
+Keep zero-sensitivity bypass. Reference replacement requires reconfirmation.
+Release build, all 19 CTest targets and mock UI confirmation/deletion checks passed.
+Synthetic cases cover exposed white background, shifts, defects and cache reuse;
+physical-camera validation and guard-band blind spots remain explicit limitations.
+[Details](label-tracking-2026-11-13.md).
+# Per-camera label tracking switch (2026-11-13)
+
+User requested a UI switch to compare inspection with and without label tracking.
+Keep the confirmed contour and store a separate boolean, defaulting to true for
+compatibility with existing confirmed contours. Disabled mode passes no contour
+to the native reference, restoring the original ROI pipeline. Confirmation enables
+the feature explicitly. This supports repeatable comparison without redrawing the
+label or changing ROI. Tests cover native baseline equivalence, restart, camera
+isolation, invalid values, and UI save failure/retry.
+
+## Remove label perimeter guard (2026-11-13)
+
+User observed missed small edge damage and explicitly requested zero extra inset.
+Remove the 3 + comparison-tolerance mask erosion entirely; retain the geometric
+intersection with the shifted visible ROI and existing validity checks. This exposes
+the full valid edge to comparison, while blur/tolerance can again see background
+near the edge. Do not claim guaranteed detection or absence of white-strip rejects.
+
+## Shared comparison relaxation matching production (2026-11-13)
+
+User requested the behavior in Desktop/detector-. Read its actual boobs+pasha
+checkout bd9f704eade0adf9568b158b6efa1dc19bd15537, including DetectorSettingsPanel.tsx
+and native inspector/settings. One UI slider controls X and Y together, 0..15 px,
+step 1. Legacy asymmetric settings display their minimum; saves write both axes.
+The comparison-envelope code already matches that source and is unchanged.
+The local boundary-color gate has no equivalent there: retain its support metric
+as diagnostics, but remove forced early rejection, letting surface differences
+reach normal relaxed comparison and score. Position/coverage failure guards remain.
+This deliberately removes a separate color-edge rejection path; it is not a claim
+of automatic label segmentation or guaranteed detection of small edge damage.
+
+## Fixed two-pixel label inset (2026-11-13)
+
+User requested a small fixed 2 px guard after testing zero guard. Apply a rectangular
+inset of two original-frame pixels per axis to the valid shifted overlap. Scale
+using actual rounded work dimensions; round to the nearest analysis pixel. The
+inset is independent of comparison relaxation and measured displacement. At 50%
+it is 1 analysis pixel; very low scales can round it to zero. This protects a small
+border while avoiding the old 3 + tolerance growth; defects inside it are excluded.
+
+## Reduce fixed label inset to one pixel (2026-11-13)
+
+User requested 1 px instead of 2 px. The inset is one original-frame pixel per axis,
+independent of relaxation. Keep existing nearest-analysis-pixel rounding: at 100%
+it is one working pixel, at 50% cvRound(0.5) is zero. This avoids silently expanding
+the requested guard to two native pixels at half scale. Release application and
+label test rebuilt; label_tracking_test passed, covering exact native mask, 50%
+coverage, tolerances 0/3/5, shifted labels and defects.
