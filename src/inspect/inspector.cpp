@@ -1,55 +1,96 @@
 #include "inspector.h"
-#include "production/core/inspector.h"
+#include "../production/core/seam.h"
+#include <opencv2/imgproc.hpp>
 #include <algorithm>
 #include <chrono>
-#include <stdexcept>
 
 namespace cd {
-namespace {
-cas::Settings settings(const InspectParams& p) {
-    auto s = cas::Settings{}.withMetricDefaults(p.cameraId);
-    s.sensitivity = std::clamp(p.sensitivity, 0.0, 1.0);
-    s.threshold = p.rejectThreshold / 100.0;
-    s.shiftToleranceX = s.shiftToleranceY = p.shiftTolerance;
-    s.inspectScale = p.downscale;
-    s.minBlobArea = p.minBlobArea;
-    s.horizontalShiftMm = p.horizontalShiftMm;
-    s.verticalShiftMm = p.verticalShiftMm;
-    return s;
-}
-}
+
 void Inspector::setReference(const cv::Mat& bgr, const std::vector<cv::Point>& roi, const InspectParams&) {
-    if (bgr.empty()) throw std::invalid_argument("empty reference");
-    auto next = std::make_shared<cas::Reference>(bgr.clone());
-    cas::NormPolygon normalized;
-    for (const auto& point : roi)
-        normalized.emplace_back(double(point.x) / std::max(1, bgr.cols - 1),
-                                double(point.y) / std::max(1, bgr.rows - 1));
-    next->setRoi(std::move(normalized));
-    reference_ = std::move(next);
-    refSize_ = bgr.size();
+    if (bgr.empty()) { reference_.reset(); return; }
+    reference_ = std::make_shared<cas::Reference>(bgr.clone());
+    cas::NormPolygon normalised;
+    for (const auto& p : roi)
+        normalised.emplace_back(p.x / double(std::max(1, bgr.cols - 1)),
+                                p.y / double(std::max(1, bgr.rows - 1)));
+    reference_->setRoi(std::move(normalised));
+    // Exclusions are passed with Settings per inspection, preserving immutable cache variants.
 }
-InspectResult Inspector::inspect(const cv::Mat& bgr, const InspectParams& p) const {
-    const auto started = std::chrono::steady_clock::now();
-    InspectResult result;
-    if (!hasReference()) { result.reason = "no_reference"; return result; }
-    if (bgr.size() != refSize_) { result.reason = "size_mismatch"; return result; }
-    const auto s = settings(p);
-    const auto outcome = cas::inspectFrame(*reference_, bgr, s, true);
-    result.score = outcome.anomalyScore * 100.0;
-    result.reject = outcome.reject;
-    result.reason = outcome.reason;
-    result.shift = outcome.rawShift;
-    result.appliedShift = outcome.shift;
-    const auto units = s.mmPerPixel(bgr.size());
-    result.shiftMm = {result.shift.x * units.x, result.shift.y * units.y};
-    result.shiftResponse = outcome.shiftResponse;
-    result.shiftRefined = outcome.shiftRefined;
-    result.zones = outcome.zones;
-    result.diffThreshold = outcome.pixelThreshold;
-    result.heatmap = cas::fullDiff(outcome);
-    result.heatmap.setTo(0, cas::fullMask(outcome) == 0);
-    result.ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started).count();
-    return result;
+
+InspectResult Inspector::inspect(const cv::Mat& bgr, const InspectParams& p, const SeamParams* seam) const {
+    InspectResult r;
+    r.exclusions = p.exclusions;
+    if (!hasReference()) { r.reason = "no_reference"; return r; }
+    if (bgr.empty() || bgr.size() != reference_->size()) { r.reason = "size_mismatch"; return r; }
+
+    auto& s = r.settings;
+    s = p.nativeSettings().forFrame(bgr.size());
+    s.exclusions.clear();
+    for (const auto& polygon : p.exclusions) {
+        cas::NormPolygon points;
+        for (const auto& q : polygon) points.emplace_back(q.x / double(std::max(1, bgr.cols - 1)), q.y / double(std::max(1, bgr.rows - 1)));
+        s.exclusions.push_back(std::move(points));
+    }
+    if (seam && seam->pts.size() >= 2) {
+        s.seam.enabled = seam->enabled;
+        s.seam.p0x = seam->pts.front().x / bgr.cols; s.seam.p0y = seam->pts.front().y / bgr.rows;
+        s.seam.p1x = seam->pts.back().x / bgr.cols; s.seam.p1y = seam->pts.back().y / bgr.rows;
+        s.seam.band = seam->bandHalf; s.seam.tolMid = seam->tolMid;
+        s.seam.tolEdge = seam->tolEdge; s.seam.edgeFrac = seam->edgeFrac;
+    }
+    auto& out = r.native;
+    out = cas::inspectFrame(*reference_, bgr, s, true);
+    r.learningDiagnostics = out.learningDiagnostics;
+    r.learningMs = out.learningMs;
+
+    // Same seam calculation and decision merge as cppAnalisSurface Service::run (20909141).
+    if (s.sensitivity > 0.0 && s.seam.enabled && s.seam.hasLine() && out.reason != "size_mismatch") {
+        cv::Mat excluded;
+        if (!p.exclusions.empty()) {
+            excluded = cv::Mat::zeros(bgr.size(), CV_8U);
+            for (const auto& polygon : p.exclusions) {
+                std::vector<cv::Point> shifted;
+                for (const auto& q : polygon) shifted.emplace_back(cvRound(q.x + out.shift.x), cvRound(q.y + out.shift.y));
+                cv::fillPoly(excluded, std::vector<std::vector<cv::Point>>{shifted}, 255);
+            }
+        }
+        const auto sr = cas::measureSeam(bgr, s.seam, excluded);
+        out.seamEnabled = true; out.seamFound = sr.found; out.seamReject = sr.reject;
+        out.seamRatio = sr.ratio; out.seamMaxDev = sr.maxDev; out.seamWorstT = sr.worstT;
+        out.seamCoverage = sr.coverage; out.seamMs = sr.ms; out.totalMs += sr.ms;
+        if (sr.reject) {
+            out.reject = true;
+            if (out.reason.empty() || out.reason == "inspection_excluded") out.reason = "seam_deviation";
+            if (!sr.badPts.empty()) {
+                cv::Rect bb = cv::boundingRect(sr.badPts);
+                bb.x -= 12; bb.y -= 12; bb.width += 24; bb.height += 24;
+                bb &= cv::Rect(0, 0, bgr.cols, bgr.rows);
+                if (bb.area() > 0) out.zones.push_back(bb);
+            }
+        }
+        auto& ui = r.seam;
+        ui.enabled = true; ui.found = sr.found; ui.reject = sr.reject;
+        ui.coverage = sr.coverage; ui.ratio = sr.ratio; ui.maxDev = sr.maxDev;
+        ui.worstT = sr.worstT; ui.centerPts = sr.centerPts; ui.badPts = sr.badPts; ui.ms = sr.ms;
+        ui.path = {cv::Point2f(seam->pts.front()), cv::Point2f(seam->pts.back())};
+        cv::Point2f direction = ui.path.back() - ui.path.front();
+        const float length = std::max(1e-6f, float(cv::norm(direction)));
+        const cv::Point2f normal(-direction.y / length, direction.x / length);
+        ui.pathNormal = {normal, normal};
+    }
+
+    r.score = out.anomalyScore * 100.0; r.reject = out.reject; r.reason = out.reason;
+    r.shift = out.shift; r.shiftLimit = out.shiftLimit; r.envelopeKernel = out.envelopeKernel;
+    r.zones = out.zones; r.diffThreshold = out.pixelThreshold; r.ms = out.totalMs;
+    const auto visualStart = std::chrono::steady_clock::now();
+    r.heatmap = cas::buildHeatmap(out, reference_->roi(), 512);
+    // Remove decorative heatmap blur from holes as well as scored pixels.
+    for (const auto& polygon : p.exclusions) {
+        std::vector<cv::Point> points;
+        for (const auto& q : polygon) points.emplace_back(cvRound(q.x * double(r.heatmap.cols - 1) / std::max(1, bgr.cols - 1)), cvRound(q.y * double(r.heatmap.rows - 1) / std::max(1, bgr.rows - 1)));
+        cv::fillPoly(r.heatmap, std::vector<std::vector<cv::Point>>{points}, 0);
+    }
+    r.heatmapMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - visualStart).count();
+    return r;
 }
 }

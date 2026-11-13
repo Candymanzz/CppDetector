@@ -1,0 +1,47 @@
+'use strict';
+const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict');
+const web=path.resolve(process.argv[2]||path.join(__dirname,'../web'));
+const elements=new Map(),requests=[],rectangles=[],pendingImages=[];
+let delayImages=false,failLearning=false;
+function element(){return {value:'',textContent:'',style:{},dataset:{},width:384,height:320,children:[],listeners:{},classList:{toggle(){},contains(){return false;}},
+ addEventListener(type,fn,capture){(this.listeners[type]??=[]).push({fn,capture});},append(...v){this.children.push(...v);},replaceChildren(...v){this.children=v;},replaceChild(){},
+ querySelector(){return element();},getContext(){return new Proxy({},{get:(_,key)=>key==='strokeRect'?(...args)=>rectangles.push(args):()=>{}});},getBoundingClientRect(){return {left:0,top:0,width:384,height:320};},setPointerCapture(){}};}
+const document={getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},querySelectorAll(){return [];},createElement:element,createTextNode:t=>t,documentElement:element()};
+const camera={frames:['first','next'],reference:'first',width:384,height:320,roi:[],seam:{enabled:false,pts:[],skip:[]},sensitivity:.5,reject_threshold:60,shift_tolerance_x:3,shift_tolerance_y:3,max_alignment_shift_x:12,max_alignment_shift_y:12,horizontal_shift_tolerance_mm:3,vertical_shift_tolerance_mm:3.96,downscale:1,min_blob_area:20,learning_robust_enabled:true,learning_shadow_enabled:true,learning_search_radius:24};
+const state={inspection_engine:'cpp-detector-eefefce4',engine_source_commit:'eefefce455ea93a2184c8d4e9178a0f1eb45847a',cameras_info:Array.from({length:10},()=>structuredClone(camera))};
+const context=vm.createContext({document,console,window:{addEventListener(){}},location:{hash:''},setTimeout(){return 1;},clearTimeout(){},setInterval(){return 1;},getComputedStyle(){return {getPropertyValue(){return '';}};},
+ Image:class{constructor(){this.naturalWidth=384;this.naturalHeight=320;}set src(s){if(delayImages)pendingImages.push(this);else this.onload?.();}},
+ async fetch(route,opts){requests.push({route,opts});const failed=failLearning&&route==='/api/learning?cam=0'&&opts?.method==='POST';const data=failed?{error:'Inspection changed; inspect the frame again'}:route==='/api/state'?state:route.startsWith('/api/status')?{last:[],running:false,period_ms:1000,batch:0,budget_ms:500}:route==='/api/testfiles'?[]:{cases:[],saved:true};return {ok:!failed,status:failed?400:200,async json(){return data;}};}});
+(async()=>{
+ vm.runInContext(fs.readFileSync(path.join(web,'app.js'),'utf8'),context);
+ vm.runInContext(fs.readFileSync(path.join(web,'learning.js'),'utf8'),context);
+ for(let i=0;i<4;i++)await new Promise(setImmediate);
+ assert.ok(document.getElementById('engineInfo').textContent.startsWith('Основной детектор eefefce4'));
+ assert.equal(document.getElementById('grid').children.length,10,'UI initialisation must complete');
+ assert.equal(document.getElementById('learnFrame').disabled,true,'requires an inspection');
+ const render=(version,extra={})=>{context.nextResult={cam:0,ver:version,frame:'next',score:10,threshold:60,sensitivity:.5,raw_anomaly_score:.2,learned_normal_matches_count:0,verdict:'OK',zones:[],ms:1,learning_bbox:{x:10,y:20,width:50,height:60},...extra};vm.runInContext('renderResult(nextResult)',context);};
+ const posts=()=>requests.filter(x=>x.route.startsWith('/api/learning?')&&x.opts?.method==='POST');
+ render(1);
+ assert.equal(document.getElementById('learnFrame').disabled,false);
+ await document.getElementById('learnFrame').onclick();
+ assert.ok(vm.runInContext('S.learning',context));
+ assert.equal(document.getElementById('learningRobust').checked,true);
+ assert.deepEqual(JSON.parse(posts()[0].opts.body),{version:1},'server selects bounds for the pinned inspection');
+ assert.ok(rectangles.some(r=>r.join(',')==='10,20,50,60'),'automatic region is drawn without mouse input');
+ assert.equal(document.getElementById('learnFrame').textContent,'Добавлено в анализ');
+ assert.equal(document.getElementById('learnFrame').disabled,true);
+ await document.getElementById('learnFrame').onclick();assert.equal(posts().length,1,'no duplicate save');
+ vm.runInContext('setMode("ref")',context);assert.ok(!vm.runInContext('S.learning',context),'leaving preview clears automatic rectangle');
+ for(const extra of [{learning_bbox:null},{defect_injected:true},{verdict:'NO_REFERENCE'}]){render(2,extra);assert.equal(document.getElementById('learnFrame').disabled,true);await document.getElementById('learnFrame').onclick();}
+ assert.equal(posts().length,1,'empty/injected/missing-reference inspections never save');
+ failLearning=true;render(3);await document.getElementById('learnFrame').onclick();failLearning=false;
+ assert.ok(!vm.runInContext('S.learning',context));assert.equal(document.getElementById('learnFrame').disabled,false,'failed save can be retried');
+ assert.match(document.getElementById('learnInfo').textContent,/Inspection changed/);
+ const count=posts().length;
+ render(4);delayImages=true;const saving=document.getElementById('learnFrame').onclick();await new Promise(setImmediate);
+ assert.equal(pendingImages.length,1);vm.runInContext('S.cam=1;S.learningResult=null',context);pendingImages.shift().onload();await saving;delayImages=false;
+ assert.equal(posts().length,count,'camera changes during image loading prevent a save');vm.runInContext('S.cam=0',context);
+ vm.runInContext('renderResult({cam:0,ver:2,frame:"next",score:0,threshold:60,sensitivity:.5,raw_anomaly_score:.2,learned_normal_matches_count:1,verdict:"OK",zones:[],ms:1,learning_robust_enabled:true,learning_ms:1,learning_diagnostics:[{id:"test",status:"matched",method:"shadow",removed_pixels:10,shift:[20,8],shadow_correlation:.95}]})',context);
+ assert.ok(document.getElementById('result').children.some(x=>x?.children?.some(y=>String(y.textContent).includes('test:'))),'per-case diagnostics rendered');
+ console.log('UI automatic learning checks passed: one click, visible bounds, empty/injected/stale/camera guards (mock DOM)');
+})().catch(e=>{console.error(e);process.exitCode=1;});

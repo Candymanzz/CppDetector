@@ -1,3 +1,7 @@
+> After the subsequent merge, the core moved to src/production/core and the richer
+> incoming adapter/learning/exclusions UI was retained. The report below describes
+> the original transfer, before that merge. [Current state](merge-core-2026-11-13.md).
+
 # Production inspection imported into the test bed — 2026-11-13
 
 Source: [defect-detector-v3, boobs+pasha, eefefce455ea93a2184c8d4e9178a0f1eb45847a](https://github.com/Candymanzz/defect-detector-v3/tree/eefefce455ea93a2184c8d4e9178a0f1eb45847a/cppAnalisSurface).

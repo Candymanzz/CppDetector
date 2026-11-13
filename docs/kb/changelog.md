@@ -1,4 +1,44 @@
+# Inspection exclusions — 2026-11-06
+
+Draw polygon zones in the camera setup to skip inspection inside them. Exclusions
+are persistent per-camera holes in ROI and also apply to the seam.
+[Behavior, reasons, checks and limits](exclusion-zones-2026-11-06.md).
+
+# 2026-11-04 — Fixed normal-region masks at shifted ROI boundaries
+
+Shared native matcher correction; actual learned camera-1 source frame score
+70.729% -> 0%, threshold remains 60%. Existing sample reused, new defect still rejects.
+Added learned_placement_test. [Full report](learned-placement-fix-2026-11-04.md).
+
+# 2026-11-04 — One-click automatic normal regions
+
+Replaced manual selection with «Дообучить»: bounds from all nonzero raw heatmap
+pixels plus 10 source px, versioned original-image preview, visible green rectangle,
+automatic save. Empty/injected/stale inspections are guarded. Native code/data unchanged.
+[Details and validation](automatic-learning-2026-11-04.md).
+
+# 2026-11-04 — Production snapshot 20909141
+
+Imported current core/service, replaced the local learning hook with native robust
+learning, added metric tolerances/calibration and corner diagnostics, scale step 1%,
+production sensitivity-zero seam handling, and current regression tests. Data paths
+are retained. [Scope, validation and limitations](production-sync-2026-11-04.md).
+
+- 2026-11-02: local moving-shadow learning experiment: independent search radius, moved change mask,
+  bounded smooth illumination compensation, native-mode fallback, per-case UI/JSON diagnostics and regression
+  tests. See [local-learning-v2.md](local-learning-v2.md). Main application code unchanged.
+
+- 2026-11-02: ported full native detector/service 52aa31ea: region normal examples, persistence and deletion,
+  sensitivity-dependent score/endpoints, connected components, independent alignment limits; added Russian UI
+  region selection/case previews, isolated profiles and regression/HTTP checks. See [learning-port.md](learning-port.md).
+
 # Changelog
+
+- 2026-10-26: ported the reference-cache correction from defect-detector-v3 cpp-detector (bfd9b54a): clone the alignment thumbnail before phaseCorrelate so its in-place Hann window cannot mutate shared reference data. Added repeated/concurrent warm/cold cache regressions and changed square-ROI adapter parity from cache diagnostics to immutable-cache/stable-result assertions.
+
+- 2026-10-26: superseded the X/Y-only port with a full local mirror of position-x-y core 885a79ed. Native score, ROI-thumbnail alignment/confidence, original-pixel settings, min-area scaling, seam and heatmap now run behind the existing UI; edge no longer affects verdicts. Added separate native profiles/logs, preserved old scenes/configs, native defaults button and parity tests.
+
+- 2026-10-26: ported the independent X/Y shift tolerance from defect-detector-v3 position-x-y (885a79ed): per-axis alignment limits and rectangular comparison envelope, two web sliders, backward-compatible legacy config loading, per-axis result/log diagnostics and CTest coverage. CppDetector's existing score/downscale/geometry behavior is preserved.
 
 - 2026-10-20: PLAN.md written; skeleton (CMakeLists, vcpkg.json, CMakePresets.json, src/main.cpp); KB created; vcpkg cloned to D:\vcpkg.
 - 2026-10-20: vcpkg deps built (OpenCV 4.14.0, httplib 0.62, nlohmann 3.12). Added src/inspect/inspector.{h,cpp} and a console runner in src/main.cpp (args: root sens thr [defect]).
@@ -18,3 +58,5 @@
 - 2026-10-22: geometry check split into two independent zones per camera, "Стык" (seam) and "Кромка" (edge); old step-mode seam config migrates to edge; per-zone deviation graph in the overlay and per-zone debug sets in logs/seam.
 
 - 2026-11-13: imported production inspection/positioning from defect-detector-v3/boobs+pasha eefefce4 via an adapter; added 0..30 mm controls, production sensitivity and original-pixel diagnostics. Release build, 5 tests and 288 parity cases passed. See [report](production-inspection-port.md).
+
+- 2026-11-13: resolved merge ed170af/bf74c6b with one eefefce4 core, incoming learning/exclusions, consistent UI identity and 30mm controls. Release, 18 CTest targets and HTTP/UI checks passed. [Report](merge-core-2026-11-13.md).

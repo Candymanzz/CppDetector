@@ -1,3 +1,44 @@
+# Inspection exclusion zones — 2026-11-06
+
+«Настройка и тест» → «Зоны исключения инспекции» → «Нарисовать зону»: click
+at least three points on the reference and press «Сохранить зону». Pink polygons
+skip surface/seam inspection, persist per camera and can be removed individually.
+[Behavior, checks and limits](docs/kb/exclusion-zones-2026-11-06.md).
+
+# Learned boundary fix — 2026-11-04
+
+Corrected the normal-region mask after alignment. Existing learned boundary samples
+now apply at their matched position; no new sample or threshold change is required.
+[Cause and checks](docs/kb/learned-placement-fix-2026-11-04.md).
+
+# Automatic learning — 2026-11-04
+
+Inspect a frame, then press «Дообучить»: the anomaly region is selected, highlighted
+and saved automatically with the same 10 px margin as the main application.
+No mouse rectangle is needed. [Behavior and checks](docs/kb/automatic-learning-2026-11-04.md).
+
+# CppDetector — updated from production 20909141 (2026-11-04)
+
+Includes camera-specific metric tolerances, upper-corner sensitivity and native robust
+learning from the main application. Existing profiles/references/samples remain usable.
+Build: powershell -ExecutionPolicy Bypass -File .\rebuild-and-run.ps1 -NoRun
+Run: .\run.cmd
+See [sync report, validation and existing data limitation](docs/kb/production-sync-2026-11-04.md).
+The earlier README below describes historical snapshots.
+
+# CppDetector: detector 52aa31ea
+
+Updated 2026-11-02: includes additional normal regions, persistent cases, independent X/Y alignment limits,
+and the complete C++ detector from main-app commit 52aa31ea.
+
+Build: powershell -ExecutionPolicy Bypass -File .\rebuild-and-run.ps1 -NoRun
+Run: .\run.cmd (opens the local UI with frames36).
+
+Inspect a frame, then use «Выбрать участок» → drag a rectangle → «Сохранить как норму».
+Repeat inspection to see the adjusted score. View/delete saved normal crops in the camera tab.
+New settings are isolated in config/config_<dataset>_52aa31ea.json; existing profiles stay intact.
+Details, test results and limitations: [learning-port.md](docs/kb/learning-port.md).
+
 ===================================+==++==========                 :.      .:.:      ====================+++=======================**+==
 ===================================+==+++========       ::.. .     ...     ..        -===================+**++=====================+**+=
 ===================================+===+++=======.        ..         .         .:-   :====================+**++++===================***+

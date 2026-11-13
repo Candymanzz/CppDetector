@@ -1,5 +1,6 @@
 #pragma once
 #include "decision_log.h"
+#include "../production/service/service.h"
 #include "../inspect/inspector.h"
 #include "../inspect/seam.h"
 #include <atomic>
@@ -19,7 +20,7 @@ constexpr int kCameras = 10;
 // Owns cameras (reference, ROI, params), the emulated frame stream and the decision log.
 class App {
 public:
-    App(fs::path sourceDir, fs::path configPath, fs::path logDir);
+    App(fs::path sourceDir, fs::path configPath, fs::path logDir, fs::path legacyConfigPath = {});
     ~App();
 
     json state();    // full snapshot for the UI
@@ -31,6 +32,11 @@ public:
     bool setReferenceFromImage(int cam, const cv::Mat& img, std::string& err);
     json inspectFrame(int cam, const std::string& frame, bool defect, std::string& err);
     json inspectUpload(int cam, const cv::Mat& img, const std::string& name, bool defect, std::string& err);
+    json learnRegion(int cam, const json& body, std::string& err);
+    json learnedCases(int cam);
+    bool deleteLearned(int cam, const std::string& id, std::string& err);
+    bool learnedImage(int cam, const std::string& id, std::vector<uchar>& out);
+    bool inspectedJpeg(int cam, uint64_t version, std::vector<uchar>& out);
     json inspectAll(int cam, bool defect, std::string& err);
     bool autoRoi(int cam, const std::string& frame, std::vector<cv::Point>& out, std::string& err);
     std::vector<std::string> testFiles() const;                  // images in <frames>/../test-pr-ph
@@ -47,7 +53,8 @@ private:
         fs::path dir;
         std::vector<std::string> frames;
         std::string refName;          // frame folder name or "upload"
-        cv::Mat ref;
+        cv::Mat ref, inspected;
+        std::string product;
         std::vector<cv::Point> roi;
         InspectParams p;
         SeamParams seam;              // zone 1: label seam, a thin bright line (KB D18)
@@ -81,7 +88,9 @@ private:
     void tick();
     void loop();
 
-    fs::path source_, cfgPath_;
+    fs::path source_, cfgPath_, legacyCfgPath_;
+    bool importedLegacy_ = false;
+    cas::Service learning_;
     DecisionLog log_;
     std::unique_ptr<Cam> cams_[kCameras];
     std::mutex saveM_;

@@ -13,7 +13,7 @@ void check(const cv::Mat& image, int& checks) {
     cas::NormPolygon normalized;
     for (const auto& p : roi) normalized.emplace_back(double(p.x)/(image.cols-1),double(p.y)/(image.rows-1));
     cas::Reference reference(image.clone()); reference.setRoi(normalized);
-    cd::InspectParams p; p.cameraId=4; p.rejectThreshold=60;
+    cd::InspectParams p; p.applyNativeSettings(cas::Settings{}.withMetricDefaults(4)); p.rejectThreshold=60;
     cd::Inspector adapter; adapter.setReference(image,roi,p);
     for (double scale : {1., .5, .37}) for (double sensitivity : {0., .5, .8, 1.})
     for (cv::Point shift : {cv::Point(0,0),cv::Point(3,-4),cv::Point(-5,3),cv::Point(30,0)}) {
@@ -24,17 +24,17 @@ void check(const cv::Mat& image, int& checks) {
         for (bool defect : {false,true}) {
             cv::Mat frame=current.clone();
             if (defect) cv::rectangle(frame,{image.cols/2,image.rows/2,18,16},{0,0,0},cv::FILLED);
-            auto s=cas::Settings{}.withMetricDefaults(p.cameraId);
+            auto s=cas::Settings{}.withMetricDefaults(4);
             s.sensitivity=sensitivity; s.threshold=.6; s.inspectScale=scale;
             s.horizontalShiftMm=p.horizontalShiftMm; s.verticalShiftMm=p.verticalShiftMm;
-            s.shiftToleranceX=s.shiftToleranceY=p.shiftTolerance; s.minBlobArea=p.minBlobArea;
+            s.shiftToleranceX=p.shiftToleranceX; s.shiftToleranceY=p.shiftToleranceY; s.minBlobArea=p.minBlobArea;
             const auto expected=cas::inspectFrame(reference,frame,s,true);
             const auto actual=adapter.inspect(frame,p);
             require(std::abs(actual.score-100*expected.anomalyScore)<1e-10,"score differs from production");
             require(actual.reason==expected.reason && actual.reject==expected.reject,"verdict differs from production");
-            require(cv::norm(actual.shift-expected.rawShift)<1e-8,"position differs from production");
+            require(cv::norm(actual.native.rawShift-expected.rawShift)<1e-8,"position differs from production");
             require(actual.zones==expected.zones,"zones differ from production");
-            require(actual.heatmap.size()==expected.workSize,"heatmap coordinates mismatch");
+            require(actual.native.workSize==expected.workSize,"heatmap coordinates mismatch");
             if (!defect && shift==cv::Point(0,0) && sensitivity!=1.)
                 require(actual.score==0 && cv::norm(actual.shift)<1e-4,"self comparison is not zero");
             ++checks;

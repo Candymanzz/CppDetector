@@ -1,4 +1,87 @@
+# 2026-11-06 — User-drawn inspection exclusion zones
+
+Context: the operator needs to stop inspecting selected regions in the standalone
+test bed. Decision: separate per-camera polygon holes, persisted in the current
+profile, applied before scoring/normalisation, also skipping seam sections.
+Why: overlay-only filtering leaves rejection active, and bounding-box suppression
+can also hide defects outside the drawn shape. Keeping ROI separate preserves its
+existing editor. The imported native core now has an explicit local extension;
+no-exclusion behavior is checked against existing parity fixtures.
+Checks: staged Release, 13/13 CTest; 800 frames/8621 parity checks; new HTTP/UI
+exclusion tests plus old learning checks. Interactive browser/hardware unverified.
+[Full behavior, tradeoffs, provenance and checks](exclusion-zones-2026-11-06.md).
+
+# 2026-11-04 — Correct learned support after alignment
+
+Actual saved camera-1 crop still rejected its own source frame: 70.729% vs threshold
+60%, despite .999809 matching confidence. The source-position mask was translated
+across a different primary-image edge after global alignment. Compute pattern support
+at the matched reference position and defer the empty-difference guard accordingly;
+retain source residual for shadows. Do not relax thresholds or ignore the whole bbox.
+Verified actual frame score zero and new-defect rejection at scales 1/.73/.5, old-code
+regression failure, main 8/8 and standalone 12/12 CTest plus HTTP. Existing data work.
+[Details, limits and source lineage](learned-placement-fix-2026-11-04.md).
+
+# 2026-11-04 — Automatic learned-region selection
+
+Context: owner requested the main application's automatic region instead of manual dragging.
+Decision: use the same raw-heatmap bounding/padding rule, computed alongside the local
+inspection; save via version-only API and display the automatic rectangle with one click.
+Why: the local UI only has a JPEG overlay; deriving bounds from its colors would be lossy.
+Using stored raw heatmap bounds also keeps crop/version selection atomic. Empty maps
+cannot silently train the entire image. Existing bbox API and learned data remain compatible.
+Checks: Release, 11/11 CTest, automatic/existing HTTP, JS syntax and mock-DOM action,
+visibility, invalid/stale input and camera-switch behavior. No manual browser verification.
+[Details](automatic-learning-2026-11-04.md).
+
+# 2026-11-04 — Sync all applicable production detector changes
+
+Context: the main app advanced from 52aa31ea to boobs+pasha/20909141 while this test bed
+still used the earlier snapshot and a local matcher hook.
+Decision: import native core/service unchanged; adapt local settings/UI/diagnostics,
+forward to native learning, keep all current dataset profile and learning paths.
+Why: direct native calls and immutable provenance support parity; a second matcher
+or renamed data namespace would diverge or discard existing operator work. Runtime
+camera/Java/PLC changes do not belong to this file-based standalone app.
+Validation: Release, ten native/local test targets, 800-frame parity (8621 checks),
+HTTP learning, isolated migration against the previous executable, JS/mock-DOM checks.
+Limits: no physical cycle/browser verification. Nine saved reference names already
+refer to absent frames; identical fallback behavior is confirmed against the old app.
+[Detailed report and tradeoffs](production-sync-2026-11-04.md).
+
+## D22 - Moving normal shadows in the test environment (2026-11-02)
+
+Problem: a learned shadow can move independently of print and outside the original saved rectangle.
+Decision: add a local optional comparison hook; preserve native matching behind a switch. Search context is
+separate from the changed-pixel application mask. Match a bounded smooth illumination residual independently
+of printed texture; expose per-case diagnostics and camera-level search/shadow settings.
+Why: merely increasing camera X/Y tolerance weakens all surface comparisons and does not explain failures.
+Tradeoffs: bounded illumination adaptation can also accept a visually identical real defect; initial limits need
+actual-frame tuning. Large/many cases cost CPU. Full-frame smoothing was replaced with local context smoothing.
+Validation: six CTest targets, HTTP persistence/mode/diagnostic tests, mock-DOM drag/save/diagnostic test pass.
+Synthetic 10-camera batch mean 82.34ms robust vs 78.83ms native; shadow false rejects 0/200 vs 200/200.
+Real failing examples, physical timing and browser interaction unverified. See [local-learning-v2.md](local-learning-v2.md).
+
+## D21 - Port complete detector 52aa31ea with region learning (2026-11-02)
+
+Context: owner requested newer main-app functionality in the standalone harness.
+Decision: vendor the complete pinned core and Service; adapt the existing UI/App and isolate new profiles.
+Why: cherry-picking only learning against the old core would diverge from its sensitivity/filter/alignment prerequisites.
+Reuse native persistence/comparison instead of reimplementing learning; Windows metadata replacement uses MoveFileExW.
+Tradeoff: new profiles reset surface tuning, preserve reference/ROI/seam and leave old profiles available.
+Validation: Release build, five CTest targets and isolated HTTP save/retry/restart/delete tests pass;
+JavaScript syntax checked. Browser interaction, full-cycle timing and production hardware remain unverified.
+Details and real-frame parity: [learning-port.md](learning-port.md).
+
 # Decisions
+
+## D20 - Local production-core mirror (2026-10-26)
+Context: user needs to test the same inspection/settings as position-x-y in this local UI before deploying.
+Decision: vendor the unchanged 885a79ed native core; use a thin unit/UI adapter, identical native seam and no edge verdict.
+Native defaults/units/score replace the old local amplified score and working-pixel semantics. Preserve the existing UI.
+Keep old configs/references intact; import scene geometry into a separate _position-x-y profile, with fresh native defaults.
+Why: local outcomes must predict the source detector given the same images, ROI, settings and OpenCV build.
+Consequences: no production repo/deployment change; native parity tests and provenance are required for updates.
 
 ## D1 - Build stack (2026-10-20)
 Context: no C++ OpenCV on machine; Python OpenCV unusable; MSVC Build Tools 2022 present.
@@ -116,3 +199,12 @@ position diagnostics no longer vary with downscale, and the source's >= threshol
 forced surface endpoints apply. No learned-sample/exclusion UI or label segmentation
 is introduced. Release build, 5 CTest tests, 288 parity cases and settings restart
 passed. Runtime not deployed. Details: [port report](production-inspection-port.md).
+
+## D21 ? Resolve independently imported production cores (2026-11-13)
+
+Merge ed170af / bf74c6b retained the newer eefefce4 core and incoming standalone
+learning/exclusion harness. One canonical core avoids duplicate cas symbols and
+keeps recent positioning/30mm fixes. Exclusions use the new Settings API; tests
+retain their intent while adopting the native cache API and current limits.
+Release build, 18 CTest targets, HTTP learning/exclusions and mock UI checks passed.
+Both sides of the knowledge history are retained. [Report](merge-core-2026-11-13.md).

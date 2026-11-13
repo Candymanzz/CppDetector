@@ -1,50 +1,64 @@
 #pragma once
-#include <opencv2/core.hpp>
-#include <string>
+#include "../production/core/inspector.h"
+#include "seam.h"
+#include "learning_matcher.h"
 #include <memory>
-namespace cas { class Reference; }
+#include <string>
 #include <vector>
 
 namespace cd {
+inline constexpr const char* kInspectionEngine = "cpp-detector-eefefce4";
+inline constexpr const char* kEngineSourceCommit = "eefefce455ea93a2184c8d4e9178a0f1eb45847a";
 
-// The production engine calculates a sensitivity-dependent 0..1 score.
-// This adapter displays that score in the test application's existing 0..100 units.
+// The local UI uses percentages for threshold/score. Everything else is native production units.
+struct InspectParams : cas::Settings {
+    double rejectThreshold = 60.0; // native threshold * 100
+    double downscale = 1.0;        // native inspect_scale
+    LearningOptions learning;
+    std::vector<std::vector<cv::Point>> exclusions; // camera/reference pixel coordinates
 
-struct InspectParams {
-    double sensitivity = 0.5;       // production 0..1; endpoints force accept/reject
-    double rejectThreshold = 10.0;  // 0..100; production uses score >= threshold
-    int shiftTolerance = 3;         // px, micro-shift tolerance
-    double downscale = 1.0;         // 1.0 = original
-    int minBlobArea = 20;           // original-frame pixels
-    double horizontalShiftMm = 3.0, verticalShiftMm = 3.96;
-    int cameraId = -1;             // selects the production provisional mm scale
+    cas::Settings nativeSettings() const {
+        cas::Settings s = *this;
+        s.threshold = rejectThreshold / 100.0;
+        s.inspectScale = downscale;
+        s.learningRobustEnabled = learning.robust;
+        s.learningShadowEnabled = learning.shadows;
+        s.learningSearchRadius = learning.searchRadius;
+        return s;
+    }
+    void applyNativeSettings(const cas::Settings& s) {
+        static_cast<cas::Settings&>(*this) = s;
+        rejectThreshold = s.threshold * 100.0;
+        downscale = s.inspectScale;
+        learning = {s.learningRobustEnabled, s.learningShadowEnabled, s.learningSearchRadius};
+    }
 };
 
 struct InspectResult {
-    double score = 0.0;             // 100 * production anomalyScore
+    double score = 0.0;             // native anomaly_score * 100, NOT anomalous area percent
     bool reject = false;
-    std::string reason;             // "", "score_over_threshold", "shift_exceeded", "no_reference"
-    cv::Point2d shift;              // raw translation, original-frame pixels
-    cv::Point2d appliedShift, shiftMm;
-    double shiftResponse = 0;
-    bool shiftRefined = false;
-    std::vector<cv::Rect> zones;    // bboxes of anomaly zones (original coords)
-    cv::Mat heatmap;                // CV_8U diff map (working resolution)
-    int diffThreshold = 0;          // diff level treated as anomalous (sensitivity mapped)
-    double ms = 0.0;
+    std::string reason;
+    cv::Point2d shift, shiftLimit;   // original-frame px
+    cv::Size envelopeKernel{1, 1};
+    std::vector<cv::Rect> zones;    // original-frame coordinates
+    cv::Mat heatmap;                // native buildHeatmap energy (0..255), <= 512 px wide
+    int diffThreshold = 0;
+    double ms = 0.0, heatmapMs = 0.0;
+    nlohmann::json learningDiagnostics = nlohmann::json::array();
+    double learningMs = 0;
+    cas::InspectOutcome native;     // unchanged native calculations, also used by parity tests
+    cas::Settings settings;
+    std::vector<std::vector<cv::Point>> exclusions;
+    SeamResult seam;               // native two-endpoint seam result adapted only for the local UI
 };
 
 class Inspector {
 public:
-    // roi: polygon in original-image coordinates; empty = whole frame
     void setReference(const cv::Mat& bgr, const std::vector<cv::Point>& roi, const InspectParams& p);
-    InspectResult inspect(const cv::Mat& bgr, const InspectParams& p) const;
-    bool hasReference() const { return bool(reference_); }
-
+    InspectResult inspect(const cv::Mat& bgr, const InspectParams& p, const SeamParams* seam = nullptr) const;
+    void setLearned(std::vector<cas::LearnedRegion> regions) { if (reference_) reference_->setLearned(std::move(regions)); }
+    bool hasReference() const { return reference_ && !reference_->bgr().empty(); }
 private:
     std::shared_ptr<cas::Reference> reference_;
-    cv::Size refSize_;
-
 };
-
-} // namespace cd
+}

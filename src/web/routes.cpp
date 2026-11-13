@@ -44,6 +44,32 @@ bool uploadedImage(const httplib::Request& req, cv::Mat& img, std::string& name)
 } // namespace
 
 void registerRoutes(httplib::Server& svr, App& app) {
+    svr.Get("/api/learning", [&](const httplib::Request& req, httplib::Response& res) {
+        sendJson(res, {{"cases", app.learnedCases(intParam(req,"cam"))}});
+    });
+    svr.Post("/api/learning", [&](const httplib::Request& req, httplib::Response& res) {
+        const auto body=json::parse(req.body,nullptr,false); std::string err;
+        auto result=app.learnRegion(intParam(req,"cam"),body,err);
+        if(!err.empty()) return sendError(res,err);
+        sendJson(res,result);
+    });
+    svr.Delete("/api/learning", [&](const httplib::Request& req, httplib::Response& res) {
+        std::string err;
+        if(!app.deleteLearned(intParam(req,"cam"),req.get_param_value("id"),err)) return sendError(res,err);
+        sendJson(res, {{"deleted",true}});
+    });
+    svr.Get("/api/learning/image", [&](const httplib::Request& req, httplib::Response& res) {
+        std::vector<uchar> out;
+        if(!app.learnedImage(intParam(req,"cam"),req.get_param_value("id"),out)) return sendError(res,"case not found",404);
+        sendJpeg(res,out);
+    });
+    svr.Get("/api/inspected", [&](const httplib::Request& req, httplib::Response& res) {
+        std::vector<uchar> out;
+        uint64_t version=0;
+        try { version=std::stoull(req.get_param_value("version")); } catch(...) {}
+        if(!app.inspectedJpeg(intParam(req,"cam"),version,out)) return sendError(res,"inspection changed",409);
+        sendJpeg(res,out);
+    });
     svr.Get("/api/state", [&](const httplib::Request&, httplib::Response& res) { sendJson(res, app.state()); });
     svr.Get("/api/status", [&](const httplib::Request&, httplib::Response& res) { sendJson(res, app.status()); });
 
