@@ -16,3 +16,5 @@
 - 2026-10-21: rebuild-and-run.{ps1,cmd} / run.{ps1,cmd} + scripts/common.ps1 (copied from cppAnalisSurface): auto-install VS Build Tools, CMake, git, vcpkg, libraries; run opens the UI on frames36.
 - 2026-10-22: seam check generalised to a polyline (D19): control points + Catmull-Rom axis, modes ridge (seam) / step (label edge), polarity, local reference fit, skip segments, max_gap; "Взять из точек ROI" in the UI; legacy p0/p1 configs still load.
 - 2026-10-22: geometry check split into two independent zones per camera, "Стык" (seam) and "Кромка" (edge); old step-mode seam config migrates to edge; per-zone deviation graph in the overlay and per-zone debug sets in logs/seam.
+
+- 2026-11-13: imported production inspection/positioning from defect-detector-v3/boobs+pasha eefefce4 via an adapter; added 0..30 mm controls, production sensitivity and original-pixel diagnostics. Release build, 5 tests and 288 parity cases passed. See [report](production-inspection-port.md).

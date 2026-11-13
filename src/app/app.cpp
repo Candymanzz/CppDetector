@@ -21,7 +21,8 @@ static int64_t nowMs() {
 
 static json paramsToJson(const InspectParams& p) {
     return {{"sensitivity", p.sensitivity}, {"reject_threshold", p.rejectThreshold},
-            {"shift_tolerance", p.shiftTolerance}, {"downscale", p.downscale}, {"min_blob_area", p.minBlobArea}};
+            {"shift_tolerance", p.shiftTolerance}, {"downscale", p.downscale}, {"min_blob_area", p.minBlobArea},
+            {"horizontal_shift_tolerance_mm", p.horizontalShiftMm}, {"vertical_shift_tolerance_mm", p.verticalShiftMm}};
 }
 
 static json roiToJson(const std::vector<cv::Point>& roi) {
@@ -38,9 +39,11 @@ static bool applyParams(const json& b, InspectParams& p, std::string& err) {
         dst = static_cast<std::remove_reference_t<decltype(dst)>>(b[k].get<double>());
         return true;
     };
-    return num("sensitivity", 0, 2, p.sensitivity) && num("reject_threshold", 0, 100, p.rejectThreshold) &&
+    return num("sensitivity", 0, 1, p.sensitivity) && num("reject_threshold", 0, 100, p.rejectThreshold) &&
            num("shift_tolerance", 0, 30, p.shiftTolerance) && num("downscale", 0.1, 1, p.downscale) &&
-           num("min_blob_area", 1, 100000, p.minBlobArea);
+           num("min_blob_area", 1, 100000, p.minBlobArea) &&
+           num("horizontal_shift_tolerance_mm", 0, 30, p.horizontalShiftMm) &&
+           num("vertical_shift_tolerance_mm", 0, 30, p.verticalShiftMm);
 }
 
 static bool parseRoi(const json& a, std::vector<cv::Point>& out, std::string& err) {
@@ -132,6 +135,7 @@ App::App(fs::path sourceDir, fs::path configPath, fs::path logDir)
             c->refName = c->frames[0];
             c->ref = cv::imread((c->dir / c->refName / "frame.jpg").string());
         }
+        c->p.cameraId = i;
         cams_[i] = std::move(c);
     }
     load();
@@ -158,8 +162,10 @@ void App::load() {
     if (j.contains("defect") && j["defect"].is_boolean()) defect_ = j["defect"].get<bool>();
     if (!j.contains("cameras") || !j["cameras"].is_array()) return;
     for (int i = 0; i < kCameras && i < (int)j["cameras"].size(); ++i) {
-        const json& cj = j["cameras"][i];
+        json cj = j["cameras"][i];
         Cam& c = *cams_[i];
+        if (cj.contains("sensitivity") && cj["sensitivity"].is_number())
+            cj["sensitivity"] = std::clamp(cj["sensitivity"].get<double>(), 0.0, 1.0);
         applyParams(cj, c.p, err);
         if (cj.contains("roi")) parseRoi(cj["roi"], c.roi, err);
         if (cj.contains("seam")) applySeam(cj["seam"], cv::Size(), c.seam, err);
@@ -519,6 +525,10 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
     j["threshold"] = c.p.rejectThreshold;
     j["sensitivity"] = c.p.sensitivity;
     j["shift"] = {std::round(r.shift.x * 100) / 100, std::round(r.shift.y * 100) / 100};
+    j["shift_mm"] = {r.shiftMm.x, r.shiftMm.y};
+    j["applied_shift"] = {r.appliedShift.x, r.appliedShift.y};
+    j["shift_response"] = r.shiftResponse;
+    j["shift_refined"] = r.shiftRefined;
     j["zones"] = json::array();
     for (auto& z : r.zones) j["zones"].push_back({z.x, z.y, z.width, z.height});
     j["ms"] = std::round((r.ms + sr.ms + er.ms) * 100) / 100;

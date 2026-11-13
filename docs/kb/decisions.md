@@ -102,3 +102,17 @@ Decision: `SeamParams.pts` = control points (>=2), a Catmull-Rom spline is the s
 Evidence (frames36 camera 4, label top edge, 13 ROI vertices, polarity -1 = white outline -> blue, band 10, min_contrast 10): clean frames edge noise 0.4-0.6 px rms; f_0000010 has a tooth defect at t=0.617 -> deviation 4.8 px (ratio 3.2 at tol 1.5). 80 frames: f_0000010 is the only reject with tol_mid=tol_edge=1.5, max_gap=0.25, skip=[1] (the printed stripe at x~385). Without polarity the outline's outer edge (foam -> white) gives deviations up to 5 px along the foam: use polarity.
 Limits: one tolerance for the whole line; no per-segment tolerances (skip is the only per-segment switch).
 Update (2026-10-22): two independent zones per camera: `seam` (ridge, label seam) and `edge` (step, label edge), each with its own points, tolerances, skip list and verdict (`seam_deviation` / `edge_deviation`); response has `seam` and `edge` blocks, the overlay stacks one deviation graph per zone, logs/seam gets one file set per zone. The mode is fixed by the zone (the API ignores `mode`). An older config that has a step-mode `seam` is migrated to `edge` on load. UI cards are generated from one template (`LINES` in app.js).
+
+
+## D20 ? Import production inspection and positioning into CppDetector (2026-11-13)
+Context: the user explicitly requested transferring inspection and positioning from
+Candymanzz/defect-detector-v3, boobs+pasha, into this test project.
+Decision: pin eefefce4, copy the required core unchanged and wrap it with the existing
+Inspector API. This avoids diverging algorithm implementations while retaining the
+local test UI and seam/edge tools. Map score units, normalize ROI coordinates and
+expose independent mm limits; use the production 0..1 sensitivity range.
+Consequences: legacy sensitivity >1 loads as 1, min-blob units become original pixels,
+position diagnostics no longer vary with downscale, and the source's >= threshold and
+forced surface endpoints apply. No learned-sample/exclusion UI or label segmentation
+is introduced. Release build, 5 CTest tests, 288 parity cases and settings restart
+passed. Runtime not deployed. Details: [port report](production-inspection-port.md).

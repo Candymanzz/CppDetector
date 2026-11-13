@@ -84,11 +84,15 @@
         <div class="card">
           <h2>Параметры</h2>
           <div class="param"><label>Чувствительность <b id="v_sensitivity"></b></label>
-            <input type="range" id="sensitivity" min="0" max="2" step="0.01"></div>
+            <input type="range" id="sensitivity" min="0" max="1" step="0.01"></div>
           <div class="param"><label>Порог брака, % <b id="v_reject_threshold"></b></label>
             <input type="range" id="reject_threshold" min="0" max="100" step="0.5"></div>
-          <div class="param"><label>Допуск на сдвиг, px <b id="v_shift_tolerance"></b></label>
+          <div class="param"><label>Ослабление сравнения, px <b id="v_shift_tolerance"></b></label>
             <input type="range" id="shift_tolerance" min="0" max="15" step="1"></div>
+          <div class="param"><label>Допуск проворота, мм <b id="v_horizontal_shift_tolerance_mm"></b></label>
+            <input type="range" id="horizontal_shift_tolerance_mm" min="0" max="30" step="0.05"></div>
+          <div class="param"><label>Допуск вертикального смещения, мм <b id="v_vertical_shift_tolerance_mm"></b></label>
+            <input type="range" id="vertical_shift_tolerance_mm" min="0" max="30" step="0.05"></div>
           <div class="param"><label>Downscale <b id="v_downscale"></b></label>
             <input type="range" id="downscale" min="0.2" max="1" step="0.05"></div>
           <div class="param"><label>Мин. площадь пятна, px <b id="v_min_blob_area"></b></label>

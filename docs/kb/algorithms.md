@@ -1,5 +1,11 @@
 # Algorithms
 
+As of 2026-11-13 the active surface inspector is the imported production core,
+wrapped by `src/inspect/inspector.cpp`. See [source, mapping and validation](production-inspection-port.md).
+It uses native phase256/ECC512 positioning, compensation before blur, independent
+mm limits and the production sensitivity-dependent score. The following original
+pipeline notes describe the earlier test-bed implementation.
+
 Planned pipeline per frame (see PLAN.md section 4): downscale -> phaseCorrelate shift -> brightness normalization in ROI
 -> absdiff (+blur) with shift tolerance -> sensitivity -> threshold -> morphology/min blob -> score = anomalous px / ROI px (%)
 -> verdict score > reject_threshold -> heatmap + contours.

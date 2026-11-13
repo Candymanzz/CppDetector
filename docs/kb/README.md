@@ -18,3 +18,5 @@ Rules:
 - Never use Python, legacy services or the old result.json/heatmap.u8 files as input or reference for CppDetector itself (user's explicit wish: build from scratch). The exception is the integration work, where the Python analisSurface API is the contract to reproduce (see integration-in-main-application.md).
 - A decision without a recorded reason is not a decision: always add "why".
 - Every integration action is logged in integration-in-main-application.md (section Change log).
+
+Current surface algorithm (2026-11-13): [production inspection port](production-inspection-port.md).

@@ -86,7 +86,7 @@ function reasonText(r) {
     case "score_over_threshold":
       return `Score ${fmt(r.score, 3)}% выше порога ${fmt(r.threshold, 2)}% — найдено зон: ${(r.zones || []).length}.`;
     case "shift_exceeded":
-      return `Кадр сдвинут относительно эталона на (${fmt(r.shift && r.shift[0])}, ${fmt(r.shift && r.shift[1])}) px — больше допустимого. Увеличь допуск на сдвиг или проверь камеру.`;
+      return `Кадр сдвинут относительно эталона на (${fmt(r.shift && r.shift[0])}, ${fmt(r.shift && r.shift[1])}) px — превышен допуск проворота или вертикального смещения.`;
     case "seam_deviation":
       return lineText("Стык", r.seam);
     case "edge_deviation":
@@ -94,7 +94,7 @@ function reasonText(r) {
     case "size_mismatch":
       return "Размер кадра не совпадает с размером эталона этой камеры — сравнение невозможно.";
     case "no_reference":
-      return "Для камеры нет эталона (или downscale изменился после выбора эталона).";
+      return "Для камеры нет эталона.";
     default:
       return r.reject ? r.reason : "";
   }
@@ -215,7 +215,7 @@ function fillSelect(sel, frames, selected) {
 }
 
 const PARAMS = [
-  ["sensitivity", 2], ["reject_threshold", 2], ["shift_tolerance", 0], ["downscale", 2], ["min_blob_area", 0],
+  ["sensitivity", 2], ["reject_threshold", 2], ["shift_tolerance", 0], ["downscale", 2], ["min_blob_area", 0], ["horizontal_shift_tolerance_mm", 2], ["vertical_shift_tolerance_mm", 2],
 ];
 
 function selectCam(i) {
