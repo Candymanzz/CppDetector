@@ -1,3 +1,10 @@
+# UI inspection state — 2026-11-16
+
+The camera toolbar owns UI-only per-camera batch snapshots and one pending
+toolbar-request guard. Buttons and shortcuts share handlers; late replies retain
+their original camera identity. The existing backend API is unchanged.
+[Interaction and verification](inspection-header-2026-11-16.md).
+
 # Core/cache integration — 2026-11-16
 
 Both geometry paths call the single eefefce4-based src/production/core inspector.

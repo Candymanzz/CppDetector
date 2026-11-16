@@ -73,6 +73,19 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 3px; }
 .bar > div { height: 100%; width: 0; background: var(--ok); transition: width .2s; }
 .bar > div.over { background: var(--bad); }
+.inspection-header {
+  flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center;
+  gap: 8px 20px; border-top: 1px solid var(--line); padding-top: 10px;
+}
+.inspection-header[hidden] { display: none; }
+.inspection-info { display: flex; flex: 1 1 280px; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-width: 0; }
+.inspection-summary { font-size: 13px; font-variant-numeric: tabular-nums; }
+.inspection-summary.bad { color: var(--bad); }
+.inspection-summary.ok { color: var(--ok); }
+.inspection-summary.warn { color: var(--warn); }
+.inspection-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.inspection-actions button { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 10px; }
+kbd { font: 11px ui-monospace, Consolas, monospace; opacity: .8; white-space: nowrap; }
 
 main { padding: 16px; max-width: 1500px; margin: 0 auto; }
 .tab { display: none; }
@@ -104,7 +117,6 @@ main { padding: 16px; max-width: 1500px; margin: 0 auto; }
 .view-modes { display: flex; gap: 4px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
 .view-modes button.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .view-modes .muted { margin-left: 8px; }
-.view-modes .run-one { margin-left: auto; }
 .canvas-wrap { background: var(--canvas-bg); border-radius: 8px; overflow: hidden; line-height: 0; }
 canvas { width: 100%; height: auto; display: block; cursor: crosshair; touch-action: none; }
 .roi-tools { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
@@ -156,4 +168,6 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 600px) {
   main { padding: 12px 16px; }
   .topbar { padding: 10px 16px; }
+  .inspection-actions { width: 100%; }
+  .inspection-actions button { flex: 1 1 100%; }
 }

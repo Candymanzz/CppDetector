@@ -1,3 +1,9 @@
+# Camera inspection toolbar — 2026-11-16
+
+The sticky camera header shows the last whole-camera defective-frame count and
+separate incomplete/error counts. It contains both inspection buttons and
+Ctrl+Enter / Ctrl+Shift+Enter shortcuts. [Behavior and checks](inspection-header-2026-11-16.md).
+
 # Current combined source — 2026-11-16
 
 main now follows origin/main b0535b0. Its eefefce4/ECC512 core and confirmed-label

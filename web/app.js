@@ -21,6 +21,9 @@ const S = {
   cams: [],            // static info per camera (frames, params, roi, ...)
   status: null,
   cam: 0,
+  tab: "grid",
+  cameraBatches: [],
+  inspectionPending: null,
   mode: "ref",         // ref | frame | result
   exclusions: [], exclusionDraft: null, exclusionsSaving: false,
   roi: [],             // working copy of the ROI of the current camera
@@ -118,6 +121,8 @@ document.querySelectorAll("#tabs button").forEach((b) =>
 );
 
 function showTab(name) {
+  S.tab = name;
+  $("inspectionHeader").hidden = name !== "cam";
   document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.id === "tab-" + name));
   if (name === "log") refreshLog();
@@ -257,7 +262,8 @@ function selectCam(i) {
     fillLineUi(key);
   });
   $("result").replaceChildren();
-  $("allResults").replaceChildren();
+  renderCameraBatch();
+  updateInspectionHeader();
   setMode("ref");
   reloadRefImage();
   refreshLearned();
@@ -286,8 +292,9 @@ function loadFrameImage() {
 }
 
 function loadResultImage(ver) {
+  const camera = S.cam;
   const img = new Image();
-  img.onload = () => { S.img.result = img; if (S.mode === "result") draw(); };
+  img.onload = () => { if (S.cam !== camera) return; S.img.result = img; if (S.mode === "result") draw(); };
   img.src = `/api/overlay?cam=${S.cam}&v=${ver || Date.now()}`;
 }
 
@@ -300,7 +307,7 @@ function setMode(m) {
   draw();
 }
 document.querySelectorAll("#viewModes button").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
-$("testSelect").addEventListener("change", () => { if (S.mode === "frame") loadFrameImage(); });
+$("testSelect").addEventListener("change", () => { if (S.mode === "frame") loadFrameImage(); updateInspectionHeader(); });
 
 /* ----- canvas + ROI editor ----- */
 
@@ -859,6 +866,69 @@ async function reloadState() {
 
 /* ----- testing ----- */
 
+function updateInspectionHeader() {
+  const pending = S.inspectionPending;
+  const camera = cur();
+  $("inspectionCamera").textContent = "Камера " + S.cam;
+  $("runOne").disabled = !!pending || !camera?.frames?.length || !$("testSelect").value;
+  $("runAll").disabled = !!pending || !camera?.frames?.some(frame => frame !== camera.reference);
+  ["runTestFile", "runAllTestFiles", "testFile"].forEach(id => { $(id).disabled = !!pending; });
+  const summary = $("inspectionSummary");
+  summary.className = "inspection-summary muted";
+  if (pending) {
+    summary.textContent = `Камера ${pending.cam}: ${pending.all ? "проверяем все кадры…" : "проверяем кадр…"}`;
+    return;
+  }
+  const batch = S.cameraBatches[S.cam];
+  if (!batch) { summary.textContent = "Все кадры ещё не проверялись"; return; }
+  if (batch.error) {
+    summary.textContent = "Проверка всех кадров не завершена";
+    summary.className = "inspection-summary warn";
+    return;
+  }
+  const rows = batch.rows;
+  if (!rows.length) { summary.textContent = "Нет кадров для проверки"; return; }
+  const rejected = rows.filter(r => r.verdict === "REJECT").length;
+  const incomplete = rows.filter(r => r.verdict === "NOT_INSPECTED").length;
+  const errors = rows.filter(r => !["OK", "REJECT", "NOT_INSPECTED"].includes(r.verdict)).length;
+  summary.textContent = `Дефектных кадров: ${rejected} из ${rows.length}` +
+    (incomplete ? ` · Без контроля: ${incomplete}` : "") + (errors ? ` · Ошибок: ${errors}` : "");
+  summary.className = "inspection-summary " + (errors || incomplete ? "warn" : rejected ? "bad" : "ok");
+}
+
+function beginInspection(all) {
+  if (S.inspectionPending || !cur()?.frames?.length || (all ? $("runAll").disabled : $("runOne").disabled)) return null;
+  const pending = { cam: S.cam, all };
+  S.inspectionPending = pending;
+  updateInspectionHeader();
+  return pending;
+}
+
+function finishInspection(pending) {
+  if (S.inspectionPending === pending) S.inspectionPending = null;
+  updateInspectionHeader();
+}
+
+function renderCameraBatch() {
+  const box = $("allResults"), batch = S.cameraBatches[S.cam];
+  box.replaceChildren();
+  if (!batch) return;
+  if (batch.error) { box.append(el("div", "muted small", "Проверка всех кадров не завершена. Повторите запуск.")); return; }
+  const rows = batch.rows, table = el("table"), head = el("tr");
+  ["Кадр", "Score, %", "Вердикт", "мс"].forEach(text => head.append(el("th", "", text)));
+  table.append(head);
+  rows.forEach(r => {
+    const tr = el("tr"), verdict = el("td");
+    verdict.append(verdictBadge(r.verdict));
+    tr.append(el("td", "mono", r.frame), el("td", "num", fmt(r.score, 3)), verdict, el("td", "num", fmt(r.ms, 1)));
+    tr.style.cursor = "pointer";
+    tr.addEventListener("click", () => { $("testSelect").value = r.frame; setMode("frame"); updateInspectionHeader(); });
+    table.append(tr);
+  });
+  const worst = rows.reduce((max, r) => Math.max(max, r.score || 0), 0);
+  box.append(el("div", "muted small", `${rows.length} кадров, максимальный score ${fmt(worst, 3)}%`), table);
+}
+
 function renderResult(r) {
   cancelLearning();
   S.learningResult = r;
@@ -912,12 +982,17 @@ function afterInspect(r) {
   refreshLogIfVisible();
 }
 
-$("runOne").addEventListener("click", async () => {
+async function inspectSelectedFrame() {
+  const pending = beginInspection(false);
+  if (!pending) return;
   try {
-    const q = `cam=${S.cam}&frame=${encodeURIComponent($("testSelect").value)}&defect=${$("testDefect").checked ? 1 : 0}`;
-    afterInspect(await api("/api/inspect?" + q, { method: "POST" }));
+    const q = `cam=${pending.cam}&frame=${encodeURIComponent($("testSelect").value)}&defect=${$("testDefect").checked ? 1 : 0}`;
+    const result = await api("/api/inspect?" + q, { method: "POST" });
+    if (S.cam === pending.cam) afterInspect(result);
   } catch (e) { /* toast shown */ }
-});
+  finally { finishInspection(pending); }
+}
+$("runOne").addEventListener("click", inspectSelectedFrame);
 
 $("testFile").addEventListener("change", async (ev) => {
   const f = ev.target.files[0];
@@ -930,28 +1005,31 @@ $("testFile").addEventListener("change", async (ev) => {
   } catch (e) { /* toast shown */ }
 });
 
-$("runAll").addEventListener("click", async () => {
+async function inspectCameraFrames() {
+  const pending = beginInspection(true);
+  if (!pending) return;
   const box = $("allResults");
   box.replaceChildren(el("div", "muted small", "проверка…"));
   try {
-    const rows = await api(`/api/inspect_all?cam=${S.cam}&defect=${$("testDefect").checked ? 1 : 0}`, { method: "POST" });
-    const t = el("table");
-    const hd = el("tr");
-    ["Кадр", "Score, %", "Вердикт", "мс"].forEach((h) => hd.append(el("th", "", h)));
-    t.append(hd);
-    rows.forEach((r) => {
-      const tr = el("tr");
-      const v = el("td");
-      v.append(verdictBadge(r.verdict));
-      tr.append(el("td", "mono", r.frame), el("td", "num", fmt(r.score, 3)), v, el("td", "num", fmt(r.ms, 1)));
-      tr.style.cursor = "pointer";
-      tr.addEventListener("click", () => { $("testSelect").value = r.frame; setMode("frame"); });
-      t.append(tr);
-    });
-    const worst = rows.reduce((m, r) => Math.max(m, r.score), 0);
-    box.replaceChildren(el("div", "muted small", `${rows.length} кадров, максимальный score ${fmt(worst, 3)}%`), t);
+    const rows = await api(`/api/inspect_all?cam=${pending.cam}&defect=${$("testDefect").checked ? 1 : 0}`, { method: "POST" });
+    if (!Array.isArray(rows)) { toast("Некорректный список результатов проверки", true); throw new Error("invalid inspection results"); }
+    S.cameraBatches[pending.cam] = { rows };
+    if (S.cam === pending.cam) renderCameraBatch();
     refreshLogIfVisible();
-  } catch (e) { box.replaceChildren(); }
+  } catch (e) {
+    S.cameraBatches[pending.cam] = { error: true };
+    if (S.cam === pending.cam) renderCameraBatch();
+  } finally { finishInspection(pending); }
+}
+$("runAll").addEventListener("click", inspectCameraFrames);
+
+window.addEventListener("keydown", event => {
+  if (S.tab !== "cam" || event.defaultPrevented || event.repeat || event.isComposing ||
+      event.altKey || !(event.ctrlKey || event.metaKey) || event.key !== "Enter") return;
+  if (event.target?.isContentEditable || event.target?.closest?.("input, textarea, select, [contenteditable], [role='textbox']")) return;
+  event.preventDefault();
+  if (event.shiftKey) void inspectCameraFrames();
+  else void inspectSelectedFrame();
 });
 
 /* ---------- log ---------- */

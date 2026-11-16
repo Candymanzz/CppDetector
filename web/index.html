@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CppDetector</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=inspection-header-20261116">
 </head>
 <body>
 <header class="topbar">
@@ -21,6 +21,16 @@
     <div class="batch" title="Время обработки пачки из 10 кадров (чтение + инспекция + отрисовка), бюджет 500 мс">
       <div class="batch-text"><span id="batchNum">пачка —</span> <b id="batchMs">— мс</b> <span class="muted">/ 500</span></div>
       <div class="bar"><div id="batchBar"></div></div>
+    </div>
+  </div>
+  <div class="inspection-header" id="inspectionHeader" hidden>
+    <div class="inspection-info">
+      <b id="inspectionCamera">Камера —</b>
+      <span id="inspectionSummary" class="inspection-summary muted" role="status" aria-live="polite" aria-atomic="true" title="Результат последней проверки всех кадров выбранной камеры">Все кадры ещё не проверялись</span>
+    </div>
+    <div class="inspection-actions">
+      <button id="runOne" class="primary" disabled title="Проверить выбранный кадр (Ctrl+Enter; на Mac — Cmd+Enter)" aria-keyshortcuts="Control+Enter Meta+Enter">Проверить кадр <kbd>Ctrl+Enter</kbd></button>
+      <button id="runAll" disabled title="Проверить все кадры камеры (Ctrl+Shift+Enter; на Mac — Cmd+Shift+Enter)" aria-keyshortcuts="Control+Shift+Enter Meta+Shift+Enter">Проверить все кадры камеры <kbd>Ctrl+Shift+Enter</kbd></button>
     </div>
   </div>
 </header>
@@ -43,7 +53,6 @@
           <button data-mode="frame">Выбранный кадр</button>
           <button data-mode="result">Результат</button>
           <span class="muted" id="viewInfo"></span>
-          <button id="runOne" class="primary run-one">Проверить кадр</button>
         </div>
         <div class="canvas-wrap"><canvas id="canvas"></canvas></div>
         <div class="roi-tools">
@@ -66,7 +75,6 @@
           <div class="row">
             <label class="filebtn">Загрузить кадр и проверить<input type="file" id="testFile" accept="image/*" hidden></label>
           </div>
-          <div class="row"><button id="runAll">Проверить все кадры камеры</button></div>
           <div class="row"><select id="testFileSelect" title="Файлы из frame/test-pr-ph"></select><button id="runTestFile">Проверить файл</button></div>
           <div class="row"><button id="runAllTestFiles">Проверить все файлы test-pr-ph</button></div>
           <div id="result" class="result"></div>
@@ -168,7 +176,7 @@
   </section>
 </main>
 <div id="toast" class="toast" role="status"></div>
-<script src="app.js?engine=eefefce4-adaptive-roi-merge-20261116"></script>
+<script src="app.js?engine=eefefce4-inspection-header-20261116"></script>
 <script src="learning.js?engine=eefefce4-adaptive-roi-merge-20261116"></script>
 <script src="exclusions.js?engine=eefefce4-exclusions-v1"></script>
 </body>

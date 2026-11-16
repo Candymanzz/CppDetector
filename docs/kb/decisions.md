@@ -1,3 +1,17 @@
+# 2026-11-16 — Keep inspection actions and batch counts in the camera header
+
+Context: the owner wants the defect count after testing every camera frame and
+quicker inspection actions. Decision: move existing buttons into the sticky header,
+count REJECT frames from the current batch API and expose guarded Ctrl+Enter /
+Ctrl+Shift+Enter actions. Keep NOT_INSPECTED and unknown/missing-reference results
+separate, and retain the last batch per camera. Why: the batch API has no zone
+counts; adding a backend contract solely for a UI summary is unnecessary. Shared
+handlers prevent shortcut/button drift and duplicate toolbar requests. Ignoring
+shortcuts during editing prevents accidental runs. Late replies cannot replace
+another camera's results. Checks: syntax, four mock-DOM suites and headless Chrome
+with real keyboard events at 1440/1024/390px pass. No detector/API/data change.
+[Behavior, verification and remaining limits](inspection-header-2026-11-16.md).
+
 # 2026-11-16 — Record the validated combined changes
 
 Context: after reviewing the uncommitted changes, the owner requested recording

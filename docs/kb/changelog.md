@@ -1,3 +1,11 @@
+# 2026-11-16 — Camera inspection counts and keyboard actions
+
+Moved both camera inspection buttons into the sticky header, added last-run
+defective-frame/incomplete/error counts and Ctrl+Enter / Ctrl+Shift+Enter actions.
+Batch snapshots are per-camera; pending and late-response guards protect results.
+Syntax, four mock-DOM suites and Chrome at three viewport sizes pass.
+[Details and limits](inspection-header-2026-11-16.md).
+
 # 2026-11-16 — Record the combined implementation in Git
 
 At the owner's follow-up request, record the validated adaptive/core integration,
