@@ -8,6 +8,7 @@ json App::learnRegion(int cam, const json& body, std::string& err) {
     Cam& c = *cams_[cam];
     std::lock_guard<std::mutex> lock(c.m);
     try {
+        if(c.p.adaptiveRoi.enabled)throw std::invalid_argument("Disable adaptive ROI before learning normal regions");
         if (!body.is_object() || !body.contains("version") || !body["version"].is_number_unsigned() ||
             body.at("version").get<uint64_t>() != c.ver || c.inspected.empty() || c.last.value("ver", uint64_t(0)) != c.ver)
             throw std::invalid_argument("Inspection changed; inspect the frame again");

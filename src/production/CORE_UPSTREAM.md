@@ -1,3 +1,7 @@
+> 2026-11-16: inspector.h/cpp additionally implement local adaptive geometry;
+> the hashes below identify the imported eefefce4 baseline, not the extended tree.
+> See [current resolution](../../docs/kb/git-pull-2026-11-16.md).
+
 > Baseline manifest: reference.h/cpp and inspector.h/cpp have local label-tracking
 > changes dated 2026-11-13; label_tracking.h is a local addition. Hashes below retain
 > the imported baseline identity. See SOURCE.md for current provenance.

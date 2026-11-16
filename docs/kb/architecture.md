@@ -1,3 +1,18 @@
+# Core/cache integration — 2026-11-16
+
+Both geometry paths call the single eefefce4-based src/production/core inspector.
+Reference::prepared(scale, exclusions) supplies immutable mask variants to feature
+preparation and comparison; InspectionGeometry detaches the per-request valid mask.
+Confirmed-label settings and adaptive settings serialize independently. See [resolution, preservation and checks](git-pull-2026-11-16.md).
+
+# Local adaptive ROI extension — 2026-11-09
+
+The local Inspector optionally uses immutable AdaptiveRoiReference features and
+per-request geometry before native comparison. It rectifies raw current pixels,
+passes a detached comparison mask through InspectionGeometry, and maps displays
+back to current-image coordinates. App owns settings, incomplete verdicts and
+learning guards. [Details](adaptive-roi-2026-11-09.md).
+
 # Inspection exclusions — 2026-11-06
 
 Draw polygon zones in the camera setup to skip inspection inside them. Exclusions

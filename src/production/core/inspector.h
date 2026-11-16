@@ -7,6 +7,14 @@
 
 namespace cas {
 
+// Local test-bed extension; null preserves the imported production inspection path.
+// The per-request mask is in primary-reference coordinates and never changes cached data.
+struct InspectionGeometry {
+    cv::Mat validReference;
+    bool prealigned = false;
+    bool allowLearned = true;
+};
+
 constexpr double kUpperCornerSensitivityMultiplier = 1.1;
 
 struct InspectOutcome {
@@ -63,10 +71,12 @@ struct InspectOutcome {
     cv::Mat kept;                    // CV_8U 0/255, region-sized (accepted anomaly blobs)
     cv::Mat aligned;                 // CV_8U, region-sized
     cv::Mat scoredEnergy;            // CV_8U, region-sized; includes the local visibility threshold
+    cv::Mat comparisonMask;          // local extension: actual adaptive mask, full work resolution
 };
 
 // Throws std::invalid_argument when the frame size differs from the reference size.
-InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Settings& s, bool keepVisuals);
+InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Settings& s, bool keepVisuals,
+                            const InspectionGeometry* geometry = nullptr);
 
 // Gray-u8 heatmap: anomaly energy gated by the accepted blobs + a soft halo, ROI-masked,
 // at most `maxWidth` wide (0 = work resolution).

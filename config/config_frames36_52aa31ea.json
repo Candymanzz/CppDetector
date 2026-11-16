@@ -1,43 +1,46 @@
 {
   "cameras": [
     {
+      "adaptive_roi_enabled": false,
+      "adaptive_roi_max_motion": 96,
+      "adaptive_roi_min_coverage": 0.7,
       "calibration": {
         "horizontal": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         },
         "vertical": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         }
       },
-      "downscale": 1.0,
+      "downscale": 1,
       "edge": {
-        "band": 10.0,
-        "edge_frac": 0.0,
+        "band": 10,
+        "edge_frac": 0,
         "enabled": false,
         "fit_deg": 0,
         "max_gap": 0.25,
-        "min_contrast": 10.0,
+        "min_contrast": 10,
         "mode": "step",
         "polarity": -1,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
+        "smooth_win": 60,
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
@@ -46,115 +49,28 @@
         0.33
       ],
       "exclusions": [],
-      "horizontal_shift_tolerance_mm": 3.0,
-      "label_outline": [],
-      "label_tracking_enabled": true,
+      "horizontal_shift_tolerance_mm": 3,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
-      "max_alignment_shift_x": 12.0,
-      "max_alignment_shift_y": 12.0,
+      "max_alignment_shift_x": 12,
+      "max_alignment_shift_y": 12,
       "metric_reference_size": [
         1224,
         1024
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "upload",
-      "reject_threshold": 60.0,
-      "roi": [
-        [
-          198,
-          665
-        ],
-        [
-          202,
-          202
-        ],
-        [
-          263,
-          139
-        ],
-        [
-          360,
-          98
-        ],
-        [
-          465,
-          71
-        ],
-        [
-          546,
-          67
-        ],
-        [
-          618,
-          66
-        ],
-        [
-          686,
-          75
-        ],
-        [
-          810,
-          112
-        ],
-        [
-          851,
-          164
-        ],
-        [
-          867,
-          229
-        ],
-        [
-          886,
-          374
-        ],
-        [
-          908,
-          494
-        ],
-        [
-          911,
-          592
-        ],
-        [
-          869,
-          648
-        ],
-        [
-          756,
-          683
-        ],
-        [
-          599,
-          697
-        ],
-        [
-          394,
-          694
-        ],
-        [
-          346,
-          710
-        ],
-        [
-          282,
-          716
-        ],
-        [
-          264,
-          693
-        ]
-      ],
+      "reference": "f_0019943",
+      "reject_threshold": 60,
+      "roi": [],
       "seam": {
-        "band": 30.0,
+        "band": 30,
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
-        "max_gap": 1.0,
-        "min_contrast": 8.0,
+        "max_gap": 1,
+        "min_contrast": 8,
         "mode": "ridge",
         "polarity": 0,
         "pts": [
@@ -168,53 +84,58 @@
           ]
         ],
         "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 5.0,
-        "tol_mid": 1.0
+        "smooth_win": 60,
+        "tol_edge": 5,
+        "tol_mid": 1
       },
       "sensitivity": 0.5,
       "shift_tolerance_x": 3,
       "shift_tolerance_y": 3,
-      "vertical_shift_tolerance_mm": 3.96
+      "vertical_shift_tolerance_mm": 3.95,
+      "label_outline": [],
+      "label_tracking_enabled": true
     },
     {
+      "adaptive_roi_enabled": false,
+      "adaptive_roi_max_motion": 96,
+      "adaptive_roi_min_coverage": 0.7,
       "calibration": {
         "horizontal": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         },
         "vertical": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         }
       },
-      "downscale": 1.0,
+      "downscale": 1,
       "edge": {
-        "band": 10.0,
-        "edge_frac": 0.0,
+        "band": 10,
+        "edge_frac": 0,
         "enabled": false,
         "fit_deg": 0,
         "max_gap": 0.25,
-        "min_contrast": 10.0,
+        "min_contrast": 10,
         "mode": "step",
         "polarity": -1,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
+        "smooth_win": 60,
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
@@ -222,212 +143,249 @@
         0.28,
         0.32
       ],
-      "exclusions": [],
-      "horizontal_shift_tolerance_mm": 3.35,
-      "label_outline": [
+      "exclusions": [
         [
-          274,
-          605
-        ],
-        [
-          479,
-          237
-        ],
-        [
-          525,
-          208
-        ],
-        [
-          598,
-          195
-        ],
-        [
-          653,
-          198
-        ],
-        [
-          694,
-          204
-        ],
-        [
-          771,
-          223
-        ],
-        [
-          854,
-          258
-        ],
-        [
-          916,
-          290
-        ],
-        [
-          973,
-          335
-        ],
-        [
-          1014,
-          385
-        ],
-        [
-          1033,
-          422
-        ],
-        [
-          944,
-          829
-        ],
-        [
-          813,
-          779
-        ],
-        [
-          778,
-          798
-        ],
-        [
-          490,
-          692
+          [
+            224,
+            347
+          ],
+          [
+            465,
+            323
+          ],
+          [
+            447,
+            237
+          ],
+          [
+            385,
+            137
+          ],
+          [
+            242,
+            154
+          ],
+          [
+            237,
+            236
+          ]
         ]
       ],
-      "label_tracking_enabled": true,
+      "horizontal_shift_tolerance_mm": 3.35,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
-      "max_alignment_shift_x": 12.0,
-      "max_alignment_shift_y": 12.0,
+      "max_alignment_shift_x": 12,
+      "max_alignment_shift_y": 12,
       "metric_reference_size": [
         1224,
         1024
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 22.5,
+      "reference": "f_0000632",
+      "reject_threshold": 60,
       "roi": [
         [
-          274,
-          605
+          46,
+          152
         ],
         [
-          479,
-          237
+          72,
+          111
         ],
         [
-          525,
-          208
+          130,
+          67
         ],
         [
-          598,
-          195
+          217,
+          32
         ],
         [
-          653,
-          198
+          304,
+          15
         ],
         [
-          694,
-          204
+          403,
+          9
         ],
         [
-          771,
-          223
+          509,
+          21
         ],
         [
-          854,
-          258
+          588,
+          45
         ],
         [
-          916,
-          290
+          638,
+          80
         ],
         [
-          973,
-          335
+          647,
+          93
         ],
         [
-          1014,
-          385
+          729,
+          511
         ],
         [
-          1033,
-          422
+          464,
+          507
         ],
         [
-          944,
-          829
+          136,
+          514
         ],
         [
-          813,
-          779
+          17,
+          518
         ],
         [
-          778,
-          798
+          34,
+          321
         ],
         [
-          490,
-          692
+          242,
+          312
+        ],
+        [
+          248,
+          179
+        ],
+        [
+          257,
+          167
+        ],
+        [
+          249,
+          179
+        ],
+        [
+          317,
+          226
+        ],
+        [
+          341,
+          247
+        ],
+        [
+          341,
+          268
+        ],
+        [
+          354,
+          287
+        ],
+        [
+          395,
+          289
+        ],
+        [
+          413,
+          270
+        ],
+        [
+          401,
+          247
+        ],
+        [
+          376,
+          236
+        ],
+        [
+          353,
+          234
+        ],
+        [
+          589,
+          490
+        ],
+        [
+          267,
+          175
+        ],
+        [
+          256,
+          166
+        ],
+        [
+          248,
+          178
+        ],
+        [
+          242,
+          312
+        ],
+        [
+          35,
+          319
         ]
       ],
       "seam": {
-        "band": 30.0,
+        "band": 30,
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
-        "max_gap": 1.0,
-        "min_contrast": 8.0,
+        "max_gap": 1,
+        "min_contrast": 8,
         "mode": "ridge",
         "polarity": 0,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 5.0,
-        "tol_mid": 1.0
+        "smooth_win": 60,
+        "tol_edge": 5,
+        "tol_mid": 1
       },
-      "sensitivity": 0.82,
+      "sensitivity": 0.7,
       "shift_tolerance_x": 3,
       "shift_tolerance_y": 3,
-      "vertical_shift_tolerance_mm": 3.85
+      "vertical_shift_tolerance_mm": 3.85,
+      "label_outline": [],
+      "label_tracking_enabled": true
     },
     {
+      "adaptive_roi_enabled": false,
+      "adaptive_roi_max_motion": 96,
+      "adaptive_roi_min_coverage": 0.7,
       "calibration": {
         "horizontal": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         },
         "vertical": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         }
       },
-      "downscale": 1.0,
+      "downscale": 1,
       "edge": {
-        "band": 10.0,
-        "edge_frac": 0.0,
+        "band": 10,
+        "edge_frac": 0,
         "enabled": false,
         "fit_deg": 0,
         "max_gap": 0.25,
-        "min_contrast": 10.0,
+        "min_contrast": 10,
         "mode": "step",
         "polarity": -1,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
+        "smooth_win": 60,
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
@@ -437,80 +395,83 @@
       ],
       "exclusions": [],
       "horizontal_shift_tolerance_mm": 3.7199999999999998,
-      "label_outline": [],
-      "label_tracking_enabled": true,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
-      "max_alignment_shift_x": 12.0,
-      "max_alignment_shift_y": 12.0,
+      "max_alignment_shift_x": 12,
+      "max_alignment_shift_y": 12,
       "metric_reference_size": [
         1224,
         1024
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 60.0,
+      "reference": "f_0000525",
+      "reject_threshold": 60,
       "roi": [],
       "seam": {
-        "band": 30.0,
+        "band": 30,
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
-        "max_gap": 1.0,
-        "min_contrast": 8.0,
+        "max_gap": 1,
+        "min_contrast": 8,
         "mode": "ridge",
         "polarity": 0,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 5.0,
-        "tol_mid": 1.0
+        "smooth_win": 60,
+        "tol_edge": 5,
+        "tol_mid": 1
       },
       "sensitivity": 0.5,
       "shift_tolerance_x": 3,
       "shift_tolerance_y": 3,
-      "vertical_shift_tolerance_mm": 3.7199999999999998
+      "vertical_shift_tolerance_mm": 3.7199999999999998,
+      "label_outline": [],
+      "label_tracking_enabled": true
     },
     {
+      "adaptive_roi_enabled": true,
+      "adaptive_roi_max_motion": 125,
+      "adaptive_roi_min_coverage": 0.76,
       "calibration": {
         "horizontal": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         },
         "vertical": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         }
       },
-      "downscale": 1.0,
+      "downscale": 1,
       "edge": {
-        "band": 10.0,
-        "edge_frac": 0.0,
+        "band": 10,
+        "edge_frac": 0,
         "enabled": false,
         "fit_deg": 0,
         "max_gap": 0.25,
-        "min_contrast": 10.0,
+        "min_contrast": 10,
         "mode": "step",
         "polarity": -1,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
+        "smooth_win": 60,
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
@@ -519,22 +480,20 @@
         0.32
       ],
       "exclusions": [],
-      "horizontal_shift_tolerance_mm": 3.0,
-      "label_outline": [],
-      "label_tracking_enabled": true,
+      "horizontal_shift_tolerance_mm": 3,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
-      "max_alignment_shift_x": 12.0,
-      "max_alignment_shift_y": 12.0,
+      "max_alignment_shift_x": 12,
+      "max_alignment_shift_y": 12,
       "metric_reference_size": [
         1224,
         1024
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 8.0,
+      "reference": "f_0000552",
+      "reject_threshold": 8,
       "roi": [
         [
           619,
@@ -595,70 +554,71 @@
         [
           575,
           32
-        ],
-        [
-          597,
-          46
         ]
       ],
       "seam": {
-        "band": 30.0,
+        "band": 30,
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
-        "max_gap": 1.0,
-        "min_contrast": 8.0,
+        "max_gap": 1,
+        "min_contrast": 8,
         "mode": "ridge",
         "polarity": 0,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 5.0,
-        "tol_mid": 1.0
+        "smooth_win": 60,
+        "tol_edge": 5,
+        "tol_mid": 1
       },
       "sensitivity": 0.9,
       "shift_tolerance_x": 3,
       "shift_tolerance_y": 3,
-      "vertical_shift_tolerance_mm": 3.84
+      "vertical_shift_tolerance_mm": 3.85,
+      "label_outline": [],
+      "label_tracking_enabled": true
     },
     {
+      "adaptive_roi_enabled": false,
+      "adaptive_roi_max_motion": 96,
+      "adaptive_roi_min_coverage": 0.7,
       "calibration": {
         "horizontal": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         },
         "vertical": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         }
       },
-      "downscale": 1.0,
+      "downscale": 1,
       "edge": {
-        "band": 10.0,
-        "edge_frac": 0.0,
+        "band": 10,
+        "edge_frac": 0,
         "enabled": false,
         "fit_deg": 0,
         "max_gap": 0.25,
-        "min_contrast": 10.0,
+        "min_contrast": 10,
         "mode": "step",
         "polarity": -1,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
+        "smooth_win": 60,
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
@@ -668,21 +628,19 @@
       ],
       "exclusions": [],
       "horizontal_shift_tolerance_mm": 3.24,
-      "label_outline": [],
-      "label_tracking_enabled": true,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
-      "max_alignment_shift_x": 12.0,
-      "max_alignment_shift_y": 12.0,
+      "max_alignment_shift_x": 12,
+      "max_alignment_shift_y": 12,
       "metric_reference_size": [
         1224,
         1024
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 60.0,
+      "reference": "f_0000525",
+      "reject_threshold": 60,
       "roi": [
         [
           164,
@@ -786,12 +744,12 @@
         ]
       ],
       "seam": {
-        "band": 10.0,
+        "band": 10,
         "edge_frac": 0.12,
         "enabled": true,
         "fit_deg": 0,
-        "max_gap": 1.0,
-        "min_contrast": 8.0,
+        "max_gap": 1,
+        "min_contrast": 8,
         "mode": "ridge",
         "polarity": 0,
         "pts": [
@@ -805,53 +763,58 @@
           ]
         ],
         "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 5.0,
-        "tol_mid": 1.0
+        "smooth_win": 60,
+        "tol_edge": 5,
+        "tol_mid": 1
       },
       "sensitivity": 0.5,
       "shift_tolerance_x": 3,
       "shift_tolerance_y": 3,
-      "vertical_shift_tolerance_mm": 4.08
+      "vertical_shift_tolerance_mm": 4.08,
+      "label_outline": [],
+      "label_tracking_enabled": true
     },
     {
+      "adaptive_roi_enabled": false,
+      "adaptive_roi_max_motion": 96,
+      "adaptive_roi_min_coverage": 0.7,
       "calibration": {
         "horizontal": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         },
         "vertical": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         }
       },
-      "downscale": 1.0,
+      "downscale": 1,
       "edge": {
-        "band": 10.0,
-        "edge_frac": 0.0,
+        "band": 10,
+        "edge_frac": 0,
         "enabled": false,
         "fit_deg": 0,
         "max_gap": 0.25,
-        "min_contrast": 10.0,
+        "min_contrast": 10,
         "mode": "step",
         "polarity": -1,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
+        "smooth_win": 60,
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
@@ -861,21 +824,19 @@
       ],
       "exclusions": [],
       "horizontal_shift_tolerance_mm": 3.24,
-      "label_outline": [],
-      "label_tracking_enabled": true,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
-      "max_alignment_shift_x": 12.0,
-      "max_alignment_shift_y": 12.0,
+      "max_alignment_shift_x": 12,
+      "max_alignment_shift_y": 12,
       "metric_reference_size": [
         1224,
         1024
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 60.0,
+      "reference": "f_0000525",
+      "reject_threshold": 60,
       "roi": [
         [
           247,
@@ -927,63 +888,68 @@
         ]
       ],
       "seam": {
-        "band": 30.0,
+        "band": 30,
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
-        "max_gap": 1.0,
-        "min_contrast": 8.0,
+        "max_gap": 1,
+        "min_contrast": 8,
         "mode": "ridge",
         "polarity": 0,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 5.0,
-        "tol_mid": 1.0
+        "smooth_win": 60,
+        "tol_edge": 5,
+        "tol_mid": 1
       },
       "sensitivity": 0.5,
       "shift_tolerance_x": 3,
       "shift_tolerance_y": 3,
-      "vertical_shift_tolerance_mm": 4.08
+      "vertical_shift_tolerance_mm": 4.08,
+      "label_outline": [],
+      "label_tracking_enabled": true
     },
     {
+      "adaptive_roi_enabled": false,
+      "adaptive_roi_max_motion": 96,
+      "adaptive_roi_min_coverage": 0.7,
       "calibration": {
         "horizontal": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         },
         "vertical": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         }
       },
-      "downscale": 1.0,
+      "downscale": 1,
       "edge": {
-        "band": 10.0,
-        "edge_frac": 0.0,
+        "band": 10,
+        "edge_frac": 0,
         "enabled": false,
         "fit_deg": 0,
         "max_gap": 0.25,
-        "min_contrast": 10.0,
+        "min_contrast": 10,
         "mode": "step",
         "polarity": -1,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
+        "smooth_win": 60,
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
@@ -992,223 +958,133 @@
         0.33
       ],
       "exclusions": [],
-      "horizontal_shift_tolerance_mm": 3.0,
-      "label_outline": [
-        [
-          319,
-          805
-        ],
-        [
-          310,
-          286
-        ],
-        [
-          330,
-          250
-        ],
-        [
-          365,
-          216
-        ],
-        [
-          413,
-          186
-        ],
-        [
-          478,
-          154
-        ],
-        [
-          553,
-          131
-        ],
-        [
-          635,
-          115
-        ],
-        [
-          727,
-          106
-        ],
-        [
-          802,
-          109
-        ],
-        [
-          874,
-          121
-        ],
-        [
-          928,
-          139
-        ],
-        [
-          958,
-          166
-        ],
-        [
-          978,
-          185
-        ],
-        [
-          1098,
-          651
-        ],
-        [
-          928,
-          698
-        ],
-        [
-          898,
-          768
-        ]
-      ],
-      "label_tracking_enabled": true,
+      "horizontal_shift_tolerance_mm": 3,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
-      "max_alignment_shift_x": 12.0,
-      "max_alignment_shift_y": 12.0,
+      "max_alignment_shift_x": 12,
+      "max_alignment_shift_y": 12,
       "metric_reference_size": [
         1224,
         1024
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 22.0,
+      "reference": "f_0000525",
+      "reject_threshold": 22,
       "roi": [
         [
-          319,
-          805
+          975,
+          177
         ],
         [
-          311,
+          1105,
+          665
+        ],
+        [
+          1002,
+          692
+        ],
+        [
+          983,
+          761
+        ],
+        [
+          658,
+          819
+        ],
+        [
+          323,
+          804
+        ],
+        [
+          312,
           272
         ],
         [
-          342,
-          228
+          350,
+          221
         ],
         [
-          369,
-          205
+          436,
+          161
         ],
         [
-          430,
-          167
+          649,
+          107
         ],
         [
-          496,
-          141
+          810,
+          106
         ],
         [
-          571,
-          121
-        ],
-        [
-          643,
-          105
-        ],
-        [
-          735,
-          101
-        ],
-        [
-          819,
-          105
-        ],
-        [
-          876,
-          115
-        ],
-        [
-          933,
+          931,
           137
-        ],
-        [
-          963,
-          162
-        ],
-        [
-          990,
-          184
-        ],
-        [
-          1098,
-          651
-        ],
-        [
-          928,
-          698
-        ],
-        [
-          898,
-          768
-        ],
-        [
-          615,
-          793
         ]
       ],
       "seam": {
-        "band": 30.0,
+        "band": 30,
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
-        "max_gap": 1.0,
-        "min_contrast": 8.0,
+        "max_gap": 1,
+        "min_contrast": 8,
         "mode": "ridge",
         "polarity": 0,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 5.0,
-        "tol_mid": 1.0
+        "smooth_win": 60,
+        "tol_edge": 5,
+        "tol_mid": 1
       },
-      "sensitivity": 0.9,
-      "shift_tolerance_x": 4,
-      "shift_tolerance_y": 4,
-      "vertical_shift_tolerance_mm": 3.95
+      "sensitivity": 0.99,
+      "shift_tolerance_x": 3,
+      "shift_tolerance_y": 3,
+      "vertical_shift_tolerance_mm": 3.96,
+      "label_outline": [],
+      "label_tracking_enabled": true
     },
     {
+      "adaptive_roi_enabled": false,
+      "adaptive_roi_max_motion": 96,
+      "adaptive_roi_min_coverage": 0.7,
       "calibration": {
         "horizontal": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         },
         "vertical": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         }
       },
-      "downscale": 1.0,
+      "downscale": 1,
       "edge": {
-        "band": 10.0,
-        "edge_frac": 0.0,
+        "band": 10,
+        "edge_frac": 0,
         "enabled": false,
         "fit_deg": 0,
         "max_gap": 0.25,
-        "min_contrast": 10.0,
+        "min_contrast": 10,
         "mode": "step",
         "polarity": -1,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
+        "smooth_win": 60,
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
@@ -1218,80 +1094,83 @@
       ],
       "exclusions": [],
       "horizontal_shift_tolerance_mm": 2.6400000000000006,
-      "label_outline": [],
-      "label_tracking_enabled": true,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
       "max_alignment_shift_x": 12.000000000000002,
-      "max_alignment_shift_y": 12.0,
+      "max_alignment_shift_y": 12,
       "metric_reference_size": [
         1224,
         1024
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 60.0,
+      "reference": "f_0000525",
+      "reject_threshold": 60,
       "roi": [],
       "seam": {
-        "band": 30.0,
+        "band": 30,
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
-        "max_gap": 1.0,
-        "min_contrast": 8.0,
+        "max_gap": 1,
+        "min_contrast": 8,
         "mode": "ridge",
         "polarity": 0,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 5.0,
-        "tol_mid": 1.0
+        "smooth_win": 60,
+        "tol_edge": 5,
+        "tol_mid": 1
       },
       "sensitivity": 0.5,
       "shift_tolerance_x": 3,
       "shift_tolerance_y": 3,
-      "vertical_shift_tolerance_mm": 2.7600000000000002
+      "vertical_shift_tolerance_mm": 2.7600000000000002,
+      "label_outline": [],
+      "label_tracking_enabled": true
     },
     {
+      "adaptive_roi_enabled": false,
+      "adaptive_roi_max_motion": 96,
+      "adaptive_roi_min_coverage": 0.7,
       "calibration": {
         "horizontal": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         },
         "vertical": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         }
       },
-      "downscale": 1.0,
+      "downscale": 1,
       "edge": {
-        "band": 10.0,
-        "edge_frac": 0.0,
+        "band": 10,
+        "edge_frac": 0,
         "enabled": false,
         "fit_deg": 0,
         "max_gap": 0.25,
-        "min_contrast": 10.0,
+        "min_contrast": 10,
         "mode": "step",
         "polarity": -1,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
+        "smooth_win": 60,
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
@@ -1301,80 +1180,83 @@
       ],
       "exclusions": [],
       "horizontal_shift_tolerance_mm": 2.6400000000000006,
-      "label_outline": [],
-      "label_tracking_enabled": true,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
       "max_alignment_shift_x": 12.000000000000002,
-      "max_alignment_shift_y": 12.0,
+      "max_alignment_shift_y": 12,
       "metric_reference_size": [
         1224,
         1024
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 60.0,
+      "reference": "f_0000525",
+      "reject_threshold": 60,
       "roi": [],
       "seam": {
-        "band": 30.0,
+        "band": 30,
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
-        "max_gap": 1.0,
-        "min_contrast": 8.0,
+        "max_gap": 1,
+        "min_contrast": 8,
         "mode": "ridge",
         "polarity": 0,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 5.0,
-        "tol_mid": 1.0
+        "smooth_win": 60,
+        "tol_edge": 5,
+        "tol_mid": 1
       },
       "sensitivity": 0.5,
       "shift_tolerance_x": 3,
       "shift_tolerance_y": 3,
-      "vertical_shift_tolerance_mm": 3.84
+      "vertical_shift_tolerance_mm": 3.84,
+      "label_outline": [],
+      "label_tracking_enabled": true
     },
     {
+      "adaptive_roi_enabled": false,
+      "adaptive_roi_max_motion": 96,
+      "adaptive_roi_min_coverage": 0.7,
       "calibration": {
         "horizontal": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         },
         "vertical": {
-          "length_mm": 0.0,
+          "length_mm": 0,
           "p0": [
-            0.0,
-            0.0
+            0,
+            0
           ],
           "p1": [
-            0.0,
-            0.0
+            0,
+            0
           ]
         }
       },
-      "downscale": 1.0,
+      "downscale": 1,
       "edge": {
-        "band": 10.0,
-        "edge_frac": 0.0,
+        "band": 10,
+        "edge_frac": 0,
         "enabled": false,
         "fit_deg": 0,
         "max_gap": 0.25,
-        "min_contrast": 10.0,
+        "min_contrast": 10,
         "mode": "step",
         "polarity": -1,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
+        "smooth_win": 60,
         "tol_edge": 1.5,
         "tol_mid": 1.5
       },
@@ -1384,46 +1266,46 @@
       ],
       "exclusions": [],
       "horizontal_shift_tolerance_mm": 3.3600000000000003,
-      "label_outline": [],
-      "label_tracking_enabled": true,
       "learning_robust_enabled": true,
       "learning_search_radius": 24,
       "learning_shadow_enabled": true,
-      "max_alignment_shift_x": 12.0,
-      "max_alignment_shift_y": 12.0,
+      "max_alignment_shift_x": 12,
+      "max_alignment_shift_y": 12,
       "metric_reference_size": [
         1224,
         1024
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 60.0,
+      "reference": "f_0000525",
+      "reject_threshold": 60,
       "roi": [],
       "seam": {
-        "band": 30.0,
+        "band": 30,
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
-        "max_gap": 1.0,
-        "min_contrast": 8.0,
+        "max_gap": 1,
+        "min_contrast": 8,
         "mode": "ridge",
         "polarity": 0,
         "pts": [],
         "skip": [],
-        "smooth_win": 60.0,
-        "tol_edge": 5.0,
-        "tol_mid": 1.0
+        "smooth_win": 60,
+        "tol_edge": 5,
+        "tol_mid": 1
       },
       "sensitivity": 0.5,
       "shift_tolerance_x": 3,
       "shift_tolerance_y": 3,
-      "vertical_shift_tolerance_mm": 3.96
+      "vertical_shift_tolerance_mm": 3.96,
+      "label_outline": [],
+      "label_tracking_enabled": true
     }
   ],
   "defect": false,
   "engine_source_commit": "eefefce455ea93a2184c8d4e9178a0f1eb45847a",
   "inspection_engine": "cpp-detector-eefefce4",
   "period_ms": 200,
-  "source_dir": "C:\\Users\\ShablinskiyM\\Desktop\\huinya pashi\\CppDetector\\frames36"
+  "source_dir": "D:\\Pj\\CppDetector\\frames36"
 }

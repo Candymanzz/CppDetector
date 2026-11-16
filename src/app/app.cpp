@@ -31,6 +31,9 @@ static json paramsToJson(const InspectParams& p) {
     j["label_tracking_enabled"] = p.labelTrackingEnabled;
     j["label_outline"] = json::array();
     for (const auto& q : p.labelOutline) j["label_outline"].push_back({q.x,q.y});
+    j["adaptive_roi_enabled"] = p.adaptiveRoi.enabled;
+    j["adaptive_roi_max_motion"] = p.adaptiveRoi.maxMotion;
+    j["adaptive_roi_min_coverage"] = p.adaptiveRoi.minCoverage;
     j["exclusions"] = json::array();
     for (const auto& polygon : p.exclusions) {
         json points = json::array();
@@ -56,6 +59,18 @@ static bool applyParams(const json& b, InspectParams& p, std::string& err, int c
     if (b.contains("label_tracking_enabled")) {
         if (!b["label_tracking_enabled"].is_boolean()) { err = "label_tracking_enabled must be boolean"; return false; }
         p.labelTrackingEnabled = b["label_tracking_enabled"].get<bool>();
+    }
+    for(const auto* key : {"adaptive_roi_enabled","adaptive_roi_max_motion","adaptive_roi_min_coverage"})patch.erase(key);
+    if(b.contains("adaptive_roi_enabled")) {
+        if(!b["adaptive_roi_enabled"].is_boolean()){err="adaptive_roi_enabled must be boolean";return false;}
+        p.adaptiveRoi.enabled=b["adaptive_roi_enabled"].get<bool>();
+    }
+    for(const auto* key : {"adaptive_roi_max_motion","adaptive_roi_min_coverage"})if(b.contains(key)) {
+        const bool motion=std::string(key)=="adaptive_roi_max_motion";
+        if(!b[key].is_number()){err=std::string("bad value for ")+key;return false;}
+        const double value=b[key].get<double>();
+        if(!std::isfinite(value)||value<(motion?8.:.5)||value>(motion?240.:1.)){err=std::string("bad value for ")+key;return false;}
+        (motion?p.adaptiveRoi.maxMotion:p.adaptiveRoi.minCoverage)=value;
     }
     patch.erase("seam"); // Local seam coordinates are original pixels, parsed separately below.
     if (b.contains("reject_threshold")) {
@@ -497,6 +512,20 @@ static std::vector<uchar> renderOverlay(const cv::Mat& img, const InspectResult&
                                         const SeamParams& sp, const SeamResult& sr, const SeamParams& ep,
                                         const SeamResult& er) {
     cv::Mat vis = img.clone();
+    if(!r.adaptive.checkedCurrent.empty()) {
+        cv::Mat original=cv::Mat::zeros(img.size(),CV_8U);
+        if(roi.size()>=3)cv::fillPoly(original,std::vector<std::vector<cv::Point>>{roi},255);else original.setTo(255);
+        cv::Mat unknown;cv::bitwise_and(original,~r.adaptive.checkedCurrent,unknown);
+        cv::Mat grey(vis.size(),vis.type(),cv::Scalar(90,90,90)),dim;
+        cv::addWeighted(vis,.4,grey,.6,0,dim);dim.copyTo(vis,unknown);
+        std::vector<std::vector<cv::Point>> contours;
+        cv::findContours(r.adaptive.checkedCurrent.clone(),contours,cv::RETR_LIST,cv::CHAIN_APPROX_SIMPLE);
+        cv::polylines(vis,contours,true,cv::Scalar(40,230,40),2);
+        for(size_t i=0;i<r.adaptive.currentPoints.size();i+=std::max(size_t(1),r.adaptive.currentPoints.size()/48)) {
+            cv::line(vis,r.adaptive.referencePoints[i],r.adaptive.currentPoints[i],cv::Scalar(180,180,70),1);
+            cv::circle(vis,r.adaptive.currentPoints[i],3,cv::Scalar(40,230,40),-1);
+        }
+    }
     if (!r.heatmap.empty()) {
         cv::Mat hm, heat;
         cv::resize(r.heatmap, hm, img.size());
@@ -603,6 +632,13 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
     j["inspection_engine"] = kInspectionEngine;
     j["engine_source_commit"] = kEngineSourceCommit;
     j["native_settings"] = r.settings.toJson();
+    j["control_complete"] = r.controlComplete;
+    j["adaptive_roi"] = {{"enabled",c.p.adaptiveRoi.enabled},{"valid",r.adaptive.valid},
+        {"engine","bounded-quadratic-lk-v1"},{"coverage",r.adaptive.coverage},
+        {"min_coverage",c.p.adaptiveRoi.minCoverage},{"max_motion_px",c.p.adaptiveRoi.maxMotion},
+        {"features",r.adaptive.features},{"tracked",r.adaptive.tracked},{"inliers",r.adaptive.inliers},
+        {"residual_px",r.adaptive.residual},{"ms",r.adaptive.ms},{"model",r.adaptive.model},
+        {"learning_enabled",!c.p.adaptiveRoi.enabled}};
     j["anomaly_score"] = r.native.anomalyScore;
     j["learning_engine"] = c.p.learning.robust ? "robust-v2" : "native-52aa31ea";
     j["learning_diagnostics"] = r.learningDiagnostics;
@@ -634,7 +670,7 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
     j["analysis_pixel_mm"] = {units.x / r.settings.inspectScale, units.y / r.settings.inspectScale};
     j["score"] = std::round(r.score * 1000) / 1000;
     j["reject"] = reject;
-    j["verdict"] = reject ? "REJECT" : (r.reason == "no_reference" || r.reason == "size_mismatch" ? "NO_REFERENCE" : "OK");
+    j["verdict"] = !r.controlComplete ? "NOT_INSPECTED" : reject ? "REJECT" : (r.reason == "no_reference" || r.reason == "size_mismatch" ? "NO_REFERENCE" : "OK");
     j["reason"] = reason;
     auto zoneJson = [](const SeamResult& z) {
         return json{{"found", z.found}, {"reject", z.reject}, {"ratio", std::round(z.ratio * 100) / 100},

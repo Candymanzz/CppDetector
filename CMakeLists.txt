@@ -16,10 +16,10 @@ target_include_directories(production_core PUBLIC src/production)
 target_link_libraries(production_core PUBLIC opencv_core opencv_imgproc opencv_imgcodecs opencv_video
   nlohmann_json::nlohmann_json Threads::Threads)
 
-add_library(local_inspection STATIC src/inspect/inspector.cpp src/inspect/auto_roi.cpp src/inspect/learning_matcher.cpp
+add_library(local_inspection STATIC src/inspect/inspector.cpp src/inspect/adaptive_roi.cpp src/inspect/auto_roi.cpp src/inspect/learning_matcher.cpp
   src/app/app.cpp src/app/learning.cpp src/app/decision_log.cpp)
 target_include_directories(local_inspection PUBLIC src)
-target_link_libraries(local_inspection PUBLIC production_core)
+target_link_libraries(local_inspection PUBLIC production_core opencv_video)
 
 add_executable(cppdetector src/main.cpp src/app/bench.cpp src/web/routes.cpp)
 target_compile_definitions(cppdetector PRIVATE CD_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
@@ -31,6 +31,9 @@ if(MSVC)
 endif()
 include(CTest)
 if(BUILD_TESTING)
+  add_executable(adaptive_roi_test tests/adaptive_roi_test.cpp)
+  target_link_libraries(adaptive_roi_test PRIVATE local_inspection)
+  add_test(NAME adaptive_roi_test COMMAND adaptive_roi_test)
   add_executable(exclusion_test tests/exclusion_test.cpp)
   target_link_libraries(exclusion_test PRIVATE local_inspection)
   add_test(NAME exclusion_test COMMAND exclusion_test)

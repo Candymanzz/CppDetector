@@ -4,7 +4,7 @@ function cancelLearning() {
   if (typeof draw === "function") draw();
 }
 function canLearnFrame(r) {
-  return r && r.cam === S.cam && r.ver && !r.defect_injected && r.verdict !== "NO_REFERENCE" && r.learning_bbox;
+  return r && !cur()?.adaptive_roi_enabled && !r.adaptive_roi?.enabled && r.control_complete !== false && r.cam === S.cam && r.ver && !r.defect_injected && r.verdict !== "NO_REFERENCE" && r.learning_bbox;
 }
 function updateLearningAction(resetInfo = false) {
   const r = S.learningResult, saved = r && S.learnedResult === r;
@@ -12,6 +12,7 @@ function updateLearningAction(resetInfo = false) {
   $("learnFrame").textContent = S.learningSaving ? "Добавление…" : saved ? "Добавлено в анализ" : "Дообучить";
   if (!S.learningSaving && !saved && (resetInfo || !canLearnFrame(r))) $("learnInfo").textContent = !r
     ? "Сначала проверьте кадр."
+    : r.adaptive_roi?.enabled || cur()?.adaptive_roi_enabled ? "В адаптивном режиме дообучение недоступно."
     : r.defect_injected ? "Тестовый дефект нельзя сохранять как норму."
     : !r.learning_bbox ? "На карте нет аномалий для дообучения."
     : "Участок будет выбран автоматически по карте аномалий с запасом 10 px.";
@@ -85,6 +86,7 @@ for (const [id,key] of [["learningRobust","learning_robust_enabled"],["learningS
   });
 }
 function renderLearningDiagnostics(box,r) {
+  if(r.adaptive_roi?.enabled) {box.append(el("p","muted small","Образцы нормы в адаптивном режиме не применяются."));return;}
   if(!r.learning_robust_enabled) {
     box.append(el("p","muted small","Образцы: прежнее сопоставление, устойчивый режим выключен"));return;
   }

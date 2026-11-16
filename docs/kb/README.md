@@ -1,6 +1,19 @@
+# Current combined source — 2026-11-16
+
+main now follows origin/main b0535b0. Its eefefce4/ECC512 core and confirmed-label
+tracking coexist with the local adaptive ROI extension. Local camera settings and
+five learned cases are preserved. Release and 20/20 CTest pass; see [resolution, preservation and checks](git-pull-2026-11-16.md).
+
 # Label contour tracking ? 2026-11-13
 
 [Confirmed contour, exposed-bucket masking and verification](label-tracking-2026-11-13.md).
+
+# Adaptive reference ROI — 2026-11-09
+
+Optional per-camera feature correspondence, bounded smooth geometry, checked-area
+mask and explicit incomplete-control verdict. Old profiles default to off; learned
+normal crops are inactive in this mode. [Operation, implementation, checks and
+limits](adaptive-roi-2026-11-09.md).
 
 # Inspection exclusions — 2026-11-06
 

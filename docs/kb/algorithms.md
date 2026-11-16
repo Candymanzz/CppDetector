@@ -1,3 +1,11 @@
+# Combined native and adaptive paths — 2026-11-16
+
+The normal path retains incoming phase256/ECC512 and confirmed-label tracking.
+Adaptive mode rectifies raw pixels first, skips a second translation and intersects
+its mask with per-request exclusions and the confirmed-label inset. The shared
+comparison slider writes both X/Y axes. See [resolution, preservation and checks](git-pull-2026-11-16.md); older algorithm snapshots
+below retain their original dates.
+
 # Confirmed label tracking ? 2026-11-13
 
 Optional label_outline intersects ROI and follows measured translation. Boundary
@@ -10,6 +18,14 @@ The only linked core is src/production/core at eefefce4. The standalone adapter
 retains incoming learning and exclusions, using immutable per-inspection masks.
 Metric limits are 0..30mm. Earlier paths and snapshot descriptions below are historical.
 [Merge choices and validation](merge-core-2026-11-13.md).
+
+# Optional adaptive reference surface — 2026-11-09
+
+Phase initialization plus forward/backward sparse LK tracks estimate a bounded
+seven-parameter smooth reference-to-current model. Comparison uses its geometric
+footprint and an explicit prealigned path; unmatched interior patches are not
+masked out. Insufficient registration/coverage is NOT_INSPECTED. [Parameters,
+math, coordinate systems and limitations](adaptive-roi-2026-11-09.md).
 
 # Inspection exclusions — 2026-11-06
 

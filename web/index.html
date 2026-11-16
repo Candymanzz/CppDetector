@@ -108,6 +108,16 @@
         </div>
 
         <div class="card">
+          <h2>Адаптивный ROI</h2>
+          <label class="check"><input type="checkbox" id="adaptiveRoiEnabled"> Следовать за знакомой поверхностью</label>
+          <div class="param"><label>Макс. перемещение поверхности, px <b id="v_adaptive_roi_max_motion"></b></label>
+            <input type="range" id="adaptive_roi_max_motion" min="8" max="240" step="1"></div>
+          <div class="param"><label>Мин. доля проверенного ROI <b id="v_adaptive_roi_min_coverage"></b></label>
+            <input type="range" id="adaptive_roi_min_coverage" min="0.5" max="1" step="0.01"></div>
+          <p class="muted small">Зелёный контур — знакомая поверхность на текущем кадре, жёлтый — исходный ROI. Серым отмечена непроверяемая часть. При потере сопоставления или малом покрытии: «Контроль не выполнен». Предел перемещения здесь заменяет прежний предел X/Y; допуски сравнения сохраняются.</p>
+          <p class="muted small">Режим экспериментальный. В нём образцы нормы не применяются и дообучение недоступно. Нужны различимые детали печати по всей области.</p>
+        </div>
+        <div class="card">
           <h2>Дополнительные образцы нормы</h2>
           <label class="check"><input type="checkbox" id="learningRobust"> Устойчивое сопоставление образцов</label>
           <label class="check"><input type="checkbox" id="learningShadows"> Учитывать смещение плавной тени</label>
@@ -141,6 +151,7 @@
       <select id="logFilter">
         <option value="">все решения</option>
         <option value="REJECT">только брак</option>
+        <option value="NOT_INSPECTED">контроль не выполнен</option>
         <option value="OK">только OK</option>
       </select>
       <select id="logCam"><option value="">все камеры</option></select>
@@ -157,8 +168,8 @@
   </section>
 </main>
 <div id="toast" class="toast" role="status"></div>
-<script src="app.js?engine=eefefce4-exclusions-v1"></script>
-<script src="learning.js?engine=eefefce4-auto-learning-v1"></script>
+<script src="app.js?engine=eefefce4-adaptive-roi-merge-20261116"></script>
+<script src="learning.js?engine=eefefce4-adaptive-roi-merge-20261116"></script>
 <script src="exclusions.js?engine=eefefce4-exclusions-v1"></script>
 </body>
 </html>

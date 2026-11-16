@@ -1,3 +1,19 @@
+# Source updated — 2026-11-16
+
+Pulled main/b0535b0 and combined the newer core and label contour controls with
+local adaptive ROI. Local camera settings and learned cases are preserved.
+Release and 20/20 CTest pass. Rebuild to run the merged source:
+`powershell -ExecutionPolicy Bypass -File .\rebuild-and-run.ps1 -NoRun`.
+[Resolution and checks](docs/kb/git-pull-2026-11-16.md).
+
+# Adaptive ROI — 2026-11-09
+
+«Настройка и тест» → «Адаптивный ROI» → «Следовать за знакомой поверхностью».
+Зелёный контур показывает проверяемую поверхность, серый — непроверяемую часть.
+Недостаточное сопоставление/покрытие выдаёт «Контроль не выполнен». Режим
+включается отдельно для камеры; по умолчанию выключен. Образцы нормы в нём
+не применяются. [Устройство, проверки и ограничения](docs/kb/adaptive-roi-2026-11-09.md).
+
 # Inspection exclusion zones — 2026-11-06
 
 «Настройка и тест» → «Зоны исключения инспекции» → «Нарисовать зону»: click

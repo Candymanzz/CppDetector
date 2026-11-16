@@ -1,3 +1,11 @@
+# Adaptive coexistence — 2026-11-16
+
+The confirmed contour also works with optional adaptive ROI: features and native
+comparison share its reference mask, and registered pixels bypass a second ECC
+translation. Adaptive coverage/display use the final inset mask. Imported contours
+for other references are not activated in the preserved local profile. Current
+combined-mode regressions and all 20 CTest targets pass; see [resolution, preservation and checks](git-pull-2026-11-16.md).
+
 # Confirmed label boundary and shift-aware inspection — 2026-11-13
 
 User request: implement a confirmed reference label contour with displacement

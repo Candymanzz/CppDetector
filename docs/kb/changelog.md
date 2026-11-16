@@ -1,3 +1,25 @@
+# 2026-11-16 — Record the combined implementation in Git
+
+At the owner's follow-up request, record the validated adaptive/core integration,
+tests, documentation and preserved local data in one commit. Code matches the
+successful Release/20 CTest and HTTP/UI verification; no algorithm change is added
+while committing. [Preservation and checks](git-pull-2026-11-16.md).
+
+# 2026-11-16 — Pull main and preserve adaptive ROI
+
+Pulled bf74c6b -> b0535b0 and resolved ten conflicts after restoring local edits.
+Kept incoming core/label tracking/shared tolerance UI with local adaptive geometry,
+profiles and five learned cases. Release, 20 CTest, five HTTP/migration scenarios
+and three mock-DOM UI suites pass. Changes remain uncommitted; see [resolution, preservation and checks](git-pull-2026-11-16.md).
+
+# 2026-11-09 — Optional adaptive ROI
+
+Added bounded feature-based reference-surface mapping, actual coverage masks,
+current-frame overlays, per-camera settings and NOT_INSPECTED status. Disabled
+learning in this experimental mode; saved data remain compatible. Added geometry,
+mask immutability, cylindrical-fixture, seam, persistence, HTTP and UI checks.
+[Behavior, reasons and verification limits](adaptive-roi-2026-11-09.md).
+
 # Inspection exclusions — 2026-11-06
 
 Draw polygon zones in the camera setup to skip inspection inside them. Exclusions

@@ -70,7 +70,7 @@ const fmt = (v, d = 2) => (typeof v === "number" ? v.toFixed(d) : "—");
 const cur = () => S.cams[S.cam];
 
 function verdictBadge(v) {
-  const map = { OK: ["ok", "OK"], REJECT: ["bad", "БРАК"], NO_REFERENCE: ["warn", "нет эталона"] };
+  const map = { OK: ["ok", "OK"], REJECT: ["bad", "БРАК"], NO_REFERENCE: ["warn", "нет эталона"], NOT_INSPECTED: ["warn", "Контроль не выполнен"] };
   const [cls, text] = map[v] || ["warn", v || "—"];
   return el("span", "badge " + cls, text);
 }
@@ -86,6 +86,12 @@ function reasonText(r) {
     case "label_position_unreliable": return "Не удалось достоверно измерить положение этикетки — нужна проверка кадра.";
     case "label_boundary_unreliable": return "Граница этикетки не подтверждается. Проверьте контур, освещение и наличие этикетки.";
     case "label_coverage_insufficient": return "Недостаточно общей видимой области этикетки для проверки.";
+    case "adaptive_registration_failed":
+      return "Не удалось уверенно сопоставить знакомую поверхность. Контроль не выполнен.";
+    case "adaptive_low_coverage":
+      return `Проверяемая поверхность: ${fmt((r.adaptive_roi?.coverage || 0) * 100, 1)}%, требуется ${fmt((r.adaptive_roi?.min_coverage || 0) * 100, 0)}%. Контроль не выполнен.`;
+    case "adaptive_seam_unavailable":
+      return "Недостаточно видимой линии шва для проверки. Контроль не выполнен.";
     case "score_over_threshold":
       return `Оценка ${fmt(r.score, 3)}% достигла порога ${fmt(r.threshold, 2)}% — найдено зон: ${(r.zones || []).length}.`;
     case "shift_exceeded":
@@ -220,6 +226,7 @@ function fillSelect(sel, frames, selected) {
 }
 
 const PARAMS = [
+  ["adaptive_roi_max_motion", 0], ["adaptive_roi_min_coverage", 2],
   ["sensitivity", 2], ["reject_threshold", 2], ["shift_tolerance_x", 0], ["horizontal_shift_tolerance_mm", 2], ["vertical_shift_tolerance_mm", 2], ["learning_search_radius", 0], ["downscale", 2], ["min_blob_area", 0],
 ];
 
@@ -241,6 +248,7 @@ function selectCam(i) {
   });
   $("learningRobust").checked = c.learning_robust_enabled;
   $("learningShadows").checked = c.learning_shadow_enabled;
+  $("adaptiveRoiEnabled").checked = !!c.adaptive_roi_enabled;
   S.roi = c.roi.map((p) => p.slice());
   S.exclusions = (c.exclusions || []).map(points => points.map(p => p.slice()));
   if (typeof updateExclusions === "function") updateExclusions();
@@ -325,7 +333,7 @@ function draw() {
   const k = canvas.width / 900;
   const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   const roiColor = css("--roi") || "#ffd400";
-  if (S.roi.length) {
+  if (S.roi.length && S.mode !== "result") {
     ctx.lineWidth = 2 * k;
     ctx.strokeStyle = roiColor;
     ctx.fillStyle = "rgba(255, 212, 0, 0.12)";
@@ -810,6 +818,15 @@ function flashSaved() {
   flashSaved.t = setTimeout(() => ($("saveState").innerHTML = "&nbsp;"), 1200);
 }
 
+$("adaptiveRoiEnabled").addEventListener("change",async()=>{
+  const cam=S.cam,value=$("adaptiveRoiEnabled").checked;
+  try {
+    await post("/api/camera?cam="+cam,{adaptive_roi_enabled:value});
+    if(S.cam===cam){cur().adaptive_roi_enabled=value;S.learningResult=null;updateLearningAction(true);}
+    flashSaved();toast("Режим сохранён. Проверьте кадр повторно");
+  }catch(e){if(S.cam===cam)$("adaptiveRoiEnabled").checked=!!cur().adaptive_roi_enabled;}
+});
+
 /* ----- reference ----- */
 
 $("setRef").addEventListener("click", async () => {
@@ -856,6 +873,12 @@ function renderResult(r) {
   add("Кадр", r.frame + (r.defect_injected ? " + тестовый дефект" : ""));
   add("Порог брака", fmt(r.threshold, 2) + "%");
   add("Чувствительность", fmt(r.sensitivity, 2));
+  if(r.adaptive_roi?.enabled) {
+    add("Покрытие ROI",fmt(r.adaptive_roi.coverage*100,1)+"%");
+    add("Опорные точки",`${r.adaptive_roi.inliers} / ${r.adaptive_roi.features}`);
+    add("Ошибка сопоставления",fmt(r.adaptive_roi.residual_px,2)+" px");
+    add("Адаптация ROI",fmt(r.adaptive_roi.ms,1)+" мс");
+  }
   add("До образцов нормы", fmt(r.raw_anomaly_score * 100, 3) + "%");
   add("Совпавших образцов", String(r.learned_normal_matches_count || 0));
   if (r.shift_mm) add("Сдвиг, мм", r.shift_mm.map(v => fmt(v, 2)).join(", "));
@@ -877,7 +900,7 @@ function renderResult(r) {
     z.style.marginTop = "6px";
     box.append(z);
   }
-  const why = r.reject ? reasonText(r) : r.verdict === "NO_REFERENCE" ? reasonText(r) : `Score ${fmt(r.score, 3)}% не превышает порог ${fmt(r.threshold, 2)}% — норма.`;
+  const why = r.reject || r.control_complete === false ? reasonText(r) : r.verdict === "NO_REFERENCE" ? reasonText(r) : `Score ${fmt(r.score, 3)}% не превышает порог ${fmt(r.threshold, 2)}% — норма.`;
   box.append(el("div", "reasonbox " + (r.reject ? "bad" : r.verdict === "OK" ? "ok" : "warn"), why));
 }
 

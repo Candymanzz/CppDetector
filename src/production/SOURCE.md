@@ -1,3 +1,12 @@
+# Current standalone provenance — 2026-11-16
+
+The baseline core is eefefce455ea93a2184c8d4e9178a0f1eb45847a, extended by incoming
+confirmed-label tracking and local optional InspectionGeometry in inspector.h/cpp.
+The API reports this eefefce4 baseline, not whole-tree byte identity. Ordinary
+positioning retains native phase256/ECC512; registered adaptive input skips a
+second translation and uses detached masks. Earlier 20909141 statements are history.
+[Merge and validation](../../docs/kb/git-pull-2026-11-16.md).
+
 # Local label-tracking extension ? 2026-11-13
 
 reference.h/cpp and inspector.h/cpp now extend the eefefce4 baseline with an optional
@@ -10,6 +19,15 @@ label_tracking.h is new. Historical byte-identity claims below describe the base
 The active core is now eefefce4, with the incoming standalone learning service.
 See [hash manifest](CORE_UPSTREAM.md) and [merge report](../../docs/kb/merge-core-2026-11-13.md).
 The following snapshot descriptions are historical.
+
+# Standalone adaptive geometry extension — 2026-11-09
+
+core/inspector.h/.cpp now also accept an optional per-request InspectionGeometry:
+prealigned raw pixels, detached masks and a learned-crop guard. The default null
+argument retains the imported comparison path. Local feature tracking, model,
+settings and overlays live outside the imported core. The API's base commit stays
+20909141 and is not a claim of whole-tree byte identity.
+[Details and validation](../../docs/kb/adaptive-roi-2026-11-09.md).
 
 # Standalone exclusion extension — 2026-11-06
 

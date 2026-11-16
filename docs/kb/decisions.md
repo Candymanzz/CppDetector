@@ -1,3 +1,46 @@
+# 2026-11-16 — Record the validated combined changes
+
+Context: after reviewing the uncommitted changes, the owner requested recording
+them without breaking existing behavior. Decision: commit the combined source,
+tests, docs and preserved operating profile as one coherent, previously verified
+unit. Why: adaptive geometry depends on its newer-core adapter and UI/settings
+changes; separating them would leave intermediate revisions incomplete. Hashes
+confirm no executable code changed after Release, 20/20 CTest and HTTP/UI checks.
+All 14 protected data files still match the original backup. Only follow-up notes
+are added now; staging checks verify the intended files and absence of conflicts.
+The safety stash/ref remain. No push or runtime update is part of this commit.
+[Checks and preservation](git-pull-2026-11-16.md).
+
+# 2026-11-16 — Reconcile local adaptive ROI with current main
+
+Context: the owner requested git pull with conflict resolution; local edits and six
+untracked adaptive files existed. Decision: stash with a durable backup ref, pull
+main to b0535b0, then integrate both feature sets through the newer immutable
+per-inspection exclusion API. Preserve native ECC and bypass its second translation
+only for already registered adaptive pixels. Keep local operating profiles and
+learned metadata instead of another machine's paths, reference names and contours.
+Why: replacing either whole side loses functionality; copying foreign contours
+onto local references creates an unsupported correspondence. Both settings paths,
+new defect rejection, exclusions, coverage masks and persistence are exercised.
+Checks: Release, 20/20 CTest (adaptive 243 assertions), five HTTP/profile scenarios,
+three mock-DOM suites and syntax. Hardware/Linux/browser remain unverified.
+No commit, push, runtime restart or binary replacement. See [resolution, preservation and checks](git-pull-2026-11-16.md).
+
+# 2026-11-09 — Follow the known reference surface
+
+Context: the owner requested implementing adaptive ROI in the standalone test bed
+to reduce false rejection when a turn reveals surface absent from the reference.
+Decision: optional per-camera sparse feature correspondence, a bounded global
+quadratic-horizontal/affine-vertical model, raw-image rectification and an explicit
+checked-area mask. Compare the actual supported reference area and project visuals
+to the current frame. Fail correspondence/coverage/seam availability explicitly.
+Why: translating vertices with the old X/Y transform alone is equivalent to the
+old alignment; freely moving a dense mesh or deleting unmatched patches can hide
+defects. Full calibrated cylinder/cone geometry needs inputs not currently present.
+Existing raw learned crops are inactive because their placement is not rectified;
+learning is blocked rather than storing incompatible samples. Native mode remains
+the default. Verification and limits: [task report](adaptive-roi-2026-11-09.md).
+
 # 2026-11-06 — User-drawn inspection exclusion zones
 
 Context: the operator needs to stop inspecting selected regions in the standalone

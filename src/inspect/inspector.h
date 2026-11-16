@@ -2,6 +2,7 @@
 #include "../production/core/inspector.h"
 #include "seam.h"
 #include "learning_matcher.h"
+#include "adaptive_roi.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -17,6 +18,8 @@ struct InspectParams : cas::Settings {
     LearningOptions learning;
     bool labelTrackingEnabled = true; // keeps the confirmed outline when temporarily disabled
     std::vector<cv::Point> labelOutline; // confirmed label boundary in reference pixels
+
+    AdaptiveRoiOptions adaptiveRoi;
     std::vector<std::vector<cv::Point>> exclusions; // camera/reference pixel coordinates
 
     cas::Settings nativeSettings() const {
@@ -52,6 +55,8 @@ struct InspectResult {
     cas::Settings settings;
     std::vector<std::vector<cv::Point>> exclusions;
     SeamResult seam;               // native two-endpoint seam result adapted only for the local UI
+    bool controlComplete = true;
+    AdaptiveRoiResult adaptive;
 };
 
 class Inspector {
@@ -62,5 +67,6 @@ public:
     bool hasReference() const { return reference_ && !reference_->bgr().empty(); }
 private:
     std::shared_ptr<cas::Reference> reference_;
+    std::shared_ptr<const AdaptiveRoiReference> adaptiveReference_;
 };
 }

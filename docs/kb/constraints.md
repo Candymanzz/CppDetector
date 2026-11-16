@@ -1,3 +1,19 @@
+# Local data during Git synchronization — 2026-11-16
+
+The pulled profile belongs to a different machine. Retain this checkout's camera
+profiles, paths and learned samples; do not attach another reference's confirmed
+label outline. The merged implementation keeps both optional geometry paths.
+See [resolution, preservation and checks](git-pull-2026-11-16.md).
+
+# Adaptive ROI amendment — 2026-11-09
+
+The owner authorized an adaptive reference ROI experiment in the standalone app.
+The manually editable reference polygon remains authoritative; each result has a
+separate mapped checked mask and coverage. Unknown geometry cannot yield OK.
+The single primary reference and classic CV constraints remain. Learned raw-frame
+crops are inactive in this mode until a correct geometry-aware representation
+exists. [Reasons and limits](adaptive-roi-2026-11-09.md).
+
 # Explicit exclusion zones — 2026-11-06
 
 The owner requested unconditional user-drawn inspection exclusions. C4 still uses

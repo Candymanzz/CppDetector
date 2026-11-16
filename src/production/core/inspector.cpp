@@ -94,7 +94,8 @@ ShiftEstimate estimateShift(const AlignmentPrepared& a, const cv::Mat& nativeGra
 
 }
 
-InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Settings& configured, bool keepVisuals) {
+InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Settings& configured, bool keepVisuals,
+                            const InspectionGeometry* geometry) {
     TimingPhase algorithmTiming("algorithm_ms");
     const auto tStart = Clock::now();
     if (bgr.empty() || bgr.size() != ref.size()) {
@@ -106,6 +107,24 @@ InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Sett
     const Settings s = configured.forFrame(bgr.size());
     auto prep = ref.prepared(s.inspectScale, s.exclusions);
     out.exclusions = s.exclusions;
+    if (geometry && !geometry->validReference.empty()) {
+        if (geometry->validReference.size()!=ref.size() || geometry->validReference.type()!=CV_8U)
+            throw std::invalid_argument("invalid adaptive inspection mask");
+        auto local=std::make_shared<Prepared>(*prep);
+        cv::Mat valid;
+        cv::resize(geometry->validReference,valid,prep->workSize,0,0,cv::INTER_AREA);
+        cv::compare(valid,254,valid,cv::CMP_GT); // retain only wholly supported downscaled pixels
+        cv::erode(valid,valid,cv::getStructuringElement(cv::MORPH_RECT,{5,5}),{-1,-1},1,cv::BORDER_CONSTANT,0);
+        // Prepared's Mat copy is shallow: detach destinations before an in-place OpenCV operation.
+        local->roiMask=prep->roiMask.clone();
+        local->upperCornerMask=prep->upperCornerMask.clone();
+        cv::bitwise_and(local->roiMask,valid,local->roiMask);
+        cv::bitwise_and(local->upperCornerMask,valid(prep->region),local->upperCornerMask);
+        local->roiArea=cv::countNonZero(local->roiMask);
+        local->upperCornerArea=cv::countNonZero(local->upperCornerMask);
+        out.comparisonMask=local->roiMask;
+        prep=std::move(local);
+    }
     out.workSize = prep->workSize;
     out.region = prep->region;
     const double scale = prep->scale;
@@ -132,7 +151,15 @@ InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Sett
     const auto tAlign = Clock::now();
     const int tolWorkX = std::max(0, static_cast<int>(std::lround(s.shiftToleranceX * scale)));
     const int tolWorkY = std::max(0, static_cast<int>(std::lround(s.shiftToleranceY * scale)));
-    const auto estimate = estimateShift(*prep->alignment, nativeGray);
+    const bool prealigned = geometry && geometry->prealigned;
+    ShiftEstimate estimate;
+    if (prealigned) {
+        // Registration already validated the source-to-reference transform.
+        // A second translation would move the rectified pixels and mask apart.
+        estimate.response = estimate.coarseResponse = 1;
+    } else {
+        estimate = estimateShift(*prep->alignment, nativeGray);
+    }
     out.shiftResponse = estimate.response;
     out.coarseShiftResponse = estimate.coarseResponse;
     out.shiftRefined = estimate.refined;
@@ -157,7 +184,7 @@ InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Sett
             out.diff=cv::Mat::zeros(region.size(),CV_8U);out.kept=out.diff.clone();out.scoredEnergy=out.diff.clone();
             out.totalMs=msSince(tStart);
         };
-        if(out.reject || estimate.response<.8 || !estimate.refined) {
+        if(out.reject || (!prealigned && (estimate.response<.8 || !estimate.refined))) {
             failure("label_position_unreliable"); return out;
         }
         out.labelBoundarySupport=labelBoundarySupport(ref.bgr(),bgr,ref.labelOutline(),applied);
@@ -192,6 +219,7 @@ InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Sett
         out.inspectionMask=effective->roiMask(region).clone();
         prep=effective;
     }
+    if (geometry && !geometry->validReference.empty()) out.comparisonMask = prep->roiMask;
     // Rounded work dimensions may have slightly different X/Y ratios on odd-size frames.
     const cv::Point2d sh(applied.x * prep->workSize.width / bgr.cols,
                          applied.y * prep->workSize.height / bgr.rows);
@@ -269,7 +297,7 @@ InspectOutcome inspectFrame(const Reference& ref, const cv::Mat& bgr, const Sett
     const auto tAnomaly = Clock::now();
     const double sensitivity = std::clamp(s.sensitivity, 0.0, 1.0);
     const int thr = cvRound(80.0 - 75.0 * sensitivity);
-    const auto learnedRegions = ref.learned();
+    const auto learnedRegions = geometry && !geometry->allowLearned ? std::vector<LearnedRegion>{} : ref.learned();
     const int learningThreshold = prep->upperCornerArea > 0
         ? cvRound(80.0 - 75.0 * std::min(1.0, sensitivity * kUpperCornerSensitivityMultiplier)) : thr;
     int originalFlagged = 0;
