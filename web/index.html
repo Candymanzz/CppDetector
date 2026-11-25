@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CppDetector</title>
-<link rel="stylesheet" href="style.css?v=inspection-header-20261116">
+<link rel="stylesheet" href="style.css?v=seam-plot-20261124a">
+<link rel="stylesheet" href="unwrap.css?v=upload-20261119">
 </head>
 <body>
 <header class="topbar">
@@ -12,6 +13,7 @@
   <nav class="tabs" id="tabs">
     <button data-tab="grid" class="active">Камеры</button>
     <button data-tab="cam">Настройка и тест</button>
+    <button data-tab="unwrap">Развёртка ведра</button>
     <button data-tab="log">Журнал решений</button>
   </nav>
   <div class="stream">
@@ -54,35 +56,12 @@
           <button data-mode="result">Результат</button>
           <span class="muted" id="viewInfo"></span>
         </div>
+        <div class="frame-picker"><label for="testSelect">Кадр</label><select id="testSelect"></select></div>
         <div class="canvas-wrap"><canvas id="canvas"></canvas></div>
-        <div class="roi-tools">
-          <button id="autoRoi">Авто-ROI</button>
-          <button id="undoRoi">Убрать последнюю точку</button>
-          <button id="clearRoi">Очистить ROI</button>
-          <button id="confirmLabel">Подтвердить ROI как контур этикетки</button>
-          <button id="clearLabel">Убрать контур этикетки</button>
-          <label class="check"><input type="checkbox" id="labelTrackingEnabled"> Компенсация по контуру этикетки</label>
-          <span class="muted" id="roiInfo"></span>
-          <span class="muted" id="labelInfo">Обведите этикетку точками ROI и подтвердите контур. Затем ROI можно изменить независимо.</span>
-        </div>
-        <p class="muted small">ROI: клик — добавить точку (рядом с ребром — вставить в него), перетаскивание — двигать точку, правая кнопка по точке — удалить. Изменения сохраняются автоматически.</p>
-        <div class="card check-card">
-          <h2>Проверка</h2>
-          <div class="row">
-            <select id="testSelect"></select>
-          </div>
-          <div class="row"><label class="check"><input type="checkbox" id="testDefect"> внести тестовый дефект</label></div>
-          <div class="row">
-            <label class="filebtn">Загрузить кадр и проверить<input type="file" id="testFile" accept="image/*" hidden></label>
-          </div>
-          <div class="row"><select id="testFileSelect" title="Файлы из frame/test-pr-ph"></select><button id="runTestFile">Проверить файл</button></div>
-          <div class="row"><button id="runAllTestFiles">Проверить все файлы test-pr-ph</button></div>
-          <div id="result" class="result"></div>
-          <div id="allResults"></div>
-        </div>
+        <div id="viewerSummary" class="viewer-summary" role="status" aria-live="polite" hidden></div>
       </div>
 
-      <aside class="side">
+      <aside class="side" tabindex="0" aria-label="Настройки камеры; прокрутка меню">
         <div class="card">
           <h2>Эталон камеры</h2>
           <div class="row"><span id="refName" class="mono">—</span></div>
@@ -147,9 +126,113 @@
           <div id="exclusionList"></div>
           <button id="clearExclusions" disabled>Удалить все зоны</button>
         </div>
+        <div class="card roi-card"><h2>ROI и контур этикетки</h2>
+        <div class="roi-tools">
+          <button id="autoRoi">Авто-ROI</button>
+          <button id="undoRoi">Убрать последнюю точку</button>
+          <button id="clearRoi">Очистить ROI</button>
+          <button id="confirmLabel">Подтвердить ROI как контур этикетки</button>
+          <button id="clearLabel">Убрать контур этикетки</button>
+          <label class="check"><input type="checkbox" id="labelTrackingEnabled"> Компенсация по контуру этикетки</label>
+          <span class="muted" id="roiInfo"></span>
+          <span class="muted" id="labelInfo">Обведите этикетку точками ROI и подтвердите контур. Затем ROI можно изменить независимо.</span>
+        </div>
+        <p class="muted small">ROI: клик — добавить точку (рядом с ребром — вставить в него), перетаскивание — двигать точку, правая кнопка по точке — удалить. Изменения сохраняются автоматически.</p>
+        </div>
+        <div class="card check-card">
+          <h2>Проверка</h2>
+<div class="row"><label class="check"><input type="checkbox" id="testDefect"> внести тестовый дефект</label></div>
+          <div class="row">
+            <label class="filebtn">Загрузить кадр и проверить<input type="file" id="testFile" accept="image/*" hidden></label>
+          </div>
+          <div class="row"><select id="testFileSelect" title="Файлы из frame/test-pr-ph"></select><button id="runTestFile">Проверить файл</button></div>
+          <div class="row"><button id="runAllTestFiles">Проверить все файлы test-pr-ph</button></div>
+          <div id="result" class="result"></div>
+          <div id="allResults"></div>
+        </div>
         <div id="lineCards"></div>
+        <div class="card seam-diagnostic" id="seamDebug" aria-label="Визуализация работы стыка этикетки">
+          <div class="seam-heading"><h2>Стык этикетки · измерение</h2><button id="showSeamSettings">Настроить стык</button></div>
+          <p id="seamDebugStatus" class="muted small" role="status" aria-live="polite">Проверьте кадр, чтобы увидеть измерения стыка.</p>
+          <p id="seamSideStatus" class="muted small" hidden></p>
+          <p id="seamUsedSettings" class="muted small" hidden></p>
+          <p id="seamSettingsChanged" class="small" role="status" hidden></p>
+          <a id="seamMaskLink" hidden target="_blank" rel="noopener"><img id="seamMaskImage" alt="Полоса стыка и маска найденных границ"></a>
+          <p id="seamMaskCaption" class="muted small" hidden>Сверху исходная полоса, снизу маска границ. Цветные точки — только измеренные участки пути. Нажмите на маску, чтобы открыть крупно.</p>
+          <div id="seamPlot" hidden></div>
+          <div id="seamLegend" class="seam-legend small" hidden><span class="seam-good">● В допуске</span><span class="seam-bad">● Выход за допуск / длина дефекта</span><span class="seam-tolerance">━ Допуск ±</span><span class="seam-missing">● Край не найден</span><span class="seam-excluded">● Исключено / короткое изменение ширины</span><span class="muted">Концы линии не оцениваются</span></div>
+        </div>
+
 
       </aside>
+    </div>
+  </section>
+
+  <section id="tab-unwrap" class="tab" aria-label="Экспериментальная инспекция развёртки">
+    <div class="uw-heading"><div><h2>Поверхность ведра в одной картинке</h2><p class="muted">Кадры → выпрямленные ракурсы → круговая развёртка → сравнение с эталоном.</p></div><span class="badge warn">Эксперимент</span></div>
+    <div class="card uw-controls">
+      <label>Ведро<select id="uwBucket"><option value="bucket1">Ведро 1 · камеры 0, 1, 3, 4</option><option value="bucket2">Ведро 2 · камеры 5, 6, 8, 9</option></select></label>
+      <label>Что проверить<select id="uwSource"><option value="frames">Выбранные кадры</option><option value="uploads">Свои изображения</option><option value="references">Эталоны · самопроверка</option></select></label>
+      <label class="uw-shared-index">Кадр № для всех камер<div class="uw-step"><button id="uwPrev" aria-label="Предыдущий кадр у всех камер">←</button><input id="uwIndex" type="number" min="1" value="1" step="1" aria-label="Номер кадра в списке каждой камеры"><span id="uwFrameCount" class="muted">/ —</span><button id="uwNext" aria-label="Следующий кадр у всех камер">→</button></div></label>
+      <label>Ширина, px<select id="uwWidth"><option value="1200">1200 · быстро</option><option value="2000" selected>2000</option><option value="3200">3200 · подробнее</option></select></label>
+      <button id="uwBuild" class="primary">Построить и проверить</button><button id="uwReload">Обновить кадры и эталоны</button>
+    </div>
+    <div class="card uw-inputs" aria-labelledby="uwInputsTitle">
+      <h2 id="uwInputsTitle">Кадры для инспекции</h2>
+      <p class="muted small">Выберите кадры из набора или нажмите «Загрузить фото» у каждой камеры для своих изображений. После загрузки проверка запускается автоматически. Свои файлы обрабатываются в браузере и хранятся до перезагрузки страницы; эталоны берутся из текущего профиля.</p>
+      <div id="uwFramePicker" class="uw-frame-picker"></div>
+      <p id="uwFrameSelection" class="uw-input-summary" role="status" aria-live="polite">Загрузка списка кадров…</p>
+      <div class="uw-stitch-tools"><label class="check"><input id="uwAutoStitch" type="checkbox" checked> Совмещать ракурсы по эталонам</label><button id="uwStitch">Уточнить совмещение</button><button id="uwResetStitch">Сбросить подгонку</button></div>
+      <p id="uwStitchStatus" class="muted small" role="status">Подгонка использует общие детали эталонов. Текущий кадр её не изменяет.</p>
+    </div>
+    <p class="uw-notice" id="uwNotice">Выберите кадры одного изделия. Одинаковая позиция в списках камер не подтверждает общий цикл съёмки. Верхние камеры 2 и 7 не входят в боковую развёртку.</p>
+    <p class="muted small" id="uwStorage"></p>
+    <div class="uw-stats" aria-live="polite"><div><span>Размер</span><b id="uwSize">—</b></div><div><span>Заполнено кадрами</span><b id="uwCoverage">—</b></div><div><span>Сравнимо с эталоном</span><b id="uwPaired">—</b></div><div><span>Различается</span><b id="uwChanged">—</b></div></div>
+    <div class="card uw-inspection-card">
+      <div class="uw-heading"><h2>Инспекция общей развёртки</h2><button id="uwInspect" class="primary">Инспектировать развёртку</button></div>
+      <div class="uw-inspection-result" id="uwInspectionResult" role="status" aria-live="polite"><b id="uwVerdict">Ещё не проверено</b><span id="uwInspectionReason">Соберите кадры одного изделия.</span></div>
+      <p id="uwInspectionMetrics" class="muted small"></p>
+      <div class="uw-inspection-params">
+        <label>Порог отличия RGB<input id="uwInspectThreshold" type="number" min="1" max="120" step="1" value="24"></label>
+        <label>Мин. площадь пятна, px²<input id="uwMinArea" type="number" min="1" max="5000" step="1" value="18"></label>
+        <label>Брак от площади, %<input id="uwRejectPercent" type="number" min="0.001" max="20" step="0.001" value="0.05"></label>
+        <label>Лимит сдвига камер ±, px<input id="uwMaxShift" type="number" min="2" max="48" step="1" value="24"></label>
+        <label>Мин. покрытие, %<input id="uwMinCoverage" type="number" min="80" max="100" step="0.1" value="97"></label>
+        <label>Ослабление, px<select id="uwInspectTolerance"><option value="0">0 · строго</option><option value="1">1</option><option value="2">2</option></select></label>
+        <label class="check"><input id="uwNormalize" type="checkbox" checked> Компенсировать яркость</label>
+        <label class="check"><input id="uwCameraTolerance" type="checkbox" checked> Учитывать допуски сравнения камер</label>
+      </div>
+      <p class="muted small">Каждая камера совмещается со своим эталоном до разворачивания. Затем проверяется единая поверхность с неподвижными стыками, в рабочих областях и с исключениями обычной инспекции. Допуски сравнения берутся из профилей камер; их можно отключить для строгой проверки. Прозрачные участки не проверялись. Сдвиги камер указаны в исходных пикселях, площадь и дополнительное ослабление — в шкале 1200 × 312. Отсутствующий кадр или ненадёжное совмещение дают «Контроль не выполнен».</p>
+      <div class="row"><button id="uwShowInspection">Показать дефекты</button><button id="uwExportInspection" disabled>Скачать результат JSON</button></div>
+      <div id="uwRegions" class="uw-regions"></div>
+      <p class="muted small">Пробный результат для настройки алгоритма. Геометрия ещё требует калибровки; на выходы станка этот вердикт не передаётся.</p>
+    </div>
+    <div class="card uw-panorama">
+      <div class="uw-viewbar"><div id="uwViews" class="view-modes"><button data-view="current" class="active">Развёртка</button><button data-view="reference">Эталон</button><button data-view="diff">Различия RGB</button><button data-view="coverage">Покрытие</button><button data-view="inspection">Инспекция</button><button data-view="aligned">Совмещённая</button><button data-view="controlReference">Эталон контроля</button></div><label class="check"><input id="uwGuides" type="checkbox" checked> Границы ракурсов</label><label>Масштаб <select id="uwZoom"><option value="fit">Вписать</option><option value="1">1:1</option><option value="2">2:1</option></select></label></div>
+      <div class="uw-ruler"><span>0°</span><span>90°</span><span>180°</span><span>270°</span><span>360°</span></div>
+      <div class="uw-scroll" id="uwScroll"><canvas id="uwCanvas" width="1200" height="390" tabindex="0" aria-label="Развёртка поверхности; нажмите, чтобы найти участок в исходном кадре"></canvas><p id="uwEmpty">Постройте развёртку из кадров выбранного ведра</p></div>
+      <p id="uwStatus" class="muted small" role="status" aria-live="polite">Геометрия и стыки требуют проверки по вашим кадрам.</p>
+      <p id="uwPixel" class="uw-pixel">Нажмите на развёртку — покажу исходную камеру и координаты участка.</p>
+      <div class="row"><label>Начало развёртки, ° <input id="uwSeam" type="number" min="0" max="359" step="1" value="0"></label><label>Порог различий RGB <input id="uwThreshold" type="range" min="1" max="120" value="24"><b id="uwThresholdValue">24</b></label><button id="uwExport" disabled>Скачать PNG</button><button id="uwExportRecipe">Скачать схему JSON</button><label class="filebtn">Загрузить схему<input id="uwImport" type="file" accept="application/json,.json" hidden></label></div>
+      <p class="muted small">Стыки показывают один ракурс без прозрачного наложения. Шахматная область — нет изображения. В покрытии: зелёный — есть пара кадр/эталон, жёлтый — только кадр, тёмный — кадра нет. «Различия RGB» — карта отличий по камерам. «Инспекция», «Совмещённая» и «Эталон контроля» используют единую развёртку; координаты в них приведены к эталону.</p>
+    </div>
+    <div class="uw-heading"><div><h2>Из каких кадров собрана картинка</h2><p class="muted small">Выберите ракурс для настройки. Стрелки меняют соседние позиции на окружности.</p></div></div>
+    <div id="uwSources" class="uw-sources"></div>
+    <div class="uw-editor card">
+      <div><div class="uw-heading"><h2 id="uwEditorTitle">Геометрия ракурса</h2><button id="uwRotate">Повернуть на 180°</button></div><div class="uw-source-wrap"><canvas id="uwSourceCanvas" width="800" height="600" aria-label="Перетащите шесть точек границ поверхности" tabindex="0"></canvas></div><p class="muted small">Перетащите 6 точек: 1–3 — верх будущей картинки, 4–6 — низ. Средние точки выпрямляют дуги. На перевёрнутом кадре верх картинки находится снизу. ROI обычной инспекции здесь не меняется.</p></div>
+      <div class="uw-editor-side"><h2>Выпрямленный ракурс</h2><canvas id="uwStripCanvas" width="360" height="240" aria-label="Результат преобразования выбранного ракурса"></canvas><p id="uwGeometryStatus" class="muted small"></p><label class="check"><input id="uwEnabled" type="checkbox" checked> Включить в развёртку</label><label>Центр на окружности, °<input id="uwCenter" type="number" min="0" max="359" step="1"></label><label>Видимый угол, °<input id="uwFov" type="number" min="30" max="170" step="1"></label><label>Преобразование<select id="uwProjection"><option value="cylinder">Цилиндрическая модель</option><option value="linear">Только выпрямление границ</option></select></label><label class="check"><input id="uwFlip" type="checkbox"> Отразить по горизонтали</label><button id="uwResetGeometry">Начальная геометрия этого ракурса</button><p class="muted small">Цилиндрическая модель приближённая. Для конического ведра границы могут сужаться; точные размеры и перспектива требуют отдельной калибровки. Начальные углы и порядок ракурсов — предположение, проверьте совпадение печати на стыках.</p></div>
+      <div class="uw-fine">
+        <h3>Точная подгонка выбранной камеры</h3>
+        <p class="muted small">На виде «Эталон» совместите печать соседних ракурсов: положение и масштаб меняются сразу для кадра и эталона. Эти поправки сохраняются отдельно от автоматической подгонки; новые кадры их не меняют.</p>
+        <div class="uw-inspection-params">
+          <label>По горизонтали, °<input id="uwFineX" type="number" min="-20" max="20" step="0.1" value="0"></label>
+          <label>По вертикали, px<input id="uwFineY" type="number" min="-30" max="30" step="0.5" value="0"></label>
+          <label>Масштаб ширины, %<input id="uwFineScaleX" type="number" min="80" max="120" step="0.5" value="100"></label>
+          <label>Масштаб высоты, %<input id="uwFineScaleY" type="number" min="80" max="120" step="0.5" value="100"></label>
+        </div>
+        <button id="uwResetFine">Сбросить точную подгонку камеры</button>
+        <p class="muted small">Вертикальные пиксели относятся к высоте 312 px. Поправки помогают выровнять стык; перспектива и форма ведра по-прежнему задаются шестью точками границ.</p>
+      </div>
     </div>
   </section>
 
@@ -176,8 +259,12 @@
   </section>
 </main>
 <div id="toast" class="toast" role="status"></div>
-<script src="app.js?engine=eefefce4-inspection-header-20261116"></script>
+<script src="app.js?engine=eefefce4-seam-plot-20261124a"></script>
 <script src="learning.js?engine=eefefce4-adaptive-roi-merge-20261116"></script>
 <script src="exclusions.js?engine=eefefce4-exclusions-v1"></script>
+<script src="unwrap-core.js?v=quality-20261119"></script>
+<script src="unwrap-inspection.js?v=quality-20261119"></script>
+<script src="unwrap-stitching.js?v=stitch-20261119"></script>
+<script src="unwrap.js?v=upload-20261119"></script>
 </body>
 </html>

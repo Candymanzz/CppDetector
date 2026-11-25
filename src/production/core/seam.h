@@ -28,6 +28,10 @@ struct SeamResult {
     double worstT = 0;               // 0..1 position along the seam of the worst deviation
     std::vector<cv::Point2f> centerPts;  // located line centre (original px), for overlay
     std::vector<cv::Point2f> badPts;     // edge points over tolerance (original px), for overlay
+    // Diagnostic trace from the same edge fits used for the verdict; no second measurement.
+    std::vector<cv::Point2f> rowPos, rowEdge, rowRef;
+    std::vector<float> rowDev, rowTol;
+    std::vector<char> rowState;         // 0 evaluated, 1 excluded, 2 ignored end, 3 not found
     double ms = 0;
 };
 

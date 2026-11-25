@@ -3,6 +3,7 @@
 #include "seam.h"
 #include "learning_matcher.h"
 #include "adaptive_roi.h"
+#include "seam_reference.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -62,11 +63,16 @@ struct InspectResult {
 class Inspector {
 public:
     void setReference(const cv::Mat& bgr, const std::vector<cv::Point>& roi, const InspectParams& p);
+    void configureSeamReference(const SeamParams& params);
+    bool confirmSeamReference(SeamParams& params,std::string& error);
+    nlohmann::json seamReferenceInfo() const;
     InspectResult inspect(const cv::Mat& bgr, const InspectParams& p, const SeamParams* seam = nullptr) const;
     void setLearned(std::vector<cas::LearnedRegion> regions) { if (reference_) reference_->setLearned(std::move(regions)); }
     bool hasReference() const { return reference_ && !reference_->bgr().empty(); }
 private:
     std::shared_ptr<cas::Reference> reference_;
+    std::shared_ptr<const SeamReference> seamReference_;
+    std::string seamReferenceReason_;
     std::shared_ptr<const AdaptiveRoiReference> adaptiveReference_;
 };
 }

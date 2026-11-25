@@ -70,6 +70,17 @@ void registerRoutes(httplib::Server& svr, App& app) {
         if(!app.inspectedJpeg(intParam(req,"cam"),version,out)) return sendError(res,"inspection changed",409);
         sendJpeg(res,out);
     });
+    svr.Post("/api/seam_reference", [&](const httplib::Request& req, httplib::Response& res) {
+        json result;std::string error;
+        if(!app.confirmSeamReference(intParam(req,"cam"),result,error))return sendError(res,error);
+        sendJson(res,result);
+    });
+    svr.Get("/api/seam_mask", [&](const httplib::Request& req, httplib::Response& res) {
+        std::vector<uchar> out;uint64_t version=0;
+        try {version=std::stoull(req.get_param_value("version"));}catch(...){}
+        if(!app.seamMaskPng(intParam(req,"cam"),version,out))return sendError(res,"seam mask unavailable or inspection changed",409);
+        res.set_header("Cache-Control","no-store");res.set_content(reinterpret_cast<const char*>(out.data()),out.size(),"image/png");
+    });
     svr.Get("/api/state", [&](const httplib::Request&, httplib::Response& res) { sendJson(res, app.state()); });
     svr.Get("/api/status", [&](const httplib::Request&, httplib::Response& res) { sendJson(res, app.status()); });
 

@@ -1,3 +1,35 @@
+# Paired mask is a standalone extension — 2026-11-24
+
+The local adapter now calls src/inspect/seam_pair.cpp for mask ridge, checking
+two reference-supported boundaries and width after normal pose compensation.
+Imported core/service are unchanged by this extension. Native parity is retained;
+old mask verdicts intentionally become stricter.
+[Contract and evidence](../../docs/kb/seam-pair-2026-11-24.md).
+
+# Optional reference seam is a standalone extension — 2026-11-24
+
+`src/inspect/seam_reference` adds a frozen primary-reference boundary, pose-aware
+profile matching and one uniform deviation limit. The local adapter selects it
+explicitly; imported core/service remain unchanged. Existing native/mask numeric
+behavior was checked separately.
+[Contract, confirmation and limits](../../docs/kb/seam-reference-2026-11-24.md).
+
+# Optional mask method remains outside the imported core — 2026-11-24
+
+The standalone adapter can explicitly select `src/inspect/seam_mask.cpp` for
+connected mask/path inspection. The existing native `core/seam.h/.cpp` and
+service are unchanged by this extension; legacy profiles default to native.
+[Selection, quality guards and limits](../../docs/kb/seam-mask-2026-11-24.md).
+
+# Additive seam diagnostic trace — 2026-11-24
+
+`core/seam.h/.cpp` additionally expose source-coordinate per-row diagnostics from
+the existing native edge fits. This restores the standalone overlay/plot without
+re-enabling the legacy local detector. It is an intentional local extension, not
+whole-file identity with upstream. Checked old/new aggregate results match on
+4 real + 4 synthetic inspections; no new performance guarantee.
+[Implementation and validation](../../docs/kb/sidebar-seam-2026-11-24.md).
+
 # Current standalone provenance — 2026-11-16
 
 The baseline core is eefefce455ea93a2184c8d4e9178a0f1eb45847a, extended by incoming

@@ -34,11 +34,20 @@
         "edge_frac": 0.0,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 0.25,
         "min_contrast": 10.0,
         "mode": "step",
         "polarity": -1,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 1.5,
@@ -63,14 +72,61 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
+      "reference": "f_0000191",
       "reject_threshold": 60.0,
-      "roi": [],
+      "roi": [
+        [
+          817,
+          177
+        ],
+        [
+          904,
+          224
+        ],
+        [
+          952,
+          807
+        ],
+        [
+          830,
+          826
+        ],
+        [
+          639,
+          826
+        ],
+        [
+          478,
+          776
+        ],
+        [
+          508,
+          246
+        ],
+        [
+          537,
+          214
+        ],
+        [
+          611,
+          181
+        ],
+        [
+          757,
+          166
+        ]
+      ],
       "seam": {
         "band": 30.0,
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 1.0,
         "min_contrast": 8.0,
         "mode": "ridge",
@@ -85,6 +141,9 @@
             153
           ]
         ],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 5.0,
@@ -129,11 +188,20 @@
         "edge_frac": 0.0,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 0.25,
         "min_contrast": 10.0,
         "mode": "step",
         "polarity": -1,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 1.5,
@@ -144,7 +212,7 @@
         0.32
       ],
       "exclusions": [],
-      "horizontal_shift_tolerance_mm": 3.35,
+      "horizontal_shift_tolerance_mm": 4.65,
       "label_outline": [],
       "label_tracking_enabled": true,
       "learning_robust_enabled": true,
@@ -158,88 +226,44 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
+      "reference": "f_0000025",
       "reject_threshold": 20.0,
       "roi": [
         [
-          466,
-          256
+          634,
+          303
         ],
         [
-          490,
-          222
+          696,
+          340
         ],
         [
-          522,
-          206
+          708,
+          449
         ],
         [
-          579,
-          194
+          732,
+          774
         ],
         [
-          635,
-          193
-        ],
-        [
-          711,
-          204
-        ],
-        [
-          795,
-          228
-        ],
-        [
-          874,
-          265
-        ],
-        [
-          920,
-          291
-        ],
-        [
-          968,
-          325
-        ],
-        [
-          1002,
-          360
-        ],
-        [
-          1031,
-          417
-        ],
-        [
-          1025,
-          455
-        ],
-        [
-          952,
-          796
-        ],
-        [
-          933,
-          826
-        ],
-        [
-          824,
+          348,
           783
         ],
         [
-          765,
-          834
+          359,
+          545
         ],
         [
-          268,
-          627
+          383,
+          338
         ],
         [
-          340,
-          470
+          410,
+          314
         ],
         [
-          38,
-          10
+          476,
+          299
         ]
       ],
       "seam": {
@@ -247,20 +271,29 @@
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 1.0,
         "min_contrast": 8.0,
         "mode": "ridge",
         "polarity": 0,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 5.0,
         "tol_mid": 1.0
       },
-      "sensitivity": 0.7,
+      "sensitivity": 0.8,
       "shift_tolerance_x": 3,
       "shift_tolerance_y": 3,
-      "vertical_shift_tolerance_mm": 3.85
+      "vertical_shift_tolerance_mm": 4.6
     },
     {
       "adaptive_roi_enabled": false,
@@ -296,11 +329,20 @@
         "edge_frac": 0.0,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 0.25,
         "min_contrast": 10.0,
         "mode": "step",
         "polarity": -1,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 1.5,
@@ -325,19 +367,57 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
+      "reference": "f_0000031",
       "reject_threshold": 60.0,
-      "roi": [],
+      "roi": [
+        [
+          736,
+          189
+        ],
+        [
+          768,
+          211
+        ],
+        [
+          847,
+          656
+        ],
+        [
+          465,
+          684
+        ],
+        [
+          451,
+          244
+        ],
+        [
+          502,
+          215
+        ],
+        [
+          617,
+          188
+        ]
+      ],
       "seam": {
         "band": 30.0,
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 1.0,
         "min_contrast": 8.0,
         "mode": "ridge",
         "polarity": 0,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 5.0,
@@ -349,7 +429,7 @@
       "vertical_shift_tolerance_mm": 3.7199999999999998
     },
     {
-      "adaptive_roi_enabled": true,
+      "adaptive_roi_enabled": false,
       "adaptive_roi_max_motion": 125.0,
       "adaptive_roi_min_coverage": 0.76,
       "calibration": {
@@ -382,11 +462,20 @@
         "edge_frac": 0.0,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 0.25,
         "min_contrast": 10.0,
         "mode": "step",
         "polarity": -1,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 1.5,
@@ -411,68 +500,52 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 8.0,
+      "reference": "f_0000129",
+      "reject_threshold": 21.0,
       "roi": [
         [
-          619,
-          51
+          755,
+          217
         ],
         [
-          688,
-          91
+          803,
+          256
         ],
         [
-          731,
-          218
+          830,
+          748
         ],
         [
-          763,
-          369
+          713,
+          744
         ],
         [
-          799,
-          553
+          632,
+          744
         ],
         [
-          23,
-          559
+          441,
+          737
         ],
         [
-          30,
-          449
+          382,
+          736
         ],
         [
-          33,
-          414
+          450,
+          244
         ],
         [
-          61,
-          167
+          497,
+          209
         ],
         [
-          76,
-          124
+          600,
+          192
         ],
         [
-          132,
-          76
-        ],
-        [
-          213,
-          41
-        ],
-        [
-          327,
-          20
-        ],
-        [
-          507,
-          18
-        ],
-        [
-          575,
-          32
+          707,
+          202
         ]
       ],
       "seam": {
@@ -480,11 +553,20 @@
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 1.0,
         "min_contrast": 8.0,
         "mode": "ridge",
         "polarity": 0,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 5.0,
@@ -529,11 +611,20 @@
         "edge_frac": 0.0,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 0.25,
         "min_contrast": 10.0,
         "mode": "step",
         "polarity": -1,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 1.5,
@@ -558,108 +649,44 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
+      "reference": "f_0000055",
       "reject_threshold": 60.0,
       "roi": [
         [
-          164,
-          647
+          912,
+          789
         ],
         [
-          310,
-          250
+          690,
+          790
         ],
         [
-          325,
-          232
+          455,
+          747
         ],
         [
-          344,
-          216
+          545,
+          245
         ],
         [
-          363,
-          205
+          590,
+          221
         ],
         [
-          387,
-          192
+          639,
+          210
         ],
         [
-          401,
-          185
+          767,
+          209
         ],
         [
-          436,
-          173
+          848,
+          229
         ],
         [
-          469,
-          165
-        ],
-        [
-          514,
-          160
-        ],
-        [
-          543,
-          157
-        ],
-        [
-          603,
-          159
-        ],
-        [
-          655,
-          167
-        ],
-        [
-          729,
-          184
-        ],
-        [
-          768,
-          200
-        ],
-        [
-          796,
-          214
-        ],
-        [
-          841,
-          243
-        ],
-        [
-          866,
-          262
-        ],
-        [
-          892,
-          293
-        ],
-        [
-          910,
-          324
-        ],
-        [
-          954,
-          788
-        ],
-        [
-          706,
-          733
-        ],
-        [
-          370,
-          700
-        ],
-        [
-          341,
-          643
-        ],
-        [
-          241,
-          645
+          911,
+          272
         ]
       ],
       "seam": {
@@ -667,6 +694,12 @@
         "edge_frac": 0.12,
         "enabled": true,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 1.0,
         "min_contrast": 8.0,
         "mode": "ridge",
@@ -681,6 +714,9 @@
             193
           ]
         ],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 5.0,
@@ -725,11 +761,20 @@
         "edge_frac": 0.0,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 0.25,
         "min_contrast": 10.0,
         "mode": "step",
         "polarity": -1,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 1.5,
@@ -754,56 +799,52 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
+      "reference": "f_0000062",
       "reject_threshold": 60.0,
       "roi": [
         [
-          247,
-          692
+          713,
+          707
         ],
         [
-          230,
-          281
+          836,
+          633
         ],
         [
-          274,
-          223
+          840,
+          511
         ],
         [
-          376,
-          160
+          795,
+          432
         ],
         [
-          498,
-          123
+          675,
+          398
         ],
         [
-          626,
-          113
+          578,
+          390
         ],
         [
-          743,
-          129
+          520,
+          451
         ],
         [
-          818,
-          169
+          517,
+          520
         ],
         [
-          828,
-          184
+          523,
+          605
         ],
         [
-          957,
-          620
+          548,
+          654
         ],
         [
-          449,
-          713
-        ],
-        [
-          405,
-          660
+          561,
+          680
         ]
       ],
       "seam": {
@@ -811,11 +852,20 @@
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 1.0,
         "min_contrast": 8.0,
         "mode": "ridge",
         "polarity": 0,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 5.0,
@@ -860,11 +910,20 @@
         "edge_frac": 0.0,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 0.25,
         "min_contrast": 10.0,
         "mode": "step",
         "polarity": -1,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 1.5,
@@ -889,77 +948,111 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
+      "reference": "f_0000079",
       "reject_threshold": 22.0,
       "roi": [
         [
-          975,
-          177
+          382,
+          23
         ],
         [
-          1105,
-          665
+          480,
+          23
         ],
         [
-          1002,
-          692
+          563,
+          30
         ],
         [
-          983,
-          761
+          629,
+          51
         ],
         [
-          658,
-          819
+          673,
+          76
         ],
         [
-          323,
-          804
+          710,
+          112
         ],
         [
-          312,
-          272
+          779,
+          454
         ],
         [
-          350,
-          221
+          804,
+          589
         ],
         [
-          436,
-          161
+          425,
+          591
         ],
         [
-          649,
-          107
+          16,
+          591
         ],
         [
-          810,
-          106
+          25,
+          189
         ],
         [
-          931,
-          137
+          51,
+          145
+        ],
+        [
+          112,
+          98
+        ],
+        [
+          187,
+          62
+        ],
+        [
+          271,
+          40
+        ],
+        [
+          329,
+          28
         ]
       ],
       "seam": {
-        "band": 30.0,
-        "edge_frac": 0.12,
-        "enabled": false,
+        "band": 8.0,
+        "edge_frac": 0.11,
+        "enabled": true,
         "fit_deg": 0,
+        "mask_coverage": 0.81,
+        "mask_defect_run": 10.0,
+        "mask_high": 1.0,
+        "mask_low": 1.0,
+        "mask_max_gap": 0.11,
+        "mask_width_tolerance": 0.5,
         "max_gap": 1.0,
         "min_contrast": 8.0,
         "mode": "ridge",
         "polarity": 0,
-        "pts": [],
+        "pts": [
+          [
+            764,
+            566
+          ],
+          [
+            661,
+            84
+          ]
+        ],
+        "reference_signature": "",
+        "reference_tolerance": 4.1,
+        "search_method": "mask",
         "skip": [],
         "smooth_win": 60.0,
-        "tol_edge": 5.0,
-        "tol_mid": 1.0
+        "tol_edge": 19.3,
+        "tol_mid": 18.5
       },
-      "sensitivity": 0.99,
-      "shift_tolerance_x": 3,
-      "shift_tolerance_y": 3,
-      "vertical_shift_tolerance_mm": 3.96
+      "sensitivity": 0.8,
+      "shift_tolerance_x": 4,
+      "shift_tolerance_y": 4,
+      "vertical_shift_tolerance_mm": 3.95
     },
     {
       "adaptive_roi_enabled": false,
@@ -995,11 +1088,20 @@
         "edge_frac": 0.0,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 0.25,
         "min_contrast": 10.0,
         "mode": "step",
         "polarity": -1,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 1.5,
@@ -1024,7 +1126,7 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
+      "reference": "f_0000037",
       "reject_threshold": 60.0,
       "roi": [],
       "seam": {
@@ -1032,11 +1134,20 @@
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 1.0,
         "min_contrast": 8.0,
         "mode": "ridge",
         "polarity": 0,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 5.0,
@@ -1081,11 +1192,20 @@
         "edge_frac": 0.0,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 0.25,
         "min_contrast": 10.0,
         "mode": "step",
         "polarity": -1,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 1.5,
@@ -1110,19 +1230,69 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
+      "reference": "f_0000059",
       "reject_threshold": 60.0,
-      "roi": [],
+      "roi": [
+        [
+          891,
+          268
+        ],
+        [
+          949,
+          574
+        ],
+        [
+          952,
+          746
+        ],
+        [
+          788,
+          815
+        ],
+        [
+          126,
+          769
+        ],
+        [
+          260,
+          256
+        ],
+        [
+          295,
+          222
+        ],
+        [
+          409,
+          176
+        ],
+        [
+          581,
+          164
+        ],
+        [
+          780,
+          187
+        ]
+      ],
       "seam": {
         "band": 30.0,
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 1.0,
         "min_contrast": 8.0,
         "mode": "ridge",
         "polarity": 0,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 5.0,
@@ -1167,11 +1337,20 @@
         "edge_frac": 0.0,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 0.25,
         "min_contrast": 10.0,
         "mode": "step",
         "polarity": -1,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 1.5,
@@ -1182,7 +1361,7 @@
         0.33
       ],
       "exclusions": [],
-      "horizontal_shift_tolerance_mm": 3.3600000000000003,
+      "horizontal_shift_tolerance_mm": 30.0,
       "label_outline": [],
       "label_tracking_enabled": true,
       "learning_robust_enabled": true,
@@ -1196,28 +1375,106 @@
       ],
       "metric_scale_source": "estimated",
       "min_blob_area": 20,
-      "reference": "f_0000001",
-      "reject_threshold": 60.0,
-      "roi": [],
+      "reference": "f_0000079",
+      "reject_threshold": 19.5,
+      "roi": [
+        [
+          523,
+          211
+        ],
+        [
+          554,
+          194
+        ],
+        [
+          613,
+          180
+        ],
+        [
+          685,
+          177
+        ],
+        [
+          826,
+          211
+        ],
+        [
+          947,
+          276
+        ],
+        [
+          993,
+          311
+        ],
+        [
+          1040,
+          360
+        ],
+        [
+          1058,
+          396
+        ],
+        [
+          1064,
+          441
+        ],
+        [
+          962,
+          883
+        ],
+        [
+          839,
+          824
+        ],
+        [
+          614,
+          720
+        ],
+        [
+          526,
+          682
+        ],
+        [
+          410,
+          642
+        ],
+        [
+          398,
+          570
+        ],
+        [
+          318,
+          537
+        ]
+      ],
       "seam": {
         "band": 30.0,
         "edge_frac": 0.12,
         "enabled": false,
         "fit_deg": 0,
+        "mask_coverage": 0.7,
+        "mask_defect_run": 6.0,
+        "mask_high": 24.0,
+        "mask_low": 8.0,
+        "mask_max_gap": 0.2,
+        "mask_width_tolerance": 0.5,
         "max_gap": 1.0,
         "min_contrast": 8.0,
         "mode": "ridge",
         "polarity": 0,
         "pts": [],
+        "reference_signature": "",
+        "reference_tolerance": 3.0,
+        "search_method": "native",
         "skip": [],
         "smooth_win": 60.0,
         "tol_edge": 5.0,
         "tol_mid": 1.0
       },
-      "sensitivity": 0.5,
-      "shift_tolerance_x": 3,
-      "shift_tolerance_y": 3,
-      "vertical_shift_tolerance_mm": 3.96
+      "sensitivity": 0.8,
+      "shift_tolerance_x": 4,
+      "shift_tolerance_y": 4,
+      "vertical_shift_tolerance_mm": 30.0
     }
   ],
   "defect": false,

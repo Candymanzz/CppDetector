@@ -1,3 +1,32 @@
+# Separate width from geometric deviation — 2026-11-24
+
+Detection and rejection formulas are unchanged. rowWidthReject / width_reject
+is derived display metadata for existing length-qualified width events.
+used_params records the inspected configuration. Twenty photo results match
+the prior engine, including complete side and width traces. [Diagnosis, behavior and evidence](seam-plot-2026-11-24.md).
+
+# Mandatory paired mask evidence — 2026-11-24
+
+Ridge mask now uses seam_pair: two primary-reference-supported Canny/DP paths,
+pose-aware cross-sections, independent deviations, local missing-side and width
+guards. No capture button or current-frame baseline fit. The old extractor remains
+a preparation primitive and step method; reference mode remains separate. [Method, evidence and limitations](seam-pair-2026-11-24.md).
+
+# Frozen reference boundary and uniform allowance — 2026-11-24
+
+The explicit reference method selects a persistent reference edge once and
+matches its polarity/profile/form after normal pose compensation. Deviation is
+measured directly against that frozen shape, with no current-image polynomial
+baseline. One tolerance changes all limits without changing the captured model
+or measured path. [Parameters, lifecycle and evidence](seam-reference-2026-11-24.md).
+
+# Optional connected seam mask — 2026-11-24
+
+Standalone `search_method=mask` adds Canny hysteresis, polarity-aware DP paths,
+observed edge deviations against robust quadratic baselines and coverage/gap
+guards. It does not interpolate missing measurements. Native mode remains the
+old default. [Parameters, semantics and actual evidence](seam-mask-2026-11-24.md).
+
 # Combined native and adaptive paths — 2026-11-16
 
 The normal path retains incoming phase256/ECC512 and confirmed-label tracking.

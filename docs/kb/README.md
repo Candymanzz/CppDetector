@@ -1,3 +1,85 @@
+# Width events and actual inspection settings — 2026-11-24
+
+Both bottom/SVG plots now separate side deviation from width; the extra
+worst-side source line is removed. Short changes are orange, enough-length
+events red. Used settings and stale-result feedback are explicit. [Diagnosis, behavior and evidence](seam-plot-2026-11-24.md).
+
+# Both mask boundaries and width — 2026-11-24
+
+The owner returned to mask/path development. One surviving edge no longer
+hides loss of the other; cross-sections check both sides and width independently.
+23 CTest, eight JS suites and nine Chrome/HTTP groups pass, including two real
+reference paint uploads. Original photos need labelled calibration. [Method, evidence and limitations](seam-pair-2026-11-24.md).
+
+# Seam captured on reference, one tolerance — 2026-11-24
+
+After the owner identified a jump to a black square, camera 6 now uses a frozen
+reference boundary with one uniform source-pixel tolerance. Shape/identity no
+longer refit on each current image. Capture/persistence/invalidations and real
+photo checks pass; f92 remains explicitly incomplete.
+[Workflow, implementation and limits](seam-reference-2026-11-24.md).
+
+# Connected seam mask — 2026-11-24
+
+New opt-in mask/path search detects the weak camera-6 seam along 98.79–100% of
+16 snapshot frames, instead of fragmented native bright-ridge samples. There is
+a real mask preview and explicit incomplete-control handling for lost/gapped
+paths. Four deviations remain unlabelled. [Method, checks and limits](seam-mask-2026-11-24.md).
+
+# Camera sidebar and seam visualization — 2026-11-24
+
+Follow-up: the whole image and compact verdict now remain fixed on the left;
+all tools, detailed results and seam plot scroll inside the right menu. Real
+photo/wheel/ROI/viewport checks and four UI suites passed.
+[Correction and checks](sidebar-seam-2026-11-24.md#follow-up-keep-the-whole-bucket-and-verdict-visible).
+
+Camera settings now scroll independently from the image/document. Native per-row
+seam diagnostics restore the old overlay graph and drive a readable plot with
+tolerances, overshoots, gaps and exclusions. [Workflow, cause and checks](sidebar-seam-2026-11-24.md).
+
+# Local images in the unwrap workspace — 2026-11-19
+
+Use **Свои изображения** or **Загрузить фото** for each camera. Uploaded files
+drive previews, the panorama and existing inspection; missing cameras remain
+explicit. Files stay in browser memory, with current profile references retained.
+16 real Chrome/HTTP scenarios and 3 layouts pass.
+[Workflow, validation and lifetime](local-uploads-2026-11-19.md).
+
+# Atlas false rejections — 2026-11-19
+
+Sources now align independently before unwrapping, with camera ROI/exclusions
+and explicit profile comparison tolerance. Accepted positions 2–4 no longer
+reject at the unchanged area threshold; injected defects remain detectable.
+Manual seam position/scale controls are available. Full automatic geometry
+remains partial. [Evidence, implementation and limits](atlas-quality-2026-11-19.md).
+
+# Reference alignment and clear seams — 2026-11-19
+
+The unwrap display uses one view per pixel, removing overlap ghosting. A local
+reference-only ORB worker fits supported camera overlaps and explicitly marks
+partial/failed joins. Bucket-1 front views 0/3 improve; a complete calibrated
+panorama is still open. [Behavior, measurements and limitations](reference-stitching-2026-11-19.md).
+
+# Frame selection at the top of the unwrap workspace — 2026-11-19
+
+**Кадры для инспекции** now shows four per-camera file lists before the result,
+with previous/next, explicit filenames and a shared frame-number control. Source
+previews and reference mode remain synchronised. [Workflow and checks](frame-selection-2026-11-19.md).
+
+# Whole-surface atlas inspection — 2026-11-19
+
+The unwrap tab now inspects one developed surface: fixed camera ownership without
+feathering, global registration, bounded brightness correction, connected defect
+regions and an experimental bucket verdict with coverage/failure guards. There
+are aligned/control-reference views and a JSON report. [Pipeline, tests and actual observations](surface-atlas-inspection-2026-11-19.md).
+
+# Bucket surface unwrap — 2026-11-19
+
+New **Развёртка ведра** tab: separate product groups, editable surface boundaries,
+raw-to-rectified previews, circular image, source provenance, coverage and exploratory
+reference differences. Browser recipes and PNG/JSON export are separate from native
+profiles; no automatic defect verdict. [Workflow, geometry, checks and limits](surface-unwrap-2026-11-19.md).
+
 # Camera inspection toolbar — 2026-11-16
 
 The sticky camera header shows the last whole-camera defective-frame count and

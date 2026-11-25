@@ -15,7 +15,7 @@ param(
     [switch]$NoRun,
     [switch]$Clean,
     [switch]$CheckOnly,
-    [int]$Port = 8080,
+    [int]$Port = 8081,
     [string]$Frames = '',
     [string]$Config = 'Release'
 )

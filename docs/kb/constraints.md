@@ -1,3 +1,76 @@
+# Diagnose tuning without silently replacing it — 2026-11-24
+
+The owner is actively tuning the mask. Preserve live settings and show which
+ones produced the displayed result. Width/side loss and geometric displacement
+are separate signals; short width violations must not imply a rejected frame.
+Physical seam identity and production calibration remain open. [Diagnosis, behavior and evidence](seam-plot-2026-11-24.md).
+
+# A surviving side cannot hide the other — 2026-11-24
+
+Mask ridge requires a supported reference pair and checks each side independently.
+Unknown reference/current rows remain null; a short local disappearance can reject
+even below global missing-length limits. More original photos now reject or lack
+control; these are not validated manufacturing-defect labels. Preserve owner tuning.
+[Method, evidence and limitations](seam-pair-2026-11-24.md).
+
+# Reference seam identity is frozen — 2026-11-24
+
+The owner requested reference-derived limits and one uniform tolerance. Current
+frames cannot redefine that reference. Tolerance must not affect matching or
+invalidate confirmation; changed primary pixels/points must require recapture.
+Missing/invisible evidence is incomplete control. One selected boundary and
+unlabelled photo outcomes do not establish complete seam/stripe defect quality.
+[Evidence and bounds](seam-reference-2026-11-24.md).
+
+# Mask seam experiment and explicit loss of control — 2026-11-24
+
+The owner requested a mask/path alternative to fragmented bright-ridge detection.
+It is explicit per camera; no automatic geometric rescaling or masked-out new
+defects. Missing path evidence stays missing, and failed coverage/gap guards give
+NOT_INSPECTED. Improved path coverage does not establish correct edge identity or
+labelled defect accuracy. [Implementation and boundaries](seam-mask-2026-11-24.md).
+
+# Local-image lifetime and compatibility — 2026-11-19
+
+Uploads live only until full page reload and cannot be recovered from recipe JSON.
+References remain profile-owned; arbitrary product photos or different native
+sizes do not become valid comparisons automatically. Missing/invalid images never
+fall back to dataset frames. Existing geometry/quality/timing limits remain.
+[Workflow and validation](local-uploads-2026-11-19.md).
+
+# Accepted-image regression and remaining geometry limits — 2026-11-19
+
+Positions 2–4 now pass with zero regions at unchanged atlas rejection thresholds.
+This is a local same-file regression, not native parity or labelled-defect quality.
+Working areas are explicit; unchecked pixels remain transparent. Tolerance/blur
+can hide small changes. Full reference geometry and the line deadline are still
+unverified. Manual position/scale correction does not establish calibration.
+[Evidence and open work](atlas-quality-2026-11-19.md).
+
+# Reference-derived geometry only — 2026-11-19
+
+The owner reported ghosting and requested better stitching. Overlap averaging
+is removed from the display. Only reference pixels can determine a new geometric
+fit; it is frozen for current-image inspection. Unsupported matches must remain
+explicitly partial, with no fabricated surface or silent source stretching.
+Native constraints still apply separately. [Decision and checks](reference-stitching-2026-11-19.md).
+
+# Whole-atlas verdict experiment — 2026-11-19
+
+The owner explicitly authorised inspecting the unfolded image. This adds a separate
+experimental whole-bucket verdict to the browser workspace, preserving native C3
+comparison and machine outputs. Missing required views/references, inadequate
+support or unreliable registration cannot produce OK. Calibration and 500 ms
+timing remain unverified. [Parameters and tradeoffs](surface-atlas-inspection-2026-11-19.md).
+
+# Surface unwrap experiment — 2026-11-19
+
+The owner authorised a separate multi-camera image workspace. It groups side views
+of one bucket, without changing C3's native per-camera comparison or issuing a native
+verdict. Top cameras and different products cannot be merged into its side image.
+Approximate coverage/geometry and browser runtime do not certify physical coverage,
+metric accuracy or C1's machine-cycle budget. [Reasons and tests](surface-unwrap-2026-11-19.md).
+
 # Local data during Git synchronization — 2026-11-16
 
 The pulled profile belongs to a different machine. Retain this checkout's camera

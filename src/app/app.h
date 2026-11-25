@@ -37,6 +37,8 @@ public:
     bool deleteLearned(int cam, const std::string& id, std::string& err);
     bool learnedImage(int cam, const std::string& id, std::vector<uchar>& out);
     bool inspectedJpeg(int cam, uint64_t version, std::vector<uchar>& out);
+    bool seamMaskPng(int cam, uint64_t version, std::vector<uchar>& out);
+    bool confirmSeamReference(int cam,json& result,std::string& error);
     json inspectAll(int cam, bool defect, std::string& err);
     bool autoRoi(int cam, const std::string& frame, std::vector<cv::Point>& out, std::string& err);
     std::vector<std::string> testFiles() const;                  // images in <frames>/../test-pr-ph
@@ -72,6 +74,7 @@ private:
         Inspector insp;
         json last;
         std::vector<uchar> overlay;
+        std::vector<uchar> seamMask;
         uint64_t ver = 0;
         size_t cursor = 0;
         int64_t lastRejectSaveMs = 0;

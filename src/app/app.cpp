@@ -126,14 +126,18 @@ static bool parseLabel(const json& value, cv::Size size, std::vector<cv::Point>&
 static json seamToJson(const SeamParams& s) {
     json pts = json::array();
     for (auto& q : s.pts) pts.push_back({cvRound(q.x), cvRound(q.y)});
-    return {{"enabled", s.enabled}, {"mode", s.mode == SeamParams::Step ? "step" : "ridge"}, {"pts", pts}, {"skip", s.skip},
+    return {{"enabled", s.enabled}, {"search_method", s.referenceSearch ? "reference" : s.maskSearch ? "mask" : "native"},
+            {"reference_tolerance",s.referenceTolerance},{"reference_signature",s.referenceSignature},
+            {"mask_low",s.maskLow},{"mask_high",s.maskHigh},{"mask_coverage",s.maskCoverage},{"mask_max_gap",s.maskMaxGap},
+            {"mask_defect_run",s.maskDefectRun},{"mask_width_tolerance",s.maskWidthTolerance},
+            {"mode", s.mode == SeamParams::Step ? "step" : "ridge"}, {"pts", pts}, {"skip", s.skip},
             {"polarity", s.polarity}, {"fit_deg", s.fitDeg}, {"smooth_win", s.smoothWin}, {"band", s.bandHalf}, {"tol_mid", s.tolMid},
             {"tol_edge", s.tolEdge}, {"edge_frac", s.edgeFrac}, {"min_contrast", s.minContrast}, {"max_gap", s.maxGap}};
 }
 
 // Validates and applies the fields present in `b` (partial update). Points are in original image px.
 // Legacy configs carry the two line ends as "p0"/"p1"; they are read as a two-point "pts".
-static bool applySeam(const json& b, const cv::Size& imgSize, SeamParams& s, std::string& err) {
+static bool applySeam(const json& b, const cv::Size& imgSize, SeamParams& s, std::string& err, bool loading = false) {
     if (!b.is_object()) { err = "seam must be an object"; return false; }
     auto num = [&](const char* k, double lo, double hi, double& dst) {
         if (!b.contains(k)) return true;
@@ -152,6 +156,21 @@ static bool applySeam(const json& b, const cv::Size& imgSize, SeamParams& s, std
         if (!b["enabled"].is_boolean()) { err = "bad seam value for enabled"; return false; }
         s.enabled = b["enabled"].get<bool>();
     }
+    if(b.contains("search_method")) {
+        if(!b["search_method"].is_string() || (b["search_method"]!="native"&&b["search_method"]!="mask"&&b["search_method"]!="reference")){err="bad seam search_method";return false;}
+        s.maskSearch=b["search_method"]=="mask";
+        s.referenceSearch=b["search_method"]=="reference";
+    }
+    if(!num("reference_tolerance",.1,50,s.referenceTolerance))return false;
+    if(b.contains("reference_signature")){
+        if(!b["reference_signature"].is_string()||b["reference_signature"].get_ref<const std::string&>().size()>512){err="bad seam reference signature";return false;}
+        const auto signature=b["reference_signature"].get<std::string>();
+        if(loading)s.referenceSignature=signature;
+        else if(signature!=s.referenceSignature){err="seam reference_signature is read-only; confirm the reference seam";return false;}
+    }
+    if(!num("mask_low",0,255,s.maskLow)||!num("mask_high",0,255,s.maskHigh)||!num("mask_coverage",.3,1,s.maskCoverage)||!num("mask_max_gap",0,1,s.maskMaxGap))return false;
+    if(!num("mask_defect_run",3,100,s.maskDefectRun)||!num("mask_width_tolerance",.05,2,s.maskWidthTolerance))return false;
+    if(s.maskLow>s.maskHigh){err="seam mask_low must not exceed mask_high";return false;}
     if (b.contains("mode")) {
         if (!b["mode"].is_string() || (b["mode"] != "ridge" && b["mode"] != "step")) { err = "bad seam value for mode"; return false; }
         s.mode = b["mode"] == "step" ? SeamParams::Step : SeamParams::Ridge;
@@ -162,12 +181,14 @@ static bool applySeam(const json& b, const cv::Size& imgSize, SeamParams& s, std
         std::vector<cv::Point2d> pts(a.size());
         for (size_t i = 0; i < a.size(); ++i)
             if (!parsePt(a[i], pts[i])) return false;
+        if(!loading&&s.pts!=pts)s.referenceSignature.clear();
         s.pts = std::move(pts);
         s.skip.clear();                                // segment numbers refer to the old points
     } else if (b.contains("p0") && b.contains("p1")) {
         cv::Point2d p0, p1;
         if (!parsePt(b["p0"], p0) || !parsePt(b["p1"], p1)) return false;
-        s.pts = (p0 == p1) ? std::vector<cv::Point2d>{} : std::vector<cv::Point2d>{p0, p1};
+        const auto pts=(p0 == p1) ? std::vector<cv::Point2d>{} : std::vector<cv::Point2d>{p0, p1};
+        if(!loading&&s.pts!=pts)s.referenceSignature.clear();s.pts=pts;
         s.skip.clear();
     }
     if (b.contains("skip")) {
@@ -220,8 +241,10 @@ App::~App() {
 
 void App::rebuild(Cam& c) {
     c.inspected.release();
+    c.overlay.clear();c.seamMask.clear();c.last=json::object();++c.ver;
     if (!c.ref.empty()) {
         c.insp.setReference(c.ref, c.roi, c.p);
+        c.insp.configureSeamReference(c.seam);
         learning_.setReference(c.product, c.ref);
         c.insp.setLearned(learning_.reference(c.product)->learned());
     }
@@ -256,7 +279,7 @@ void App::load() {
             json seam = cj["seam"];
             if (seam.contains("pts") && seam["pts"].is_array() && seam["pts"].size() > 2)
                 seam["pts"] = {seam["pts"].front(), seam["pts"].back()};
-            applySeam(seam, cv::Size(), c.seam, err);
+            applySeam(seam, cv::Size(), c.seam, err, true);
         }
         if (c.seam.mode == SeamParams::Step) c.seam = SeamParams();
         c.seam.skip.clear();
@@ -320,6 +343,7 @@ json App::state() {
         cj["reference"] = c.refName;
         cj["roi"] = roiToJson(c.roi);
         cj["seam"] = seamToJson(c.seam);
+        cj["seam_reference"]=c.insp.seamReferenceInfo();
         cj["edge"] = seamToJson(c.edge);
         cj["width"] = c.ref.cols;
         cj["height"] = c.ref.rows;
@@ -405,6 +429,7 @@ bool App::setReferenceFromFrame(int cam, const std::string& frame, std::string& 
         if (!readFrame(c, frame, m)) { err = "unknown frame"; return false; }
         if (!c.ref.empty() && m.size() != c.ref.size()) { c.roi.clear(); c.p.exclusions.clear(); }
         c.p.labelOutline.clear();
+        c.seam.referenceSignature.clear();
         c.ref = m;
         c.refName = frame;
         rebuild(c);
@@ -421,6 +446,7 @@ bool App::setReferenceFromImage(int cam, const cv::Mat& img, std::string& err) {
         std::lock_guard<std::mutex> lk(c.m);
         if (!c.ref.empty() && img.size() != c.ref.size()) { c.roi.clear(); c.p.exclusions.clear(); }
         c.p.labelOutline.clear();
+        c.seam.referenceSignature.clear();
         c.ref = img;
         c.refName = "upload";
         fs::create_directories(cfgPath_.parent_path());
@@ -446,6 +472,18 @@ static void drawSeamDetail(cv::Mat& vis, const SeamParams& sp, const SeamResult&
     const int N = int(sr.rowPos.size());
     if (N < 2) return;
     const cv::Scalar white(255, 255, 255), green(0, 230, 0), red(0, 0, 255), magenta(255, 0, 255), orange(0, 150, 255);
+    if(sr.pairedMask&&sr.sides.size()==2&&sr.sides[0].state.size()==size_t(N)){
+        for(int i=0;i<N;++i){
+            if(i%20==0&&sr.sides[0].state[i]!=1&&sr.sides[0].state[i]!=2)
+                cv::line(vis,sr.sides[0].reference[i],sr.sides[1].reference[i],cv::Scalar(200,180,0),1,cv::LINE_AA);
+            for(const auto& side:sr.sides){
+                if(side.state[i]==3&&i%3==0)cv::circle(vis,side.reference[i],2,magenta,1,cv::LINE_AA);
+                if(side.state[i]!=0)continue;
+                const bool bad=std::abs(side.deviation[i])>sr.rowTol[i]||sr.rowWidthReject[i];
+                if(i>0&&side.state[i-1]==0)cv::line(vis,side.edge[i-1],side.edge[i],bad?red:sr.rowWidthBad[i]?orange:green,1,cv::LINE_AA);
+            }
+        }
+    }
     auto over = [&](int i) { return std::fabs(sr.rowDev[i]) > sr.rowTol[i]; };
 
     // runs of evaluated rows -> polylines
@@ -462,14 +500,14 @@ static void drawSeamDetail(cv::Mat& vis, const SeamParams& sp, const SeamResult&
             }
         }
     };
-    runs([&](const std::vector<cv::Point>& ref, const std::vector<cv::Point>& edge) {
+    if(!sr.pairedMask)runs([&](const std::vector<cv::Point>& ref, const std::vector<cv::Point>& edge) {
         if (ref.size() > 1) cv::polylines(vis, ref, false, white, 1, cv::LINE_AA);
         if (edge.size() > 1) cv::polylines(vis, edge, false, green, 1, cv::LINE_AA);
     });
     for (int i = 0; i < N; ++i) {
-        if (sr.rowState[i] == 3 && i % 3 == 0) cv::circle(vis, sr.rowPos[i], 1, magenta, -1);
+        if (!sr.pairedMask && sr.rowState[i] == 3 && i % 3 == 0) cv::circle(vis, sr.rowPos[i], 1, magenta, -1);
         else if (sr.rowState[i] == 1) cv::circle(vis, sr.rowPos[i], 1, orange, -1);
-        else if (sr.rowState[i] == 0 && over(i)) cv::circle(vis, sr.rowEdge[i], 2, red, -1);
+        else if (!sr.pairedMask && sr.rowState[i] == 0 && over(i)) cv::circle(vis, sr.rowEdge[i], 2, red, -1);
     }
 
     // deviation graph
@@ -477,10 +515,11 @@ static void drawSeamDetail(cv::Mat& vis, const SeamParams& sp, const SeamResult&
     cv::Mat panel = vis(cv::Rect(0, vis.rows - H * (slot + 1), vis.cols, H));
     cv::Mat dark(panel.size(), panel.type(), cv::Scalar(20, 20, 20));
     cv::addWeighted(panel, 0.3, dark, 0.7, 0, panel);
-    const double tolMax = std::max(sp.tolMid, sp.tolEdge);
-    const double range = std::max(3.0 * tolMax, 3.0);          // px shown above and below zero
-    const double mid = H / 2.0, scale = (H / 2.0 - 16) / range;
-    auto X = [&](int i) { return M + (vis.cols - 2 * M) * double(i) / (N - 1); };
+    const double tolMax = sr.referenceSearch ? sp.referenceTolerance : std::max(sp.tolMid, sp.tolEdge);
+    const double range = std::max((sr.pairedMask?1.35:3.0) * tolMax, 3.0);
+    const double mid = sr.pairedMask?48:H/2.0, scale = (sr.pairedMask?25:(H/2.0-16))/range;
+    const int left=sr.pairedMask?62:M;
+    auto X = [&](int i) { return left + (vis.cols - left - M) * double(i) / (N - 1); };
     auto Y = [&](double d) { return mid - std::clamp(d, -range, range) * scale; };
     cv::line(panel, {M, int(mid)}, {vis.cols - M, int(mid)}, cv::Scalar(120, 120, 120), 1);
     std::vector<cv::Point> up, lo;
@@ -492,13 +531,41 @@ static void drawSeamDetail(cv::Mat& vis, const SeamParams& sp, const SeamResult&
     }
     cv::polylines(panel, up, false, cv::Scalar(0, 215, 255), 1);
     cv::polylines(panel, lo, false, cv::Scalar(0, 215, 255), 1);
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; !sr.pairedMask && i < N; ++i) {
         const int x = int(X(i));
         if (sr.rowState[i] == 1) cv::line(panel, {x, 0}, {x, 5}, orange, 1);
         else if (sr.rowState[i] == 3) cv::line(panel, {x, H - 6}, {x, H - 1}, magenta, 1);
         else if (sr.rowState[i] == 0) cv::circle(panel, {x, int(Y(sr.rowDev[i]))}, 1, over(i) ? red : green, -1);
     }
     char txt[160];
+    if(sr.pairedMask&&sr.sides.size()==2&&sr.sides[0].state.size()==size_t(N)){
+        std::snprintf(txt,sizeof txt,"%s: edge deviation px; green/teal = sides 1/2, yellow = tolerance, scale +-%.1f",name,range);
+        cv::putText(panel,txt,{M,12},cv::FONT_HERSHEY_SIMPLEX,.34,white,1,cv::LINE_AA);
+        double widthRange=std::max(.75,sp.maskWidthTolerance*1.35);
+        for(int i=0;i<N;++i)if(std::isfinite(sr.rowWidth[i])&&sr.rowReferenceWidth[i]>0)widthRange=std::max(widthRange,std::abs(sr.rowWidth[i]/sr.rowReferenceWidth[i]-1.)*1.15);
+        auto W=[&](double d){return 105.-std::clamp(d,-widthRange,widthRange)*12./widthRange;};
+        cv::line(panel,{left,105},{vis.cols-M,105},cv::Scalar(100,100,100),1);
+        for(int sign:{-1,1})cv::line(panel,{left,int(W(sign*sp.maskWidthTolerance))},{vis.cols-M,int(W(sign*sp.maskWidthTolerance))},cv::Scalar(0,215,255),1);
+        std::snprintf(txt,sizeof txt,"width change %%: limit +-%.0f%%; orange = short change, red = run >= %.0f px",sp.maskWidthTolerance*100,sp.maskDefectRun);
+        cv::putText(panel,txt,{M,87},cv::FONT_HERSHEY_SIMPLEX,.32,white,1,cv::LINE_AA);
+        cv::putText(panel,"0%",{M,109},cv::FONT_HERSHEY_SIMPLEX,.3,white,1,cv::LINE_AA);
+        for(int k=0;k<2;++k){const auto& side=sr.sides[k];const cv::Scalar color=k?cv::Scalar(200,210,40):green;const int lane=H-19+k*11;
+            cv::line(panel,{left,lane},{vis.cols-M,lane},cv::Scalar(80,80,80),1);
+            cv::putText(panel,k?"edge 2":"edge 1",{M,lane+3},cv::FONT_HERSHEY_SIMPLEX,.3,color,1,cv::LINE_AA);
+            for(int i=0;i<N;++i){const int x=int(X(i));
+                if(side.state[i]==0)cv::circle(panel,{x,int(Y(side.deviation[i]))},1,std::abs(side.deviation[i])>sr.rowTol[i]?red:color,-1);
+                if(side.state[i]==3)cv::line(panel,{x,lane-3},{x,lane+3},magenta,1);
+                else if(side.state[i]==4)cv::line(panel,{x,lane-2},{x,lane+2},cv::Scalar(145,145,145),1);
+                else if(side.state[i]==1)cv::line(panel,{x,lane-3},{x,lane+3},orange,1);
+            }
+        }
+        for(int i=0;i<N;++i)if(std::isfinite(sr.rowWidth[i])&&sr.rowReferenceWidth[i]>0){const double d=sr.rowWidth[i]/sr.rowReferenceWidth[i]-1.;
+            cv::circle(panel,{int(X(i)),int(W(d))},1,sr.rowWidthReject[i]?red:sr.rowWidthBad[i]?orange:green,-1);
+        }
+        std::snprintf(txt,sizeof txt,"max %.2f px; tolerance %.1f..%.1f px",sr.maxDev,sp.tolMid,sp.tolEdge);
+        cv::putText(panel,txt,{left,23},cv::FONT_HERSHEY_SIMPLEX,.34,white,1,cv::LINE_AA);
+        return;
+    }
     std::snprintf(txt, sizeof txt, "%s: deviation, px (yellow = tolerance, scale +-%.1f)   magenta = not found, orange = skipped", name, range);
     cv::putText(panel, txt, {M, 12}, cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(220, 220, 220), 1, cv::LINE_AA);
     if (worst >= 0) {
@@ -542,6 +609,14 @@ static std::vector<uchar> renderOverlay(const cv::Mat& img, const InspectResult&
     int slot = 0;
     auto zone = [&](const SeamParams& zp, const SeamResult& zr, const char* name, const cv::Scalar& col) {
         if (!zp.enabled || zr.path.size() < 2) return;
+        if(zr.referenceSearch){
+            std::vector<cv::Point> lower,upper;
+            const auto normal=zr.pathNormal.front();
+            for(const auto& p:zr.rowRef){lower.emplace_back(p-normal*float(zp.referenceTolerance));upper.emplace_back(p+normal*float(zp.referenceTolerance));}
+            if(lower.size()>1){cv::polylines(vis,lower,false,col,1,cv::LINE_AA);cv::polylines(vis,upper,false,col,1,cv::LINE_AA);}
+            drawSeamDetail(vis,zp,zr,slot++,name);return;
+        }
+        if(zr.pairedMask){drawSeamDetail(vis,zp,zr,slot++,name);return;}
         // search band and axis, then the measured line and the deviation graph
         std::vector<cv::Point> axis, sideA, sideB;
         for (size_t i = 0; i < zr.path.size(); ++i) {
@@ -592,12 +667,16 @@ static void writeSeamDebug(const fs::path& dir, int id, const std::string& frame
       << " longest_gap=" << sr.longestGap << " ratio=" << sr.ratio << " max_dev=" << sr.maxDev << " worst_t=" << sr.worstT
       << " ms=" << sr.ms << " bad_points=" << sr.badPts.size() << "\n";
     if (sr.rowPos.empty()) t << "line was not built (disabled, fewer than 2 points, shorter than 50 px or outside the image)\n";
-    t << "state: 0 evaluated, 1 skipped segment, 2 line end ignored, 3 no edge found\n";
+    t << "state: 0 evaluated, 1 skipped segment, 2 line end ignored, 3 no edge found, 4 reference unsupported\n";
     t << "row x y state dev_px\n";
     for (size_t i = 0; i < sr.rowPos.size(); ++i) {
         t << i << " " << std::fixed << std::setprecision(1) << sr.rowPos[i].x << " " << sr.rowPos[i].y << " " << int(sr.rowState[i]) << " ";
         if (std::isnan(sr.rowDev[i])) t << "-"; else t << std::setprecision(2) << sr.rowDev[i];
         t << "\n";
+    }
+    for(size_t k=0;k<sr.sides.size();++k){const auto& side=sr.sides[k];
+        t<<"side "<<k+1<<" coverage="<<side.coverage<<" longest_missing_px="<<side.longestMissingPx<<"\n";
+        for(size_t i=0;i<side.state.size();++i){t<<i<<" "<<int(side.state[i])<<" ";if(std::isfinite(side.deviation[i]))t<<side.deviation[i];else t<<"-";t<<"\n";}
     }
     t.close();
     cv::imwrite(base.string() + ".png", img);
@@ -678,7 +757,40 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
                     {"coverage", std::round(z.coverage * 100) / 100},
                     {"ms", std::round(z.ms * 100) / 100}};
     };
-    if (r.native.seamEnabled) j["seam"] = zoneJson(sr);
+    if (r.native.seamEnabled) {
+        j["seam"] = zoneJson(sr);
+        j["seam"]["search_method"]=sr.referenceSearch?"reference":sr.maskSearch?"mask":"native";
+        if(sr.referenceSearch)j["seam"]["reference_tolerance"]=c.seam.referenceTolerance;
+        j["seam"]["control_complete"]=sr.controlComplete;
+        j["seam"]["mask_reason"]=sr.maskReason;
+        j["seam"]["gap"]=sr.longestGap;
+        j["seam"]["mask_sides"]=sr.maskSides;
+        j["seam"]["paired_mask"]=sr.pairedMask;
+        j["seam"]["used_params"]=seamToJson(c.seam);
+        if(sr.pairedMask){
+            j["seam"]["reference_coverage"]=sr.pairReferenceCoverage;
+            j["seam"]["defect_run_px"]=c.seam.maskDefectRun;
+            j["seam"]["width_tolerance"]=c.seam.maskWidthTolerance;
+            j["seam"]["longest_width_run_px"]=sr.longestWidthRun;
+            auto& sides=j["seam"]["sides"]=json::array();
+            for(const auto& side:sr.sides){
+                json samples=json::array();
+                for(size_t i=0;i<side.state.size();++i)samples.push_back({{"t",i/double(std::max(size_t(1),side.state.size()))},{"state",int(side.state[i])},
+                    {"deviation",side.state[i]==0?json(side.deviation[i]):json(nullptr)}});
+                sides.push_back({{"polarity",side.sign},{"coverage",side.coverage},{"longest_missing_px",side.longestMissingPx},{"samples",std::move(samples)}});
+            }
+        }
+        j["seam"]["mask_preview"]=!sr.maskPreview.empty();
+        auto& trace = j["seam"]["samples"] = json::array();
+        const double length = c.seam.pts.size() >= 2 ? cv::norm(c.seam.pts.back() - c.seam.pts.front()) : 0;
+        for (size_t i = 0; i < sr.rowState.size(); ++i) {
+            trace.push_back({{"t", length > 0 ? i / length : 0}, {"state", int(sr.rowState[i])},
+                             {"deviation", sr.rowState[i] == 0 ? json(sr.rowDev[i]) : json(nullptr)},
+                             {"tolerance", sr.rowTol[i]}});
+            if(sr.pairedMask){auto& sample=trace.back();sample["width"]=std::isfinite(sr.rowWidth[i])?json(sr.rowWidth[i]):json(nullptr);
+                sample["reference_width"]=std::isfinite(sr.rowReferenceWidth[i])?json(sr.rowReferenceWidth[i]):json(nullptr);sample["width_bad"]=bool(sr.rowWidthBad[i]);sample["width_reject"]=bool(sr.rowWidthReject[i]);}
+        }
+    }
     j["exclusions"] = paramsToJson(c.p)["exclusions"];
     j["threshold"] = c.p.rejectThreshold;
     j["sensitivity"] = c.p.sensitivity;
@@ -704,6 +816,8 @@ json App::inspectLocked(Cam& c, int id, const cv::Mat& imgIn, const std::string&
 
     if (keepOverlay) {
         c.inspected = img.clone();
+        c.seamMask.clear();
+        if(!sr.maskPreview.empty())cv::imencode(".png",sr.maskPreview,c.seamMask);
         c.overlay = renderOverlay(img, r, c.roi, c.seam, sr, c.edge, er);
         j["ver"] = ++c.ver;
         // Legacy polyline/edge debug files do not describe the native seam calculation; keep JSON diagnostics.
@@ -785,6 +899,25 @@ bool App::overlayJpeg(int cam, std::vector<uchar>& out) {
     std::lock_guard<std::mutex> lk(cams_[cam]->m);
     out = cams_[cam]->overlay;
     return !out.empty();
+}
+
+bool App::confirmSeamReference(int cam,json& result,std::string& error) {
+    if(!validCam(cam)){error="bad camera";return false;}
+    {
+        auto& c=*cams_[cam];std::lock_guard<std::mutex> lock(c.m);
+        auto settings=c.seam;settings.enabled=true;
+        if(!c.insp.confirmSeamReference(settings,error))return false;
+        c.seam=std::move(settings);c.inspected.release();c.overlay.clear();c.seamMask.clear();c.last=json::object();++c.ver;
+        result={{"seam",seamToJson(c.seam)},{"reference",c.insp.seamReferenceInfo()}};
+    }
+    save();return true;
+}
+
+bool App::seamMaskPng(int cam,uint64_t version,std::vector<uchar>& out) {
+    if(!validCam(cam))return false;
+    auto& c=*cams_[cam];std::lock_guard<std::mutex> lock(c.m);
+    if(version!=c.ver||c.seamMask.empty())return false;
+    out=c.seamMask;return true;
 }
 
 // ---- emulated stream: every period one frame of every camera, processed in parallel ----

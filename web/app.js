@@ -8,6 +8,13 @@ const LINES = [
 ];
 // name: [min, max, step, decimals, label]
 const LINE_PARAM_DEFS = {
+  reference_tolerance: [0.1, 50, 0.1, 1, "Допуск стыка, px"],
+  mask_low: [0, 255, 1, 0, "Маска: нижний порог границы"],
+  mask_high: [0, 255, 1, 0, "Маска: верхний порог границы"],
+  mask_coverage: [0.3, 1, 0.01, 2, "Минимальная доля найденного стыка"],
+  mask_max_gap: [0, 1, 0.01, 2, "Максимальный непрерывный пропуск"],
+  mask_defect_run: [3, 100, 1, 0, "Мин. длина пропажи края / изменения ширины, px"],
+  mask_width_tolerance: [0.05, 2, 0.05, 2, "Допуск изменения ширины"],
   band: [5, 200, 1, 0, "Полоса поиска (±), px"],
   tol_mid: [0.1, 50, 0.1, 1, "Допуск в середине, px"],
   tol_edge: [0.1, 50, 0.1, 1, "Допуск на краях линии, px"],
@@ -16,7 +23,8 @@ const LINE_PARAM_DEFS = {
   min_contrast: [2, 40, 1, 0, "Мин. контраст, ур. серого"],
   max_gap: [0.05, 1, 0.05, 2, "Макс. разрыв линии (доля)"],
 };
-const lineParams = (ln) => (ln.step ? ["band", "tol_mid", "tol_edge", "edge_frac", "smooth_win", "min_contrast", "max_gap"] : ["band", "tol_mid", "tol_edge", "edge_frac"]);
+const lineParams = (ln) => (ln.step ? ["band", "tol_mid", "tol_edge", "edge_frac", "smooth_win", "min_contrast", "max_gap"] : ["reference_tolerance", "band", "tol_mid", "tol_edge", "edge_frac", "mask_low", "mask_high", "mask_coverage", "mask_max_gap", "mask_defect_run", "mask_width_tolerance"]);
+const lineParamText = (p,value) => p==="mask_width_tolerance"?fmt(value*100,0)+"%":fmt(value,LINE_PARAM_DEFS[p][3]);
 const S = {
   cams: [],            // static info per camera (frames, params, roi, ...)
   status: null,
@@ -86,6 +94,16 @@ function lineText(name, s) {
 
 function reasonText(r) {
   switch (r.reason) {
+    case "seam_reference_required": return "Задайте стык на эталоне и нажмите «Запомнить стык эталона». Контроль стыка не выполнен.";
+    case "seam_reference_changed": return "Изменился эталон или линия поиска. Стык нужно запомнить заново. Контроль стыка не выполнен.";
+    case "seam_reference_not_found": return "На эталоне не удалось уверенно выделить стык. Уточните два конца линии или выберите другой эталон.";
+    case "seam_mask_outside_frame": return "Точки стыка находятся вне текущего кадра. Задайте линию заново. Контроль стыка не выполнен.";
+    case "seam_mask_line_invalid": return "Для поиска стыка нужны два конца линии длиной не менее 50 px. Контроль стыка не выполнен.";
+    case "seam_mask_not_found": return r.seam?.search_method==="reference" ? "Не удалось уверенно сопоставить стык с эталоном. Проверьте кадр и выбранный эталон. Контроль стыка не выполнен." : "Маска не подтверждает достаточную длину стыка. Проверьте положение полосы и пороги маски. Контроль стыка не выполнен.";
+    case "seam_mask_gap": return "В найденном стыке слишком длинный пропуск без подтверждённой границы. Контроль стыка не выполнен.";
+    case "seam_mask_reference_pair": return "На эталоне не подтверждены обе стороны стыка. Проверьте линию, ширину полосы и пороги маски. Контроль двух краёв не выполнен.";
+    case "seam_mask_side_missing": return "Пропал участок одного или обоих краёв стыка.";
+    case "seam_mask_width": return "Ширина стыка изменилась относительно эталона.";
     case "label_position_unreliable": return "Не удалось достоверно измерить положение этикетки — нужна проверка кадра.";
     case "label_boundary_unreliable": return "Граница этикетки не подтверждается. Проверьте контур, освещение и наличие этикетки.";
     case "label_coverage_insufficient": return "Недостаточно общей видимой области этикетки для проверки.";
@@ -122,11 +140,13 @@ document.querySelectorAll("#tabs button").forEach((b) =>
 
 function showTab(name) {
   S.tab = name;
+  document.documentElement.classList.toggle("camera-workspace", name === "cam");
   $("inspectionHeader").hidden = name !== "cam";
   document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.id === "tab-" + name));
   if (name === "log") refreshLog();
   if (name === "cam") draw();
+  if (name === "unwrap") window.UnwrapUI?.open();
 }
 
 /* ---------- grid ---------- */
@@ -262,6 +282,8 @@ function selectCam(i) {
     fillLineUi(key);
   });
   $("result").replaceChildren();
+  renderSeamDiagnostic(null);
+  renderViewerSummary(null);
   renderCameraBatch();
   updateInspectionHeader();
   setMode("ref");
@@ -402,7 +424,19 @@ function drawLine(ln, k) {
   ctx.save();
   ctx.lineWidth = 1.5 * k;
   const skip = sm.skip || [];
-  for (let sg = 0; sg + 1 < sm.pts.length; sg++) {
+  const captured=cur()?.seam_reference;
+  if(sm.search_method==="reference"&&S.mode!=="result"&&referenceReady(ln.key)){
+    const path=captured.path,normal=captured.normal,tolerance=sm.reference_tolerance||3;
+    for(const sign of [-1,0,1]){
+      ctx.beginPath();ctx.strokeStyle=sign?ln.color:"#ffffff";
+      path.forEach((p,i)=>{const x=p[0]+normal[0]*tolerance*sign,y=p[1]+normal[1]*tolerance*sign;i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();
+    }
+  }
+  if(sm.search_method==="reference"&&S.mode!=="result"&&!referenceReady(ln.key)){
+    ctx.strokeStyle=ln.color;ctx.setLineDash([5*k,4*k]);ctx.beginPath();
+    sm.pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke();ctx.setLineDash([]);
+  }
+  for (let sg = 0; sm.search_method!=="reference" && sg + 1 < sm.pts.length; sg++) {
     const c = seamSegment(sm.pts, sg);
     const off = skip.includes(sg);
     ctx.strokeStyle = off ? "#ff9800" : sm.enabled ? ln.color : ln.color + "73";
@@ -457,6 +491,7 @@ function segDist(p, a, b) {
 }
 
 canvas.addEventListener("pointerdown", (ev) => {
+  if(Object.values(S.ln).some(line=>line.referencePending))return;
   if (S.learning || S.exclusionDraft || S.exclusionsSaving) return;
   if (ev.button !== 0) return;
   const pt = canvasPoint(ev);
@@ -623,10 +658,16 @@ function buildLineCards() {
   LINES.forEach((ln) => {
     const k = ln.key;
     const card = el("div", "card");
+    const parameter=(p)=>{
+      const [mn,mx,st,,label]=LINE_PARAM_DEFS[p];
+      return `<div class="param" id="${k}_${p}_row"><label>${label} <b id="v_${k}_${p}"></b></label><input type="range" id="${k}_${p}" min="${mn}" max="${mx}" step="${st}"></div>`;
+    };
     card.innerHTML = `
       <details class="fold" id="${k}_fold">
       <summary><h2>${ln.title} <span class="muted small">— ${ln.hint}</span></h2></summary>
       <div class="row"><label class="check"><input type="checkbox" id="${k}_enabled"> проверять геометрию</label></div>
+      <div class="row"><label>Поиск стыка <select id="${k}_search_method"><option value="mask">Маска + связный путь · два края</option><option value="reference">По эталону · один допуск</option><option value="native">Яркая линия · прежний</option></select></label></div>
+      <p class="muted small">Задайте два конца стыка на эталоне. В режиме маски каждый край проверяется отдельно; поперечные сечения контролируют ширину и пропажу сторон.</p>
       ${ln.step ? `<div class="row"><label>Яркая сторона&nbsp;
         <select id="${k}_polarity">
           <option value="0">любая</option>
@@ -640,11 +681,13 @@ function buildLineCards() {
         <button id="${k}_clear">Сбросить</button>
       </div>
       <div class="muted small" id="${k}_info">&nbsp;</div>
-      ${lineParams(ln).map((p) => {
-        const [mn, mx, st, , label] = LINE_PARAM_DEFS[p];
-        return `<div class="param"><label>${label} <b id="v_${k}_${p}"></b></label>
-          <input type="range" id="${k}_${p}" min="${mn}" max="${mx}" step="${st}"></div>`;
-      }).join("")}
+      <div class="row"><button id="${k}_capture">Запомнить стык эталона</button></div>
+      <p id="${k}_reference_status" class="muted small" role="status"></p>
+      ${parameter("reference_tolerance")}
+      <div>
+      <p id="${k}_mask_hint" class="muted small" hidden>Маска ищет связный путь для каждой стороны. Эталон определяет положение двух краёв и исходную ширину автоматически. Пропажа одного края не скрывается вторым. Кнопка запоминания для этого режима не нужна.</p>
+      ${lineParams(ln).filter(p=>p!=="reference_tolerance").map(parameter).join("")}
+      </div>
       </details>`;
     host.append(card);
     // folded by default; the state is remembered per browser
@@ -659,8 +702,21 @@ function buildLineCards() {
 }
 buildLineCards();
 
+function referenceReady(key) {
+  const model=cur()?.seam_reference,d=S.ln[key]?.d;
+  return !!(model?.ready&&d&&d.reference_signature===model.signature&&model.endpoints?.length===d.pts.length&&model.endpoints.every((p,i)=>Math.hypot(p[0]-d.pts[i][0],p[1]-d.pts[i][1])<.01));
+}
+
 function fillLineUi(key) {
   const ln = LINES.find((x) => x.key === key), l = S.ln[key], d = l.d;
+  for(const [field,value] of Object.entries({reference_tolerance:3,mask_low:8,mask_high:24,mask_coverage:.7,mask_max_gap:.2,mask_defect_run:6,mask_width_tolerance:.5})) if(d[field]==null)d[field]=value;
+  $(key + "_search_method").value = d.search_method || "native";
+  $(key + "_mask_hint").hidden = d.search_method !== "mask";
+  for(const field of ["mask_low","mask_high","mask_coverage","mask_max_gap","mask_defect_run","mask_width_tolerance"]) $(key+"_"+field+"_row").hidden=d.search_method!=="mask";
+  const isReference=d.search_method==="reference";
+  $(key+"_reference_tolerance_row").hidden=!isReference;
+  $(key+"_capture").hidden=$(key+"_reference_status").hidden=!isReference;
+  for(const field of ["band","tol_mid","tol_edge","edge_frac"])$(key+"_"+field+"_row").hidden=isReference;
   const busy = l.pick || !!l.roiSel;
   $(key + "_enabled").checked = !!d.enabled;
   if (ln.step) {
@@ -672,26 +728,40 @@ function fillLineUi(key) {
   $(key + "_done").hidden = !busy;
   $(key + "_skip").hidden = true; // production seam has no excluded polyline segments
   $(key + "_skip").textContent = l.skipMode ? "Закончить исключение" : "Исключить участки";
-  lineParams(ln).forEach((p) => { $(`${key}_${p}`).value = d[p]; $(`v_${key}_${p}`).textContent = fmt(d[p], LINE_PARAM_DEFS[p][3]); });
+  lineParams(ln).forEach((p) => { $(`${key}_${p}`).value = d[p]; $(`${key}_${p}`).disabled=!!l.referencePending; $(`v_${key}_${p}`).textContent = lineParamText(p,d[p]); });
+  for(const control of ["enabled","search_method","fromRoi","pick","clear"])$(key+"_"+control).disabled=!!l.referencePending;
   const n = d.pts.length;
   $(key + "_info").textContent = l.skipMode ? `кликай по участкам линии, которые не проверять (оранжевые, исключено: ${(d.skip || []).length}); повторный клик возвращает участок` :
     l.roiSel ? `кликай по точкам ROI вдоль линии (выбрано: ${l.roiSel.length}), затем «Готово»` :
     l.pick ? `кликай по линии (точек: ${n}), затем «Готово»` :
     n < 2 ? "Нужно задать две крайние точки линии, двумя концами." :
     "Две точки линии шва. Тяни точку мышью, ПКМ — удалить.";
+  if(!busy&&d.pts.some(p=>p[0]<0||p[1]<0||p[0]>=cur().width||p[1]>=cur().height)) $(key+"_info").textContent="Точки стыка за пределами текущего кадра. Задайте два конца линии заново.";
+  $(key+"_capture").disabled=busy||!!l.referencePending||d.pts.length!==2||d.pts.some(p=>p[0]<0||p[1]<0||p[0]>=cur().width||p[1]>=cur().height);
+  $(key+"_reference_status").textContent=l.referencePending?"Запоминаю стык эталона…":referenceReady(key)?"Стык эталона запомнен. Допуск одинаковый по всей длине.":"Стык эталона не запомнен или изменился. Подтвердите форму на эталоне.";
 }
 
 async function saveLine(key) {
   const ln = LINES.find((x) => x.key === key), l = S.ln[key], d = l.d;
+  refreshSeamSettingsStatus();
+  const camera=S.cam;
   if (d.pts.length === 1 || l.pick || l.roiSel) return;      // an unfinished line is only a draft
-  const body = { enabled: d.enabled && d.pts.length === 2, pts: d.pts };
+  const body = { enabled: d.enabled && d.pts.length === 2, pts: d.pts, search_method: d.search_method || "native" };
   if (ln.step) body.polarity = d.polarity || 0;
   lineParams(ln).forEach((p) => (body[p] = d[p]));
+  const saved=JSON.parse(JSON.stringify(d));
+  const pointsChanged=JSON.stringify(S.cams[camera][key].pts)!==JSON.stringify(d.pts);
+  if(pointsChanged){saved.reference_signature="";d.reference_signature="";S.cams[camera].seam_reference={ready:false};}
+  const queueKey=camera+":"+key;
+  const operation=(lineSaveQueue.get(queueKey)||Promise.resolve()).catch(()=>{}).then(()=>post("/api/camera?cam="+camera,{[key]:body}));
+  lineSaveQueue.set(queueKey,operation);
   try {
-    await post("/api/camera?cam=" + S.cam, { [key]: body });
-    cur()[key] = JSON.parse(JSON.stringify(d));
-    flashSaved();
-  } catch (e) { /* toast shown */ }
+    await operation;
+    S.cams[camera][key] = saved;
+    if(S.cam===camera)flashSaved();
+    return true;
+  } catch (e) { return false; /* toast shown */ }
+  finally { if(lineSaveQueue.get(queueKey)===operation)lineSaveQueue.delete(queueKey); }
 }
 
 /* ROI vertices (polygon order) picked by the user, rotated so the run does not start in the middle of the
@@ -717,10 +787,30 @@ function stopOtherModes(key) {
 }
 
 let lineTimer = {};
+const lineSaveQueue=new Map();
 LINES.forEach((ln) => {
   const k = ln.key;
   const L = () => S.ln[k];
   const redraw = () => { fillLineUi(k); draw(); };
+  $(k+"_capture").addEventListener("click",async()=>{
+    const camera=S.cam,line=L(),points=JSON.stringify(line.d.pts);
+    if(line.referencePending)return;
+    clearTimeout(lineTimer[k]);
+    line.referencePending=true;setMode("ref");redraw();
+    try{
+      if(!await saveLine(k))return;
+      if(JSON.stringify(line.d.pts)!==points){toast("Точки изменились. Нажмите «Запомнить» ещё раз.",true);return;}
+      const response=await post("/api/seam_reference?cam="+camera,{});
+      S.cams[camera][k]=response.seam;S.cams[camera].seam_reference=response.reference;
+      if(S.cam===camera&&S.ln[k]===line&&JSON.stringify(line.d.pts)===points){
+        line.d=JSON.parse(JSON.stringify(response.seam));S.lastResultVer=null;S.img.result=null;
+        $("result").replaceChildren();renderViewerSummary(null);renderSeamDiagnostic(null);redraw();
+      }
+      toast("Стык эталона запомнен");
+    }catch(e){toast(reasonText({reason:e.message})||e.message,true);}
+    finally{line.referencePending=false;if(S.cam===camera&&S.ln[k]===line)redraw();}
+  });
+  $(k + "_search_method").addEventListener("change", () => { L().d.search_method=$(k+"_search_method").value;redraw();saveLine(k); });
 
   $(k + "_enabled").addEventListener("change", () => {
     if ($(k + "_enabled").checked && L().d.pts.length < 2) {
@@ -780,7 +870,11 @@ LINES.forEach((ln) => {
   lineParams(ln).forEach((p) => {
     $(`${k}_${p}`).addEventListener("input", () => {
       L().d[p] = Number($(`${k}_${p}`).value);
-      $(`v_${k}_${p}`).textContent = fmt(L().d[p], LINE_PARAM_DEFS[p][3]);
+      if(p==="mask_low"&&L().d.mask_low>L().d.mask_high)L().d.mask_high=L().d.mask_low;
+      if(p==="mask_high"&&L().d.mask_high<L().d.mask_low)L().d.mask_low=L().d.mask_high;
+      if(p==="mask_low"||p==="mask_high")fillLineUi(k);
+      $(`v_${k}_${p}`).textContent = lineParamText(p,L().d[p]);
+      refreshSeamSettingsStatus();
       draw();
       clearTimeout(lineTimer[k]);
       lineTimer[k] = setTimeout(() => saveLine(k), 300);
@@ -897,6 +991,7 @@ function updateInspectionHeader() {
 }
 
 function beginInspection(all) {
+  if(Object.values(S.ln).some(line=>line.referencePending))return null;
   if (S.inspectionPending || !cur()?.frames?.length || (all ? $("runAll").disabled : $("runOne").disabled)) return null;
   const pending = { cam: S.cam, all };
   S.inspectionPending = pending;
@@ -929,9 +1024,126 @@ function renderCameraBatch() {
   box.append(el("div", "muted small", `${rows.length} кадров, максимальный score ${fmt(worst, 3)}%`), table);
 }
 
+// Plot the native fit's actual worst edge at each cross-section, with that
+// inspection's tolerances. Missing/excluded samples are never joined by a curve.
+function refreshSeamSettingsStatus(r=S.learningResult) {
+  const used=r?.seam?.used_params,current=S.ln.seam?.d;
+  $("seamUsedSettings").hidden=!used;
+  $("seamUsedSettings").textContent=used
+    ?(used.search_method==="reference"?`В этой проверке: эталонный допуск ±${fmt(used.reference_tolerance,1)} px`:`В этой проверке: допуск ${fmt(used.tol_mid,1)}/${fmt(used.tol_edge,1)} px`)
+      +(used.search_method==="mask"?`, пороги маски ${fmt(used.mask_low,0)}/${fmt(used.mask_high,0)}, длина дефекта ${fmt(used.mask_defect_run,0)} px, допуск ширины ${fmt(used.mask_width_tolerance*100,0)}%.`:".")
+    :"";
+  const fields=["enabled","pts","search_method","mode",...(used?.search_method==="reference"?["reference_tolerance","reference_signature"]:["band","tol_mid","tol_edge","edge_frac",...(used?.search_method==="mask"?["mask_low","mask_high","mask_coverage","mask_max_gap","mask_defect_run","mask_width_tolerance"]:[])])];
+  const changed=!!(used&&current&&r.cam===S.cam&&fields.some(k=>JSON.stringify(used[k])!==JSON.stringify(current[k])));
+  $("seamSettingsChanged").hidden=!changed;
+  $("seamSettingsChanged").textContent=changed?"Настройки изменены после проверки. Изображение и графики показывают предыдущий результат — проверьте кадр заново.":"";
+}
+
+function renderSeamDiagnostic(r) {
+  const status = $("seamDebugStatus"), plot = $("seamPlot"), legend = $("seamLegend");
+  plot.innerHTML = "";
+  plot.hidden = legend.hidden = true;
+  $("seamMaskLink").hidden=$("seamMaskCaption").hidden=true;
+  $("seamMaskImage").onload=null;
+  $("seamSideStatus").hidden=true;$("seamSideStatus").textContent="";
+  refreshSeamSettingsStatus(r);
+  const z = r?.seam;
+  if (!z) {
+    status.textContent = r
+      ? "Кадр " + r.frame + ": измерение стыка не выполнялось. Проверьте включение стыка, две точки линии и чувствительность."
+      : "Проверьте кадр, чтобы увидеть измерения. В меню «Стык этикетки» задайте два конца линии и включите проверку геометрии.";
+    return;
+  }
+  status.textContent = "Кадр " + r.frame + " · " + (z.control_complete===false ? "Контроль стыка не выполнен" : !z.found ? "Стык не найден" : z.reject ? "Стык: БРАК" : "Стык в допуске")
+    + " · найдено " + fmt(z.coverage * 100, 1) + "% линии"
+    + (z.found ? " · макс. отклонение " + fmt(z.max_dev, 2) + " px на " + Math.round(z.worst_t * 100) + "% длины · " + fmt(z.ratio, 2) + "× допуска" : "");
+  if(z.search_method==="mask")status.textContent+=" · маска + связный путь · пропуск "+fmt((z.gap||0)*100,1)+"%";
+  if(z.paired_mask){
+    $("seamSideStatus").hidden=false;
+    $("seamSideStatus").textContent=(z.sides||[]).map((s,i)=>`Край ${i+1}: найдено ${fmt(s.coverage*100,1)}%, пропажа до ${fmt(s.longest_missing_px,0)} px`).join(" · ")
+      +` · Изменение ширины до ${fmt(z.longest_width_run_px||0,0)} px подряд; порог ${fmt(z.defect_run_px,0)} px, допуск ширины ${fmt(z.width_tolerance*100,0)}%`
+      +((z.longest_width_run_px||0)>0&&(z.longest_width_run_px||0)<z.defect_run_px?" — короче порога длины, само по себе не даёт брак":"");
+  }
+  if(z.search_method==="reference")status.textContent+=" · по эталону · допуск ±"+fmt(z.reference_tolerance,1)+" px по всей длине";
+  $("seamMaskCaption").textContent=z.search_method==="reference"
+    ?"Сверху исходная полоса, снизу найденные границы. Синие линии — форма эталона ± общий допуск, цветные точки — измеренный стык. Нажмите, чтобы открыть крупно."
+    :z.paired_mask?"Сверху исходная полоса, снизу маска. Голубые сечения соединяют ожидаемые края, зелёные точки — найденные стороны, пурпурные — пропавший край. Оранжевый — изменение ширины короче порога длины, красный — отклонение или достаточно длинный дефект ширины. Нажмите, чтобы открыть крупно."
+    :"Сверху исходная полоса, снизу маска границ. Цветные точки — только измеренные участки пути. Нажмите на маску, чтобы открыть крупно.";
+  if(z.mask_reason)status.textContent+=" · "+reasonText({reason:z.mask_reason,seam:z});
+  if(z.mask_preview&&r.ver){
+    const url=`/api/seam_mask?cam=${r.cam??S.cam}&version=${r.ver}`;
+    $("seamMaskLink").href=url;
+    $("seamMaskImage").onload=()=>{if($("seamMaskImage").getAttribute("src")===url)$("seamMaskLink").hidden=$("seamMaskCaption").hidden=false;};
+    $("seamMaskImage").onerror=()=>{$("seamMaskLink").hidden=$("seamMaskCaption").hidden=true;};
+    $("seamMaskImage").src=url;
+  }
+  const samples = (z.samples || []).filter(s => Number.isFinite(s.t) && Number.isFinite(s.tolerance));
+  if (samples.length < 2) {
+    status.textContent += " · Нет данных для графика: не удалось построить опорную линию.";
+    return;
+  }
+  const range = Math.max(1, ...samples.map(s => Math.max(s.tolerance * 1.35, Math.abs(s.deviation || 0) * 1.15)));
+  const x = t => 64 + 816 * t, y = d => 94 - d / range * 70;
+  const point = (s, sign) => x(s.t).toFixed(2) + "," + y(sign * s.tolerance).toFixed(2);
+  let svg = '<title>Отклонение стыка: зелёные точки в допуске, красные за допуском</title>';
+  svg += '<text x="8" y="14" fill="currentColor" font-size="12">Δ, px</text>';
+  for (const value of [-range, 0, range]) {
+    svg += `<line x1="64" x2="880" y1="${y(value)}" y2="${y(value)}" stroke="currentColor" opacity=".25"/><text x="57" y="${y(value)+4}" text-anchor="end" fill="currentColor" font-size="12">${fmt(value, 1)}</text>`;
+  }
+  for (const t of [0, .25, .5, .75, 1]) svg += `<text x="${x(t)}" y="188" text-anchor="middle" fill="currentColor" font-size="12">${t*100}%</text>`;
+  svg += '<text x="472" y="207" text-anchor="middle" fill="currentColor" font-size="12">Положение от первого конца линии ко второму</text>';
+  svg += `<polygon points="${samples.map(s=>point(s,1)).concat([...samples].reverse().map(s=>point(s,-1))).join(" ")}" fill="var(--warn)" opacity=".12"/>`;
+  for (const sign of [1,-1]) svg += `<polyline points="${samples.map(s=>point(s,sign)).join(" ")}" stroke="var(--warn)" fill="none" stroke-width="1.5"/>`;
+  for (const s of z.paired_mask?[]:samples) {
+    const measured = s.state === 0 && Number.isFinite(s.deviation);
+    const color = measured ? Math.abs(s.deviation) > s.tolerance ? "var(--bad)" : "var(--ok)" : s.state === 1 ? "#c77516" : s.state === 3 ? "#ce49c5" : "var(--muted)";
+    const cy = measured ? y(s.deviation) : 172;
+    svg += `<circle cx="${x(s.t)}" cy="${cy}" r="1.7" fill="${color}"><title>${fmt(s.t*100,1)}%: ${measured ? fmt(s.deviation,2)+" px; допуск ±"+fmt(s.tolerance,2)+" px" : s.state===1 ? "зона исключения" : s.state===3 ? "линия не найдена" : "конец не оценивается"}</title></circle>`;
+  }
+  if(z.paired_mask)for(const [sideIndex,side] of (z.sides||[]).entries())for(const [i,s] of (side.samples||[]).entries()){
+    const measured=s.state===0&&Number.isFinite(s.deviation),tol=samples[i]?.tolerance||1,widthBad=z.samples?.[i]?.width_bad,widthReject=z.samples?.[i]?.width_reject;
+    const color=measured?(Math.abs(s.deviation)>tol||widthReject?"var(--bad)":widthBad?"#c77516":sideIndex?"#15979b":"var(--ok)"):s.state===3?"#ce49c5":s.state===1?"#c77516":"var(--muted)";
+    svg+=`<circle cx="${x(s.t)}" cy="${measured?y(s.deviation):164+sideIndex*10}" r="${sideIndex?1.8:1.3}" fill="${color}"><title>Край ${sideIndex+1}, ${fmt(s.t*100,1)}%: ${measured?fmt(s.deviation,2)+" px"+(widthBad?"; ширина вне допуска":""):s.state===3?"край пропал":s.state===4?"нет опоры на эталоне":s.state===1?"исключено":"конец не оценивается"}</title></circle>`;
+  }
+  if(z.paired_mask){
+    const widths=(z.samples||[]).filter(s=>Number.isFinite(s.width)&&s.reference_width>0),limit=z.width_tolerance||.5;
+    const wrange=Math.max(.75,limit*1.35,...widths.map(s=>Math.abs(s.width/s.reference_width-1)*1.15)),wy=d=>286-d/wrange*22;
+    svg+='<g id="seamWidthPlot"><text x="64" y="231" fill="currentColor" font-size="13">Изменение ширины относительно эталона, %</text>';
+    svg+=`<text x="64" y="248" fill="currentColor" font-size="11">Допуск ±${fmt(limit*100,0)}%; длина дефекта от ${fmt(z.defect_run_px,0)} px; оранжевое — короче порога</text>`;
+    for(const v of [-wrange,0,wrange])svg+=`<line x1="64" x2="880" y1="${wy(v)}" y2="${wy(v)}" stroke="currentColor" opacity=".2"/><text x="57" y="${wy(v)+4}" fill="currentColor" text-anchor="end" font-size="11">${fmt(v*100,0)}%</text>`;
+    for(const sign of [-1,1])svg+=`<line x1="64" x2="880" y1="${wy(sign*limit)}" y2="${wy(sign*limit)}" stroke="var(--warn)" stroke-width="1.5"/>`;
+    for(const s of widths){const d=s.width/s.reference_width-1,color=s.width_reject?"var(--bad)":s.width_bad?"#c77516":"var(--ok)";
+      svg+=`<circle cx="${x(s.t)}" cy="${wy(d)}" r="1.8" fill="${color}"><title>${fmt(s.t*100,1)}% длины: ширина ${fmt(s.width,2)} px, эталон ${fmt(s.reference_width,2)} px; изменение ${fmt(d*100,1)}%${s.width_bad?(s.width_reject?" — достигнут порог длины дефекта":" — короче порога длины дефекта"):""}</title></circle>`;
+    }
+    svg+='</g>';
+  }
+  if (z.found) svg += `<line x1="${x(z.worst_t)}" x2="${x(z.worst_t)}" y1="20" y2="165" stroke="currentColor" stroke-dasharray="4 4" opacity=".6"/>`;
+  plot.innerHTML = `<svg viewBox="0 0 900 ${z.paired_mask?325:210}" role="img" aria-label="Отклонение двух краёв и изменение ширины стыка">` + svg + '</svg>';
+  plot.hidden = legend.hidden = false;
+}
+
+$("showSeamSettings").addEventListener("click", () => {
+  $("seam_fold").open = true;
+  $("seam_fold").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  $("seam_enabled").focus({ preventScroll: true });
+});
+
+function renderViewerSummary(r) {
+  const box = $("viewerSummary");
+  box.replaceChildren();
+  box.hidden = !r;
+  if (!r) return;
+  box.append(verdictBadge(r.verdict), el("strong", "", fmt(r.score, 3) + "%"), el("span", "mono", r.frame || ""));
+  if (r.reject || r.control_complete === false || r.verdict === "NO_REFERENCE") {
+    box.append(el("span", "viewer-reason", reasonText(r)));
+  }
+}
+
 function renderResult(r) {
+  renderViewerSummary(r);
   cancelLearning();
   S.learningResult = r;
+  renderSeamDiagnostic(r);
   updateLearningAction(true);
   const box = $("result");
   box.replaceChildren();
@@ -1109,6 +1321,7 @@ window.addEventListener("load", () => {
     const m = /^#cam(\d)$/.exec(location.hash);
     if (m && S.cams[Number(m[1])]) openCam(Number(m[1]));
     else if (location.hash === "#log") showTab("log");
+    else if (location.hash === "#unwrap") showTab("unwrap");
   }, 300);
 });
 

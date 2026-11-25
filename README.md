@@ -1,3 +1,19 @@
+# Inspect the developed surface — 2026-11-19
+
+**Развёртка ведра → Инспектировать развёртку** now compares a complete surface
+atlas with its reference: global registration, bounded brightness correction,
+defect regions and an experimental whole-bucket verdict. Missing/unsupported
+control stays explicit. No C++ rebuild needed; refresh the page. Calibration and
+real-defect accuracy remain open. [Behavior and verification](docs/kb/surface-atlas-inspection-2026-11-19.md).
+
+# Bucket surface unwrap — 2026-11-19
+
+Open **Развёртка ведра** (or `#unwrap`) for an experimental scan of one bucket's
+side surface: source frames, editable curved boundaries, rectified strips and a
+circular image. Includes reference differences, coverage and PNG/JSON export.
+Geometry is approximate; automatic rejection is not enabled. Static UI change:
+refresh the browser, no rebuild required. [Workflow, tests and limits](docs/kb/surface-unwrap-2026-11-19.md).
+
 # Source updated — 2026-11-16
 
 Pulled main/b0535b0 and combined the newer core and label contour controls with

@@ -166,17 +166,25 @@ SeamResult measureSeam(const cv::Mat& bgr, const SeamParams& p, const cv::Mat& e
     std::vector<double> fL = robustFit(t, eL, 2, 1.5, eligible), fR = robustFit(t, eR, 2, 1.5, eligible);
     if (fL.empty() || fR.empty()) return done();
 
+    res.rowPos.resize(N); res.rowEdge.resize(N); res.rowRef.resize(N);
+    res.rowDev.assign(N, float(kNaN)); res.rowTol.resize(N); res.rowState.resize(N);
     int evalRows = 0, validRows = 0;
     for (int i = 0; i < N; ++i) {
-        if (ignored[i]) continue;
-        if (t[i] < p.endIgnore || t[i] > 1.0 - p.endIgnore) continue;
-        ++evalRows;
-        if (std::isnan(eL[i]) || std::isnan(eR[i])) continue;
-        ++validRows;
+        res.rowPos[i] = cv::Point2f(p.p0 + u * i);
         const double e = std::min(t[i], 1.0 - t[i]);
         const double tol = std::max(0.05, e < p.edgeFrac ? p.tolEdge : p.tolMid);
+        res.rowTol[i] = float(tol);
+        if (ignored[i]) { res.rowState[i] = 1; continue; }
+        if (t[i] < p.endIgnore || t[i] > 1.0 - p.endIgnore) { res.rowState[i] = 2; continue; }
+        ++evalRows;
+        if (std::isnan(eL[i]) || std::isnan(eR[i])) { res.rowState[i] = 3; continue; }
+        ++validRows;
         const double dev[2] = {eL[i] - polyval(fL, t[i]), eR[i] - polyval(fR, t[i])};
         const double edges[2] = {eL[i], eR[i]};
+        const int worstEdge = std::fabs(dev[0]) >= std::fabs(dev[1]) ? 0 : 1;
+        res.rowDev[i] = float(dev[worstEdge]);
+        res.rowEdge[i] = cv::Point2f(p.p0 + u * i + nrm * edges[worstEdge]);
+        res.rowRef[i] = cv::Point2f(p.p0 + u * i + nrm * (edges[worstEdge] - dev[worstEdge]));
         for (int k = 0; k < 2; ++k) {
             const double ratio = std::fabs(dev[k]) / tol;
             const cv::Point2f pt(float(p.p0.x + u.x * i + nrm.x * edges[k]), float(p.p0.y + u.y * i + nrm.y * edges[k]));

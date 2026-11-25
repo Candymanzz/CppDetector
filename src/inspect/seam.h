@@ -1,6 +1,7 @@
 #pragma once
 #include <opencv2/core.hpp>
 #include <vector>
+#include <string>
 
 namespace cd {
 
@@ -10,6 +11,14 @@ namespace cd {
 //   Step  = boundary between two regions (label edge on the bucket bottom): one edge is measured.
 // The line is given by control points; a Catmull-Rom spline through them is the search axis.
 struct SeamParams {
+    bool referenceSearch = false;
+    double referenceTolerance = 3.0; // uniform source-pixel deviation from the confirmed reference edge
+    std::string referenceSignature; // server-confirmed pixels + endpoints + algorithm version
+    bool maskSearch = false;          // opt-in connected edge mask; legacy native path remains default
+    double maskLow = 8, maskHigh = 24; // Canny hysteresis thresholds, low <= high
+    double maskCoverage = 0.70, maskMaxGap = 0.20;
+    double maskDefectRun = 6;          // consecutive source pixels for a missing side or changed width
+    double maskWidthTolerance = .50;  // relative width change, with a 1 px sampling floor
     enum Mode { Ridge = 0, Step = 1 };
     bool enabled = false;
     int mode = Ridge;
@@ -29,7 +38,28 @@ struct SeamParams {
     double maxGap = 1.0;             // fraction of the line that may be continuously "not found" (1 = off)
 };
 
+struct SeamSideResult {
+    int sign = 0;
+    double coverage = 0, longestMissingPx = 0;
+    std::vector<char> state; // 0 observed, 1 excluded, 2 end, 3 current missing, 4 reference unsupported
+    std::vector<float> deviation;
+    std::vector<cv::Point2f> edge, reference;
+};
+
 struct SeamResult {
+    bool pairedMask = false;
+    double pairReferenceCoverage = 0, longestWidthRun = 0;
+    std::vector<SeamSideResult> sides;
+    std::vector<float> rowWidth, rowReferenceWidth;
+    std::vector<char> rowWidthBad;
+    std::vector<char> rowWidthReject; // entire width-change runs that reach the configured defect length
+    bool referenceSearch = false;
+    std::vector<std::vector<double>> candidateOffsets; // reference preparation only; not JSON
+    std::vector<int> candidateSigns;
+    bool maskSearch = false, controlComplete = true;
+    std::string maskReason;
+    int maskSides = 0;
+    cv::Mat maskPreview;             // original strip + binary mask and observed paths, horizontal
     bool enabled = false;
     bool found = false;              // line located in >= 50% of the evaluated rows
     bool reject = false;

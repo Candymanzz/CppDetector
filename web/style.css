@@ -121,6 +121,47 @@ main { padding: 16px; max-width: 1500px; margin: 0 auto; }
 canvas { width: 100%; height: auto; display: block; cursor: crosshair; touch-action: none; }
 .roi-tools { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
 .side { display: grid; gap: 12px; }
+/* The camera workspace fills the available viewport, including a wrapping header.
+   Scroll positions belong to each column; wheel events never move the image with the menu. */
+.camera-workspace body { height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+.camera-workspace .topbar { flex: 0 0 auto; }
+.camera-workspace main { flex: 1 1 auto; min-height: 0; width: 100%; display: flex; flex-direction: column; }
+.camera-workspace #engineInfo, .camera-workspace .camtabs { flex: 0 0 auto; }
+.camera-workspace #engineInfo { display: none; }
+.camera-workspace .camtabs { flex-wrap: nowrap; overflow-x: auto; }
+.camera-workspace .camtabs button { flex-shrink: 0; }
+.camera-workspace #tab-cam.active { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.camera-workspace .cam-layout { flex: 1 1 auto; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+.camera-workspace .side { min-height: 0; overflow-y: scroll; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.camera-workspace .viewer-col { min-height: 0; min-width: 0; overflow: hidden; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; }
+.camera-workspace .canvas-wrap { min-height: 0; display: flex; align-items: center; justify-content: center; }
+.camera-workspace #canvas { width: auto; height: auto; max-width: 100%; max-height: 100%; flex: 0 1 auto; }
+.frame-picker { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.frame-picker select { flex: 1; min-width: 0; }
+.viewer-summary { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; margin-top: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.viewer-summary[hidden] { display: none; }
+.viewer-summary .viewer-reason { flex-basis: 100%; font-size: 13px; overflow-wrap: anywhere; }
+.roi-card .roi-tools { margin-top: 0; }
+.roi-card .roi-tools button { max-width: 100%; white-space: normal; text-align: left; }
+.camera-workspace .side { align-content: start; grid-auto-rows: max-content; padding-right: 4px; }
+.seam-diagnostic { margin-top: 8px; }
+.seam-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.seam-heading h2 { margin: 0; }
+.seam-diagnostic p { margin: 8px 0; }
+.seam-legacy { margin-top: 10px; }
+.seam-legacy > summary { cursor: pointer; margin-bottom: 8px; }
+#seamMaskLink[hidden], #seamMaskCaption[hidden] { display: none; }
+#seamMaskLink { display: block; margin: 8px 0; }
+#seamMaskImage { display: block; width: 100%; height: auto; image-rendering: pixelated; background: var(--canvas-bg); }
+#seamPlot { display: block; width: 100%; height: auto; color: var(--muted); }
+#seamPlot svg { display: block; width: 100%; height: auto; }
+#seamPlot[hidden], #seamLegend[hidden] { display: none; }
+.seam-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.seam-good { color: var(--ok); }
+.seam-bad { color: var(--bad); }
+.seam-tolerance { color: var(--warn); }
+.seam-missing { color: #ce49c5; }
+.seam-excluded { color: #c77516; }
 .fold > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
 .fold > summary::-webkit-details-marker { display: none; }
 .fold > summary::before { content: "▸"; color: var(--muted); }
@@ -163,6 +204,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 @media (max-width: 980px) {
   .cam-layout { grid-template-columns: 1fr; }
+  .camera-workspace .cam-layout { grid-template-rows: minmax(0, 3fr) minmax(0, 2fr); }
   .stream { margin-left: 0; }
 }
 @media (max-width: 600px) {
@@ -170,4 +212,6 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .topbar { padding: 10px 16px; }
   .inspection-actions { width: 100%; }
   .inspection-actions button { flex: 1 1 100%; }
+  .camera-workspace .inspection-actions button { flex: 1 1 40%; font-size: 12px; }
+  .camera-workspace .inspection-actions kbd, .camera-workspace #viewInfo { display: none; }
 }

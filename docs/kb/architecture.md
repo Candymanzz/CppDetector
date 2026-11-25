@@ -1,3 +1,91 @@
+# Seam diagnostic snapshot — 2026-11-24
+
+App JSON includes used_params and per-row width-event qualification. C++
+overlay and SVG consume the same event states; the frontend compares its
+working draft to the inspected snapshot and requests reinspection explicitly.
+[Diagnosis, behavior and evidence](seam-plot-2026-11-24.md).
+
+# Paired mask adapter — 2026-11-24
+
+Inspector routes ridge mask to inspectMaskedSeam with primary pixels and pose.
+Per-inspection preparation avoids a stale model lifecycle; sides/width states feed
+JSON, debug logs, overlay and versioned PNG. Imported production core is unchanged.
+[Method, evidence and limitations](seam-pair-2026-11-24.md).
+
+# Reference-seam cache and confirmation — 2026-11-24
+
+Inspector owns an immutable model rebuilt only from the primary reference and
+validated against its persisted pixel/point/preparation signature. A dedicated
+confirmation endpoint captures the model. The adapter matches current pixels
+after existing pose compensation, then uses uniform deviation limits. Rebuilds
+invalidate stale backend result visuals; per-camera UI queues isolate late saves.
+[Contract and checks](seam-reference-2026-11-24.md).
+
+# Optional standalone mask seam inspector — 2026-11-24
+
+`src/inspect/seam_mask` is selected explicitly by the local adapter, without
+changing imported native core/service. Its typed quality/trace/preview feed the
+existing verdict/overlay and versioned PNG endpoint. Failed mask control cannot
+produce OK; old native missing-line behavior stays compatible.
+[Contract and validation](seam-mask-2026-11-24.md).
+
+# Camera viewport and native seam trace — 2026-11-24
+
+Follow-up: the left camera grid no longer scrolls. The canvas fits both dimensions
+and a compact `renderResult` summary remains visible below it. All tools, complete
+results and seam diagnostics live in the right scroll menu. The independent-left
+scroll description below is historical.
+[Current layout and evidence](sidebar-seam-2026-11-24.md#follow-up-keep-the-whole-bucket-and-verdict-visible).
+
+The camera tab uses viewport-height flex/grid with independent left/right scroll
+containers; other tabs retain page flow. Native seam fits now expose per-row
+diagnostics through the standalone adapter and JSON to the existing overlay and
+a separate SVG plot. Adaptive mapping includes diagnostic coordinates. Decisions
+and numerical comparison are preserved in the checked cases.
+[Contract and verification](sidebar-seam-2026-11-24.md).
+
+# Browser-local file sources — 2026-11-19
+
+`unwrap.js` separates frames/uploads/references. Local File decoding shares the
+normal raster path; memory maps are keyed by camera and unique selection serial.
+No new endpoint is used. Old decodes cannot restore replaced/removed images;
+temporary URLs are released. The unchanged worker receives normal RGBA inputs,
+while reports carry file provenance/metadata only.
+[Source lifecycle and checks](local-uploads-2026-11-19.md).
+
+# Source preparation before surface comparison — 2026-11-19
+
+`unwrap-source.js` adds independent source positioning/photometry, reference
+ROI/exclusion support and profile-tolerance envelopes. Their fixed-owner atlases
+are compared without another global shift. Scope/coverage are reported separately;
+source previews/inverse coordinates agree. Fine manual matrices compose after
+reference-only calibration and enter the v2 report. Native/API are unchanged.
+[Pipeline and tests](atlas-quality-2026-11-19.md).
+
+# Reference-stitching worker — 2026-11-19
+
+A separate on-demand OpenCV.js worker extracts/matches reference features and
+fits bounded corrections. Browser recipes retain a content/geometry signature;
+current frames never determine it. Cut rendering and 2D ownership apply the same
+correction to both atlases, with inverse mapping for source clicks. Native/API
+and the inspector module remain unchanged. [Pipeline and partial-fit limits](reference-stitching-2026-11-19.md).
+
+# Whole-atlas inspection worker — 2026-11-19
+
+The renderer additionally builds current/reference atlases with identical fixed
+angular ownership and no overlap averaging. `unwrap-inspection.js` registers and
+compares the complete canonical atlas, produces circular connected regions and
+gates its independent verdict on input/support/registration completeness. All
+state remains browser-local and GET-only. [Pipeline and limits](surface-atlas-inspection-2026-11-19.md).
+
+# Browser surface workspace — 2026-11-19
+
+The independent unwrap UI reads camera state/images through the existing GET API.
+Six-point boundary geometry, angular placement and source/reference comparison run
+in a Web Worker using a pure JS raster core. Browser-local recipes are scoped by
+dataset/bucket and never enter native camera settings. Cancelled jobs cannot replace
+newer inputs. [Data flow, geometry and limitations](surface-unwrap-2026-11-19.md).
+
 # UI inspection state — 2026-11-16
 
 The camera toolbar owns UI-only per-camera batch snapshots and one pending

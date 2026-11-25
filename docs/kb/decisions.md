@@ -1,3 +1,178 @@
+# Explain width events and retained results — 2026-11-24
+
+The owner saw local marks but a quiet deviation plot. Separate width and both
+edge signals, remove the aggregate source line that could switch boundaries,
+qualify short events visually and report used settings with stale-draft feedback.
+Why: width is not geometric dev, and slider edits do not reprocess an old image.
+Tradeoff: denser diagnostic, while numerical decisions and owner tuning remain
+unchanged. Release, 23 CTest, eight JS suites and six Chrome/HTTP groups pass.
+Twenty photo contracts match; isolated f95 changes from OK to width REJECT
+only when the configured length changes from 29 to 6, at the same measurements.
+[Diagnosis, behavior and evidence](seam-plot-2026-11-24.md).
+
+# Check both mask boundaries and width — 2026-11-24
+
+The owner demonstrated one-sided paint accepted through the opposite boundary and
+requested mask/path development. Require an automatic primary-reference pair, two
+polarity paths and local side-loss/width checks. Simple AND alone cannot prevent
+dropping the second track or replacing it with a narrowed-stripe edge. No reference
+capture step is added to mask. Tradeoffs are stricter visibility, per-inspection
+preparation and a need for labelled calibration. Release, 23 CTest, eight JS suites
+and nine Chrome/HTTP groups pass; both injected real-reference uploads reject.
+Six native comparisons retain numbers; 16 unlabelled originals give 2 OK, 8 REJECT
+and 6 incomplete results. Keep the owner's band 5 and 3.8/5.4 tolerances. [Method, evidence and limitations](seam-pair-2026-11-24.md).
+
+# Capture the reference seam and expose one tolerance — 2026-11-24
+
+Context: the owner identified a nearby black square behind a path jump and asked
+to learn the seam on the reference, then widen a single uniform allowance.
+Decision: explicitly confirm one stable reference boundary, persist its identity
+signature, match it using appearance/polarity and existing pose compensation, and
+measure current deviations against the frozen shape. Why: current-image fitting
+can adopt a neighboring printed edge and redefine the baseline. A larger numeric
+limit alone would keep the identity problem. Previous methods remain in a closed
+compatibility section. Tradeoffs: one selected boundary, confirmation after
+reference/point changes and explicit incomplete control when support is lost.
+Release, 23 CTest, eight JS suites and ten Chrome/HTTP groups pass. Tests retain
+true kinks and exclude a moved black-square distractor. In the 16-photo camera-6
+snapshot, the pipeline produces 15 OK and one incomplete result; defect labelling
+and production accuracy remain open. Initial common limit is the previous middle
+6.3 px; source references, ROI and learned data are preserved.
+[Workflow, tests and limitations](seam-reference-2026-11-24.md).
+
+# Connected mask search for a weak seam — 2026-11-24
+
+Context: the owner showed a fragmented seam plot and proposed a min/max mask
+plus a path between endpoints. Camera-6 f80 confirmed native coverage 29.98%.
+Decision: an explicit local Canny/DP method with observed edge residuals, real
+mask preview and coverage/continuous-gap guards; activate only camera 6. Why:
+independent row maxima lose the weak broad boundary, while global path evidence
+can locate it without fabricating measured pixels in gaps. Native remains for
+comparison. Raising tolerances or interpolating every missing point would hide
+the detection problem and is not used. Tradeoffs: a second experimental method,
+prefiltering/path bias and possible wrong-edge selection; small defects and
+production quality remain unvalidated. Release, 22 CTest, eight JS suites and
+nine Chrome/HTTP groups pass. On 16 available camera-6 frames coverage is
+98.79–100%; four threshold exceedances require human labelling. Back up sources,
+binary and profile; preserve geometric settings, references and learned data.
+[Evidence, contract and limitations](seam-mask-2026-11-24.md).
+
+# Fixed whole image and verdict during settings scroll — 2026-11-24
+
+Context: the owner clarified that the earlier change did not keep the bucket and
+inspection visible. The old wheel test allowed an oversized, scrolling left view.
+Decision: fit the image to a fixed left viewport with a compact verdict and move
+all tools, full result and seam plot into the right menu. Why: independent left
+scroll still required losing the image to reach the result. Tradeoff: the image
+scales to available space; narrow layouts stack the panes. Four existing UI suites,
+syntax and Chrome/HTTP on a real photo passed, including full image + verdict,
+wheel at both panes/boundaries, source ROI click, four layouts and unwrap. UI/docs
+install without changing EXE or stored data; no new native/line tests.
+[Behavior and limits](sidebar-seam-2026-11-24.md#follow-up-keep-the-whole-bucket-and-verdict-visible).
+
+# Independent camera menu and native seam diagnostics — 2026-11-24
+
+Context: scrolling settings moved the entire page; the owner also requested the
+former seam visualization. The overlay renderer survived, but its per-row input
+was dropped when the native seam adapter replaced the local detector.
+Decision: give each camera column its own bounded scroll container; expose the
+existing native fit's actual row diagnostics, restore the overlay graph, and add
+a readable plot with tolerances and a shortcut to seam controls. Why: menu wheel
+input must preserve the image position, and a display derived from aggregate
+metrics could not show actual local defects. Re-enabling the legacy detector
+would change decisions, so it is not used. Tradeoffs: separate left scrolling
+for controls below the image; trace/rendering overhead has no timing guarantee.
+Verification: Release, 21/21 CTest, eight existing JS suites, actual Chrome/HTTP
+wheel/focus/layout/state checks and old/new equality on 4 real + 4 synthetic
+inspections. Original data hashes are retained; line quality/deadline untested.
+[Detailed behavior, implementation and limits](sidebar-seam-2026-11-24.md).
+
+# Separate local-image mode — 2026-11-19
+
+The owner requested their own files in the source cards. Add explicit upload mode
+and per-camera controls in both input areas, sharing decode/render/inspection.
+The separate mode prevents silent mixing with old server frames. Unique identities
+protect replacements and late decodes; JSON stores metadata and files remain in
+memory. Server persistence was unnecessary for this request. Tradeoff: reload
+requires reselection; references stay unchanged. Sixteen actual-browser scenarios,
+including PNG/JPEG, defects, missing/invalid inputs and decode races, pass.
+[Decision and checks](local-uploads-2026-11-19.md).
+
+# Source compensation before surface inspection — 2026-11-19
+
+The same native-accepted files falsely rejected in the atlas. Replace global atlas
+motion with independent source motion before warp, use profile ROI/exclusions
+and an explicit per-source tolerance envelope, then retain one surface comparison.
+Raising rejection thresholds or removing wide seam bands was not used. Position
+2 still failed after motion/ROI alone; its profile tolerance removes the residual.
+Manual reference-side position/scale controls address unsupported joins without
+using current defects to recalibrate geometry. Tests confirm accepted positions
+1–4 and injected interior/join defects. Tradeoffs: small changes within tolerance
+and unchecked scope may be missed; native equivalence and full physical geometry
+remain open. [Measurements and validation](atlas-quality-2026-11-19.md).
+
+# 2026-11-19 — Remove ghosting and fit only supported reference overlaps
+
+Context: the screenshot shows double text and inconsistent scale from averaging
+roughly positioned cameras. Decision: a single-view cut display plus reference-only
+ORB matching/RANSAC and bounded component fitting, saved with a reference signature.
+Reject weak or unsafe fits; explicitly retain partial status. Why: hiding the error
+with transparency does not align the surface, while fitting current frames can
+erase defect evidence. A fixed fit also preserves reproducible source coordinates.
+Alternative feature probes did not recover a reliable complete overlap graph,
+so thresholds are not relaxed to claim full calibration. Checks: old geometry,
+inspection/UI, the new transform suite and 13 actual-HTTP Chrome interactions.
+Front 0/3 landmark error improves 38.47→2.96 px; the remaining joins are open.
+[Method, actual observations and tradeoffs](reference-stitching-2026-11-19.md).
+
+# 2026-11-19 — Make the inspection inputs visible before the result
+
+Context: the owner cannot find the frame choice beneath the panorama. Decision:
+add a compact top input block, explicit file names and per-camera navigation;
+clarify the shared list ordinal and reference self-test. Keep preview selectors
+synchronised through one frame handler and clear stale previews/results. Why:
+large preview cards above the result would consume unnecessary vertical space,
+while independent selection state could inspect different inputs than displayed.
+Checks: syntax, four existing UI suites, nine actual-HTTP Chrome interaction cases
+and 1440/1024/390px layouts. No algorithm or native data changes.
+[Operator behavior and verification](frame-selection-2026-11-19.md).
+
+# 2026-11-19 — Inspect one unblended developed surface
+
+Context: the owner requested trying inspection through unfolding, beyond the
+initial preview. Decision: form a fixed-ownership atlas, globally register its
+current/reference versions, apply bounded robust brightness compensation and
+measure connected differences at one canonical resolution. Gate the independent
+bucket verdict on complete inputs, registration and coverage. Why: feathering
+can cancel deviations; merely relabelling the old per-camera map would not inspect
+one image. Exact calibration and a new native/PLC contract are outside this trial.
+Defaults remain strict after measuring an optional 1 px relaxation; there is no
+verified ground truth to justify suppressing every real-photo difference. Tradeoffs:
+global registration/lighting cannot resolve per-camera deformation, and small
+defects can be lost to blur/tolerance/area filtering. Checks: 13 controlled image
+scenarios, 6438 geometry assertions, four old UI suites, syntax and 17 actual-HTTP
+Chrome scenarios. Injected photo defect rejected at 0.701%; some real-photo frames
+also reject and require review. No physical quality/timing validation or native
+inspection change. [Parameters, observations and limits](surface-atlas-inspection-2026-11-19.md).
+
+# 2026-11-19 — Make an independent bucket surface workspace
+
+Context: the owner wants one scanned-looking image from the bucket views, a separate
+tab for future inspection work, and visibility into each frame's transformation.
+Decision: browser-side six-point boundary rectification with an approximate cylinder
+projection, angular placement/feathering, per-frame strip previews, provenance and
+coverage. Separate the two buckets; omit top views. Compare paired camera pixels
+before blending with a maximum difference, while withholding an automatic verdict.
+Why: native inspection must not inherit uncalibrated stitching artefacts, and simply
+concatenating views retains their curvature. Exact cylinder/cone calibration needs
+inputs currently unavailable. Browser-local recipes and GET-only APIs allow immediate
+experimentation without rewriting saved detector settings. Compromise: seams need
+manual adjustment; no registration/lighting correction or proven physical coverage.
+Checks: 6438 core assertions, four existing UI suites, syntax, Chrome with the actual
+HTTP backend/frames, missing inputs, import/export, pointer editing, job isolation
+and three layouts. Native C++/machine cycle and defect accuracy remain unverified.
+[Implementation, observations and limits](surface-unwrap-2026-11-19.md).
+
 # 2026-11-16 — Keep inspection actions and batch counts in the camera header
 
 Context: the owner wants the defect count after testing every camera frame and

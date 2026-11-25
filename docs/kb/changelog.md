@@ -1,3 +1,93 @@
+# Consistent seam plots and setting snapshots — 2026-11-24
+
+Removed the extra aggregate line, added separate width/side plots and short-event
+colors, plus used settings and stale-result guidance. Detection results on 20
+photo comparisons remain identical; 23 CTest, eight JS and Chrome/HTTP pass.
+[Diagnosis, behavior and evidence](seam-plot-2026-11-24.md).
+
+# Paired mask inspection — 2026-11-24
+
+Independent two-side paths, width/local disappearance limits and cross-section
+visuals replace OR acceptance in mask ridge. 23 CTest, eight JS suites and nine
+Chrome/HTTP groups pass. Stricter original-photo outcomes require calibration.
+[Method, evidence and limitations](seam-pair-2026-11-24.md).
+
+# Reference seam and one uniform tolerance — 2026-11-24
+
+Added explicit reference capture, immutable model/signature, one common allowance,
+reference-relative matching and preview/overlay bounds. A late capture remains
+camera-scoped; reference/point changes invalidate confirmation. Release, 23 CTest,
+eight JS suites and ten real-browser/HTTP groups pass; f92 remains incomplete.
+[Reasoning and evidence](seam-reference-2026-11-24.md).
+
+# Connected seam mask and real preview — 2026-11-24
+
+Added per-camera opt-in mask/path search, two edge thresholds, coverage/gap
+guards and a versioned source/mask PNG preview. Camera-6 f80 coverage improves
+29.98%→100%; four unlabelled exceedances remain in the 16-frame snapshot.
+Release, 22 CTest, eight JS suites and nine HTTP/Chrome groups passed.
+[Implementation, validation and limits](seam-mask-2026-11-24.md).
+
+# Fixed complete image and compact inspection result — 2026-11-24
+
+Removed left-column scrolling, fitted the complete image to its viewport, pinned
+the verdict below it and moved every tool/detail/graph into the right menu. Four
+existing UI suites and real-photo Chrome/HTTP wheel/ROI/layout checks passed.
+[Follow-up behavior and reasoning](sidebar-seam-2026-11-24.md#follow-up-keep-the-whole-bucket-and-verdict-visible).
+
+# Camera menu scroll and seam plot — 2026-11-24
+
+Bounded independent settings scrolling, restored native seam overlay diagnostics
+and new readable tolerance/deviation plot with missing/excluded states. Release,
+21 C++ tests, eight JS suites and real-browser/HTTP checks passed; checked old/new
+inspection results match. [Details and limitations](sidebar-seam-2026-11-24.md).
+
+# Local file input for unwrap inspection — 2026-11-19
+
+Added camera upload/remove controls above inspection and beside original images,
+explicit local mode, shared decoding and preview/inspection, clear failure states,
+stale-decode guards and file metadata reports. Sixteen Chrome scenarios, three
+layouts, syntax and four existing UI suites pass; no API writes occur.
+[Behaviour and limitations](local-uploads-2026-11-19.md).
+
+# Atlas false-rejection correction — 2026-11-19
+
+Added pre-warp source motion/photometry, native ROI/exclusions and explicit profile
+comparison tolerances, working-area coverage, consistent previews/coordinates,
+fine manual seam controls and v2 reports. Positions 2–4: REJECT → OK without
+raising the rejection threshold. Existing/new unit tests and 16 Chrome scenarios
+pass; full geometric stitching remains open.
+[Details](atlas-quality-2026-11-19.md).
+
+# 2026-11-19 — Clear seams with partial reference alignment
+
+Removed transparent overlap ghosting; added reference-only feature fitting,
+signature reuse, reset and explicit partial-fit status. Corrected ownership/source
+mapping for 2D transforms. Front views 0/3 improve; full calibration is not
+established. Old/new tests and 13 Chrome cases pass. [Results and limitations](reference-stitching-2026-11-19.md).
+
+# 2026-11-19 — Visible per-camera input selection
+
+Added a top **Кадры для инспекции** block with file lists, ordinal/count,
+previous/next, an explicit summary and reference-mode labels. Preview selections
+stay synchronised; stale inputs/results are invalidated. Existing UI and nine
+actual-HTTP Chrome interactions pass. [Details](frame-selection-2026-11-19.md).
+
+# 2026-11-19 — Experimental inspection through the developed surface
+
+Added fixed-ownership inspection atlases, global registration, bounded brightness
+correction, circular connected regions, explicit complete/incomplete bucket verdicts,
+parameter controls, aligned/reference views and a JSON report. Controlled defects,
+missing inputs and existing UI behavior pass checks. Real-photo differences still
+need calibration and review. [Results and limitations](surface-atlas-inspection-2026-11-19.md).
+
+# 2026-11-19 — Bucket surface unwrap tab
+
+Added separate bucket panoramas, editable curved boundaries/cylinder projection,
+raw/rectified previews, source coordinates, reference differences, coverage and
+PNG/JSON exchange. No native verdict/configuration changes. Core, existing UI and
+actual-HTTP Chrome checks pass. [Details and limitations](surface-unwrap-2026-11-19.md).
+
 # 2026-11-16 — Camera inspection counts and keyboard actions
 
 Moved both camera inspection buttons into the sticky header, added last-run
